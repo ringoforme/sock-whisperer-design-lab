@@ -33,7 +33,7 @@ const Home = () => {
         <div className="container mx-auto max-w-7xl flex justify-between items-center">
           <div className="flex items-center">
             <div className="bg-gradient-to-r from-orange-500 to-pink-500 w-8 h-8 rounded-md mr-2"></div>
-            <h1 className="text-2xl font-bold">Lovable</h1>
+            <h1 className="text-2xl font-bold">SoxLab</h1>
           </div>
           <div className="flex gap-4">
             <Button variant="ghost" onClick={() => navigate('/login')}>Log In</Button>
@@ -47,15 +47,15 @@ const Home = () => {
         <section className="py-20 px-4">
           <div className="container mx-auto max-w-6xl text-center">
             <h1 className="text-5xl md:text-6xl font-bold mb-4">
-              掌上 <span className="relative">
-                <span>袜子实验室</span>
+              Build something <span className="relative">
+                <span>SoxLab</span>
                 <span className="absolute -right-12 top-0">
                   <div className="bg-gradient-to-r from-orange-500 to-pink-500 w-8 h-8 rounded-md"></div>
                 </span>
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-12">
-              Idea to app in seconds, with your personal full stack engineer
+              从创意到落地, 你的私人设计师
             </p>
             
             {/* Chat box mockup */}
@@ -134,7 +134,7 @@ const Home = () => {
 
       <footer className="py-8 px-4 text-center text-gray-500 text-sm">
         <div className="container mx-auto">
-          <p>© 2025 Sock Whisperer. Powered by Lovable.</p>
+          <p>© 2025 SoxLab. Powered by SoxLab.</p>
         </div>
       </footer>
     </div>
