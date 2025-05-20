@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Download, Vector, Edit, PaperclipIcon, MessageSquare, Send } from 'lucide-react';
+import { Download, FileVector, Edit, PaperclipIcon, MessageSquare, Send } from 'lucide-react';
 
 const DesignLab = () => {
   const [chatInput, setChatInput] = useState('');
@@ -26,7 +26,7 @@ const DesignLab = () => {
     if (!chatInput.trim()) return;
     
     // Add user message to chat
-    const newMessages = [...messages, {text: chatInput, sender: 'user'}];
+    const newMessages = [...messages, {text: chatInput, sender: 'user' as const}];
     setMessages(newMessages);
     
     // Simulate AI response
@@ -34,12 +34,12 @@ const DesignLab = () => {
       if (chatMode) {
         setMessages([...newMessages, {
           text: "I understand your request. Let me think about how to help you with that design.", 
-          sender: 'ai'
+          sender: 'ai' as const
         }]);
       } else {
         setMessages([...newMessages, {
           text: "I've created some new sock designs based on your input. Check them out on the right!", 
-          sender: 'ai'
+          sender: 'ai' as const
         }]);
         // In a real app, you'd generate new designs here
       }
@@ -59,7 +59,7 @@ const DesignLab = () => {
     if (e.target.files && e.target.files.length > 0) {
       // In a real app, you'd handle the file upload here
       const newMessage = `Uploaded file: ${e.target.files[0].name}`;
-      setMessages([...messages, {text: newMessage, sender: 'user'}]);
+      setMessages([...messages, {text: newMessage, sender: 'user' as const}]);
     }
   };
 
@@ -82,7 +82,7 @@ const DesignLab = () => {
     console.log('Editing design:', id);
     setMessages([...messages, {
       text: `I want to edit design #${id}. Can we make some changes to it?`, 
-      sender: 'user'
+      sender: 'user' as const
     }]);
   };
 
@@ -180,7 +180,7 @@ const DesignLab = () => {
                           <Download className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleVectorize(design.id)}>
-                          <Vector className="h-4 w-4" />
+                          <FileVector className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(design.id)}>
                           <Edit className="h-4 w-4" />

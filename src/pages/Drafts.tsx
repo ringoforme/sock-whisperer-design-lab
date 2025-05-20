@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Vector, Edit } from 'lucide-react';
+import { Download, FileVector, Edit } from 'lucide-react';
 
 const Drafts = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -165,7 +164,7 @@ const Drafts = () => {
                         <Download className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleVectorize(draft.id)}>
-                        <Vector className="h-4 w-4" />
+                        <FileVector className="h-4 w-4" />
                       </Button>
                     </div>
                   </CardFooter>
@@ -239,7 +238,7 @@ const Drafts = () => {
                         <Download className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleVectorize(draft.id)}>
-                        <Vector className="h-4 w-4" />
+                        <FileVector className="h-4 w-4" />
                       </Button>
                     </div>
                   </CardFooter>
