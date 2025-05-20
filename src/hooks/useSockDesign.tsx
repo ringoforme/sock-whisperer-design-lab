@@ -1,11 +1,11 @@
 
 import { useState, useCallback } from 'react';
 
-type SockType = 'no-show' | 'crew' | 'knee-high';
+export type SockType = 'no-show' | 'crew' | 'knee-high';
 
-type ThemeType = 'casual' | 'athletic' | 'festive' | 'halloween' | 'christmas' | 'summer' | 'winter' | 'spring' | 'fall';
+export type ThemeType = 'casual' | 'athletic' | 'festive' | 'halloween' | 'christmas' | 'summer' | 'winter' | 'spring' | 'fall';
 
-type PatternType = 
+export type PatternType = 
   | 'solid' 
   | 'stripes' 
   | 'polka-dots' 

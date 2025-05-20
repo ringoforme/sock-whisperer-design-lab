@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { FileUploader, NoteTakingApp, RecipeFinder, RechartsDashboard } from 'lucide-react';
+import { FileText, Book, Utensils, BarChart } from 'lucide-react';
 
 const Home = () => {
   return (
@@ -61,19 +61,19 @@ const Home = () => {
             {/* App buttons */}
             <div className="flex flex-wrap justify-center gap-3">
               <Button variant="outline" className="bg-white flex items-center gap-2 px-4 py-2 rounded-full">
-                <FileUploader className="h-4 w-4" />
+                <FileText className="h-4 w-4" />
                 <span>File uploader</span>
               </Button>
               <Button variant="outline" className="bg-white flex items-center gap-2 px-4 py-2 rounded-full">
-                <NoteTakingApp className="h-4 w-4" />
+                <Book className="h-4 w-4" />
                 <span>Note taking app</span>
               </Button>
               <Button variant="outline" className="bg-white flex items-center gap-2 px-4 py-2 rounded-full">
-                <RecipeFinder className="h-4 w-4" />
+                <Utensils className="h-4 w-4" />
                 <span>Recipe finder</span>
               </Button>
               <Button variant="outline" className="bg-white flex items-center gap-2 px-4 py-2 rounded-full">
-                <RechartsDashboard className="h-4 w-4" />
+                <BarChart className="h-4 w-4" />
                 <span>Recharts dashboard</span>
               </Button>
             </div>
