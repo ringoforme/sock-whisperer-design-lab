@@ -5,6 +5,7 @@ import SockDesignArea from '@/components/SockDesignArea';
 import { useSockDesign } from '@/hooks/useSockDesign';
 import { Toaster } from '@/components/ui/sonner';
 import { Link } from 'react-router-dom';
+import { PatternType, ThemeType } from '@/hooks/useSockDesign';
 
 const DesignLab = () => {
   const {
@@ -32,10 +33,10 @@ const DesignLab = () => {
         updateBaseColor(element.value);
         break;
       case 'pattern':
-        updatePattern(element.value);
+        updatePattern(element.value as PatternType);
         break;
       case 'theme':
-        updateTheme(element.value);
+        updateTheme(element.value as ThemeType);
         break;
     }
   };
