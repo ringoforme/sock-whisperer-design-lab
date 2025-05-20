@@ -1,10 +1,31 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { FileText, Book, Utensils, BarChart } from 'lucide-react';
 
 const Home = () => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+      // You could show a toast or update UI to indicate file selection
+      console.log("File selected:", e.target.files[0].name);
+    }
+  };
+
+  const handleAttachClick = () => {
+    // Programmatically click the hidden file input
+    fileInputRef.current?.click();
+  };
+
+  const handleCreateClick = () => {
+    navigate('/design');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 via-purple-50 to-red-50">
       {/* Header */}
@@ -15,7 +36,7 @@ const Home = () => {
             <h1 className="text-2xl font-bold">Lovable</h1>
           </div>
           <div className="flex gap-4">
-            <Button variant="ghost">Log In</Button>
+            <Button variant="ghost" onClick={() => navigate('/login')}>Log In</Button>
             <Button className="bg-black hover:bg-gray-800 text-white">Get started for free</Button>
           </div>
         </div>
@@ -46,10 +67,30 @@ const Home = () => {
               />
               <div className="flex justify-between items-center mt-4 pt-4 border-t">
                 <div>
-                  <Button variant="outline" size="sm">Attach</Button>
+                  {/* Hidden file input */}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileSelect} 
+                    style={{ display: 'none' }}
+                    accept="image/*"
+                  />
+                  <Button variant="outline" size="sm" onClick={handleAttachClick}>
+                    {selectedFile ? `${selectedFile.name.slice(0, 15)}...` : "Attach"}
+                  </Button>
                 </div>
                 <div className="flex items-center">
-                  <Button variant="outline" size="sm" className="mr-2">Public</Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mr-2" 
+                    onClick={handleCreateClick}
+                  >
+                    Create
+                  </Button>
+                  <Button variant="outline" size="sm" className="mr-2">
+                    Customized
+                  </Button>
                   <Button size="sm" className="rounded-full aspect-square p-2 bg-gray-200">
                     <span className="sr-only">Send</span>
                     →
