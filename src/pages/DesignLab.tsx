@@ -4,8 +4,9 @@ import ChatWindow from '@/components/ChatWindow';
 import SockDesignArea from '@/components/SockDesignArea';
 import { useSockDesign } from '@/hooks/useSockDesign';
 import { Toaster } from '@/components/ui/sonner';
+import { Link } from 'react-router-dom';
 
-const Index = () => {
+const DesignLab = () => {
   const {
     design,
     updateType,
@@ -42,8 +43,12 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white dark:bg-gray-950">
-        <div className="container mx-auto py-4">
-          <h1 className="text-2xl font-bold text-sock-purple text-center">Sock Whisperer Design Lab</h1>
+        <div className="container mx-auto py-4 px-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-sock-purple">Sock Whisperer Design Lab</h1>
+          <nav className="hidden md:flex space-x-6">
+            <Link to="/" className="text-gray-700 hover:text-sock-purple transition-colors">Home</Link>
+            <Link to="/design" className="text-gray-700 hover:text-sock-purple transition-colors font-medium">Design Lab</Link>
+          </nav>
         </div>
       </header>
 
@@ -75,4 +80,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default DesignLab;
