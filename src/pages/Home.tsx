@@ -1,11 +1,14 @@
+
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { FileText, Book, Utensils, BarChart } from 'lucide-react';
+
 const Home = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFile(e.target.files[0]);
@@ -13,13 +16,20 @@ const Home = () => {
       console.log("File selected:", e.target.files[0].name);
     }
   };
+
   const handleAttachClick = () => {
     // Programmatically click the hidden file input
     fileInputRef.current?.click();
   };
+
   const handleCreateClick = () => {
     navigate('/design');
   };
+
+  const handleCustomizedClick = () => {
+    navigate('/customized');
+  };
+
   return <div className="min-h-screen bg-gradient-to-b from-blue-50 via-purple-50 to-red-50">
       {/* Header */}
       <header className="py-4 px-4">
@@ -68,7 +78,7 @@ const Home = () => {
                   <Button variant="outline" size="sm" className="mr-2" onClick={handleCreateClick}>
                     Create
                   </Button>
-                  <Button variant="outline" size="sm" className="mr-2">
+                  <Button variant="outline" size="sm" className="mr-2" onClick={handleCustomizedClick}>
                     Customized
                   </Button>
                   <Button size="sm" className="rounded-full aspect-square p-2 bg-gray-200">
@@ -112,4 +122,5 @@ const Home = () => {
       </footer>
     </div>;
 };
+
 export default Home;
