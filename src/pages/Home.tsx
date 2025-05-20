@@ -82,7 +82,7 @@ const Home = () => {
             {/* App buttons */}
             <div className="flex flex-wrap justify-center gap-3">
               <Button variant="outline" className="bg-white flex items-center gap-2 px-4 py-2 rounded-full">
-                <FileText className="h-4 w-4" />
+                
                 <span>File uploader</span>
               </Button>
               <Button variant="outline" className="bg-white flex items-center gap-2 px-4 py-2 rounded-full">
@@ -114,7 +114,7 @@ const Home = () => {
 
       <footer className="py-8 px-4 text-center text-gray-500 text-sm">
         <div className="container mx-auto">
-          <p>© 2025 SoxLab. Powered by SoxLab.</p>
+          <p>© 2025 Sock Whisperer. Powered by Lovable.</p>
         </div>
       </footer>
     </div>;
