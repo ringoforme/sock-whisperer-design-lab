@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Download, FileVector, Edit, PaperclipIcon, MessageSquare, Send } from 'lucide-react';
+import { Download, File, Edit, PaperclipIcon, MessageSquare, Send } from 'lucide-react';
 
 const DesignLab = () => {
   const [chatInput, setChatInput] = useState('');
@@ -180,7 +180,7 @@ const DesignLab = () => {
                           <Download className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleVectorize(design.id)}>
-                          <FileVector className="h-4 w-4" />
+                          <File className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(design.id)}>
                           <Edit className="h-4 w-4" />
