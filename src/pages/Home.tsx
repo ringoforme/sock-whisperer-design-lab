@@ -1,14 +1,11 @@
-
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { FileText, Book, Utensils, BarChart } from 'lucide-react';
-
 const Home = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFile(e.target.files[0]);
@@ -16,18 +13,14 @@ const Home = () => {
       console.log("File selected:", e.target.files[0].name);
     }
   };
-
   const handleAttachClick = () => {
     // Programmatically click the hidden file input
     fileInputRef.current?.click();
   };
-
   const handleCreateClick = () => {
     navigate('/design');
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-purple-50 to-red-50">
+  return <div className="min-h-screen bg-gradient-to-b from-blue-50 via-purple-50 to-red-50">
       {/* Header */}
       <header className="py-4 px-4">
         <div className="container mx-auto max-w-7xl flex justify-between items-center">
@@ -60,32 +53,19 @@ const Home = () => {
             
             {/* Chat box mockup */}
             <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-6 mb-12">
-              <input 
-                type="text" 
-                placeholder="Ask Lovable to create a"
-                className="w-full px-4 py-3 text-lg bg-transparent border-none focus:outline-none"
-              />
+              <input type="text" placeholder="Ask Lovable to create a" className="w-full px-4 py-3 text-lg bg-transparent border-none focus:outline-none" />
               <div className="flex justify-between items-center mt-4 pt-4 border-t">
                 <div>
                   {/* Hidden file input */}
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileSelect} 
-                    style={{ display: 'none' }}
-                    accept="image/*"
-                  />
+                  <input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{
+                  display: 'none'
+                }} accept="image/*" />
                   <Button variant="outline" size="sm" onClick={handleAttachClick}>
                     {selectedFile ? `${selectedFile.name.slice(0, 15)}...` : "Attach"}
                   </Button>
                 </div>
                 <div className="flex items-center">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mr-2" 
-                    onClick={handleCreateClick}
-                  >
+                  <Button variant="outline" size="sm" className="mr-2" onClick={handleCreateClick}>
                     Create
                   </Button>
                   <Button variant="outline" size="sm" className="mr-2">
@@ -122,14 +102,7 @@ const Home = () => {
         </section>
         
         {/* Navigation link to the Design Lab */}
-        <section className="py-12 px-4 bg-white">
-          <div className="container mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-6">Ready to design your custom socks?</h2>
-            <Button size="lg" className="bg-sock-purple hover:bg-sock-dark-purple">
-              <Link to="/design">Go to Sock Design Lab</Link>
-            </Button>
-          </div>
-        </section>
+        
       </main>
 
       <footer className="py-8 px-4 text-center text-gray-500 text-sm">
@@ -137,8 +110,6 @@ const Home = () => {
           <p>© 2025 SoxLab. Powered by SoxLab.</p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Home;
