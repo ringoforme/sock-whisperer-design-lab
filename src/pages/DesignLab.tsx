@@ -1,11 +1,13 @@
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Download, File, Edit, PaperclipIcon, MessageSquare, Send } from 'lucide-react';
+import ChatWindow from '@/components/ChatWindow';
 
 const DesignLab = () => {
   const [chatInput, setChatInput] = useState('');
@@ -13,7 +15,7 @@ const DesignLab = () => {
   const [messages, setMessages] = useState<{text: string, sender: 'user' | 'ai'}[]>([
     {text: "What kind of sock design would you like to create today?", sender: 'ai'}
   ]);
-  const [designs, setDesigns] = useState<{id: number, imageUrl: string}[]>([
+  const [designs, setDesigns] = useState<{id: number, imageUrl: string, isEditing?: boolean}[]>([
     {id: 1, imageUrl: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=500&auto=format'},
     {id: 2, imageUrl: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=500&auto=format'},
     {id: 3, imageUrl: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=500&auto=format'},
@@ -21,6 +23,34 @@ const DesignLab = () => {
     {id: 5, imageUrl: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=500&auto=format'},
     {id: 6, imageUrl: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=500&auto=format'},
   ]);
+  const [selectedDesign, setSelectedDesign] = useState<number | null>(null);
+  const location = useLocation();
+
+  // Check if there's an initial prompt from the homepage
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const initialPrompt = params.get('prompt');
+    
+    if (initialPrompt) {
+      // Add user message with the initial prompt
+      handleInitialPrompt(initialPrompt);
+    }
+  }, [location]);
+
+  const handleInitialPrompt = (prompt: string) => {
+    setMessages([
+      ...messages,
+      {text: prompt, sender: 'user' as const}
+    ]);
+    
+    // Simulate AI response
+    setTimeout(() => {
+      setMessages(prev => [
+        ...prev,
+        {text: "I understand your request. Let me create some sock designs for you.", sender: 'ai' as const}
+      ]);
+    }, 1000);
+  };
   
   const handleSendMessage = () => {
     if (!chatInput.trim()) return;
@@ -70,20 +100,56 @@ const DesignLab = () => {
   const handleDownload = (id: number) => {
     // In a real app, you'd implement the download functionality here
     console.log('Downloading design:', id);
+    toast.success(`Downloading design #${id}`);
   };
 
   const handleVectorize = (id: number) => {
     // In a real app, you'd implement the vectorize functionality here
     console.log('Vectorizing design:', id);
+    toast.success(`Vectorizing design #${id}`);
   };
 
   const handleEdit = (id: number) => {
-    // In a real app, you'd load the selected design for editing
     console.log('Editing design:', id);
+    
+    // Mark the selected design for editing
+    setSelectedDesign(id);
+    
+    // Update the designs to highlight the selected one
+    setDesigns(designs.map(design => ({
+      ...design,
+      isEditing: design.id === id
+    })));
+    
+    // Add message to chat about editing this design
     setMessages([...messages, {
       text: `I want to edit design #${id}. Can we make some changes to it?`, 
       sender: 'user' as const
     }]);
+    
+    // Simulate AI response
+    setTimeout(() => {
+      setMessages(prev => [
+        ...prev,
+        {text: `I'll help you edit design #${id}. What changes would you like to make?`, sender: 'ai' as const}
+      ]);
+    }, 800);
+  };
+
+  const handleSockDesignPrompt = (message: string) => {
+    // Add user message to chat
+    setMessages(prev => [...prev, {text: message, sender: 'user' as const}]);
+    
+    // Simulate AI processing and response
+    setTimeout(() => {
+      // In a real app, you would process the message and generate/update designs
+      setMessages(prev => [...prev, {
+        text: selectedDesign 
+          ? `I've updated design #${selectedDesign} based on your request.`
+          : "I've created some sock designs based on your description!",
+        sender: 'ai' as const
+      }]);
+    }, 1500);
   };
 
   return (
@@ -108,63 +174,18 @@ const DesignLab = () => {
       <main className="container mx-auto py-6 px-4 md:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
           {/* Chat Area */}
-          <div className="h-[80vh] flex flex-col border rounded-lg bg-white shadow-sm">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((msg, index) => (
-                <div 
-                  key={index} 
-                  className={`message ${msg.sender === 'user' ? 'user-message' : 'ai-message'}`}
-                >
-                  {msg.text}
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  <PaperclipIcon className="h-5 w-5 text-gray-500 hover:text-sock-purple" />
-                  <input 
-                    id="file-upload" 
-                    type="file" 
-                    className="hidden" 
-                    onChange={handleFileUpload} 
-                  />
-                </label>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={toggleChatMode}
-                  className={chatMode ? "text-sock-purple" : "text-gray-500"}
-                >
-                  <MessageSquare className="h-5 w-5" />
-                </Button>
-                <div className="relative flex-1">
-                  <textarea
-                    className="w-full p-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-sock-purple resize-none"
-                    placeholder={chatMode ? "Chat with AI about your design..." : "Describe the sock design you want..."}
-                    rows={1}
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={handleKeyPress}
-                  />
-                  <Button 
-                    size="icon" 
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                    onClick={handleSendMessage}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+          <div className="h-[80vh] flex flex-col border rounded-lg overflow-hidden">
+            <ChatWindow onSendMessage={handleSockDesignPrompt} />
           </div>
           
           {/* Designs Area */}
           <div className="h-[80vh] overflow-y-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {designs.map((design) => (
-                <Card key={design.id} className="overflow-hidden">
+                <Card 
+                  key={design.id} 
+                  className={`overflow-hidden transition-all ${design.isEditing ? 'ring-2 ring-sock-purple' : ''}`}
+                >
                   <CardContent className="p-0">
                     <div className="aspect-square relative">
                       <img 
@@ -172,6 +193,11 @@ const DesignLab = () => {
                         alt={`Sock design ${design.id}`} 
                         className="w-full h-full object-cover"
                       />
+                      {design.isEditing && (
+                        <div className="absolute top-2 right-2 bg-sock-purple text-white text-xs px-2 py-1 rounded">
+                          Editing
+                        </div>
+                      )}
                     </div>
                     <div className="p-3 flex justify-between items-center">
                       <span className="text-sm font-medium">Design #{design.id}</span>
@@ -182,7 +208,12 @@ const DesignLab = () => {
                         <Button variant="ghost" size="icon" onClick={() => handleVectorize(design.id)}>
                           <File className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(design.id)}>
+                        <Button 
+                          variant={design.isEditing ? "default" : "ghost"} 
+                          size="icon" 
+                          onClick={() => handleEdit(design.id)}
+                          className={design.isEditing ? "text-white bg-sock-purple" : ""}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                       </div>
