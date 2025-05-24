@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
@@ -152,8 +153,21 @@ const DesignLab = () => {
       }, 'drafts');
     }
     
-    // 跳转到独立编辑页面
-    navigate(`/edit/${id}`);
+    // 进入编辑模式
+    setSelectedDesign(id);
+    setIsEditingMode(true);
+    
+    // 标记设计为编辑状态
+    setDesigns(designs.map(design => ({
+      ...design,
+      isEditing: design.id === id
+    })));
+    
+    // 更新聊天上下文
+    setMessages(prev => [
+      ...prev,
+      {text: `现在正在编辑设计 #${id}。请告诉我您想要做什么改动？`, sender: 'ai' as const}
+    ]);
   };
 
   const handleRegenerate = async () => {
