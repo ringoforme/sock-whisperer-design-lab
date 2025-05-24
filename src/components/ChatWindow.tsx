@@ -19,7 +19,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onSendMessage }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Welcome to the Sock Whisperer Design Lab! Describe your ideal socks and I'll create them for you. For example, try saying: \"I want purple crew socks with white polka dots\" or \"Create Halloween socks with bats\"",
+      text: "欢迎来到袜匠设计工作室！描述您理想的袜子，我会为您创作。例如，试着说："我想要紫色船袜配白色圆点"或"创作万圣节主题的蝙蝠袜子"",
       isUser: false
     }
   ]);
@@ -58,11 +58,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onSendMessage }) => {
     // Simulate AI response
     setTimeout(() => {
       const designDescriptions = [
-        "I've updated your sock design! Check out the preview.",
-        "Your new sock design is ready to view!",
-        "I've created a sock design based on your description. What do you think?",
-        "Design updated! Take a look at the preview panel.",
-        "Your custom socks are ready for review. Need any adjustments?"
+        "我已更新了您的袜子设计！请查看预览。",
+        "您的新袜子设计已准备就绪！",
+        "我已根据您的描述创建了袜子设计。您觉得怎么样？",
+        "设计已更新！请看预览面板。",
+        "您的定制袜子已准备好审查。需要任何调整吗？"
       ];
       
       const aiResponse = {
@@ -78,8 +78,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onSendMessage }) => {
   return (
     <div className="chat-container h-full flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-sm">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold text-sock-purple">Sock Whisperer Chat</h2>
-        <p className="text-sm text-muted-foreground">Describe your ideal sock design</p>
+        <h2 className="text-lg font-semibold text-sock-purple">袜匠助手聊天</h2>
+        <p className="text-sm text-muted-foreground">描述您理想的袜子设计</p>
       </div>
       
       <div className="messages-container flex-1 overflow-y-auto p-4">
@@ -99,7 +99,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onSendMessage }) => {
           ref={inputRef}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Describe your ideal socks..."
+          placeholder="描述您理想的袜子..."
           className="flex-1"
         />
         <Button type="submit" className="bg-sock-purple hover:bg-sock-dark-purple">

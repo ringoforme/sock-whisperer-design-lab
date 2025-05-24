@@ -34,7 +34,7 @@ const TrendingElements: React.FC<TrendingElementsProps> = ({
   return (
     <Card className="animate-fade-in">
       <CardHeader className="py-4">
-        <CardTitle className="text-sm font-medium">Trending Elements</CardTitle>
+        <CardTitle className="text-sm font-medium">热门元素</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
         <div className="flex flex-wrap gap-2">

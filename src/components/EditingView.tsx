@@ -34,16 +34,16 @@ const EditingView: React.FC<EditingViewProps> = ({
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <CardTitle>Editing Design #{design.id}</CardTitle>
+              <CardTitle>编辑设计 #{design.id}</CardTitle>
             </div>
             <div className="flex space-x-2">
               <Button variant="outline" size="sm" onClick={() => onDownload(design.id)}>
                 <Download className="h-4 w-4 mr-2" />
-                Download
+                下载
               </Button>
               <Button variant="outline" size="sm" onClick={() => onVectorize(design.id)}>
                 <File className="h-4 w-4 mr-2" />
-                Vectorize
+                矢量化
               </Button>
             </div>
           </div>
@@ -52,7 +52,7 @@ const EditingView: React.FC<EditingViewProps> = ({
           <div className="max-w-lg w-full">
             <img 
               src={design.imageUrl} 
-              alt={`Sock design ${design.id}`} 
+              alt={`袜子设计 ${design.id}`} 
               className="w-full h-auto rounded-lg shadow-lg border transition-transform hover:scale-105"
             />
           </div>

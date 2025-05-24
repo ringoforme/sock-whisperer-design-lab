@@ -24,15 +24,15 @@ const Login = () => {
         <CardHeader>
           <div className="flex items-center mb-2">
             <div className="bg-gradient-to-r from-orange-500 to-pink-500 w-8 h-8 rounded-md mr-2"></div>
-            <h1 className="text-2xl font-bold">Lovable</h1>
+            <h1 className="text-2xl font-bold">袜匠工作室</h1>
           </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription>Enter your credentials to access your account</CardDescription>
+          <CardTitle className="text-2xl">欢迎回来</CardTitle>
+          <CardDescription>请输入您的账户信息以登录</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">Email</label>
+              <label htmlFor="email" className="text-sm font-medium">邮箱</label>
               <Input 
                 id="email"
                 type="email" 
@@ -43,7 +43,7 @@ const Login = () => {
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">Password</label>
+              <label htmlFor="password" className="text-sm font-medium">密码</label>
               <Input 
                 id="password"
                 type="password"
@@ -56,12 +56,12 @@ const Login = () => {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full bg-black hover:bg-gray-800 text-white">
-              Sign In
+              登录
             </Button>
             <div className="text-center text-sm">
-              Don't have an account?{" "}
+              还没有账户？{" "}
               <Link to="/" className="text-blue-600 hover:underline">
-                Sign up
+                注册
               </Link>
             </div>
           </CardFooter>

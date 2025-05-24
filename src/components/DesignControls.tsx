@@ -22,46 +22,46 @@ const DesignControls: React.FC<DesignControlsProps> = ({
   onRandomDesign
 }) => {
   const colors = [
-    { name: 'Purple', value: '#9b87f5' },
-    { name: 'Light Purple', value: '#E5DEFF' },
-    { name: 'Green', value: '#F2FCE2' },
-    { name: 'Yellow', value: '#FEF7CD' },
-    { name: 'Orange', value: '#FEC6A1' },
-    { name: 'Pink', value: '#FFDEE2' },
-    { name: 'Peach', value: '#FDE1D3' },
-    { name: 'Blue', value: '#D3E4FD' },
-    { name: 'Gray', value: '#F1F0FB' },
+    { name: '紫色', value: '#9b87f5' },
+    { name: '浅紫色', value: '#E5DEFF' },
+    { name: '绿色', value: '#F2FCE2' },
+    { name: '黄色', value: '#FEF7CD' },
+    { name: '橙色', value: '#FEC6A1' },
+    { name: '粉色', value: '#FFDEE2' },
+    { name: '桃色', value: '#FDE1D3' },
+    { name: '蓝色', value: '#D3E4FD' },
+    { name: '灰色', value: '#F1F0FB' },
   ];
 
   const patterns = [
-    { name: 'None', value: null },
-    { name: 'Polka Dots', value: 'polka-dots' },
-    { name: 'Stripes', value: 'stripes' },
-    { name: 'Chevron', value: 'chevron' },
-    { name: 'Plaid', value: 'plaid' },
-    { name: 'Pumpkins', value: 'pumpkins' },
-    { name: 'Skulls', value: 'skulls' },
-    { name: 'Bats', value: 'bats' },
-    { name: 'Candy Canes', value: 'candy-canes' },
-    { name: 'Snowflakes', value: 'snowflakes' },
-    { name: 'Hearts', value: 'hearts' },
-    { name: 'Stars', value: 'stars' },
-    { name: 'Flowers', value: 'flowers' },
+    { name: '无图案', value: null },
+    { name: '圆点', value: 'polka-dots' },
+    { name: '条纹', value: 'stripes' },
+    { name: '人字纹', value: 'chevron' },
+    { name: '格子', value: 'plaid' },
+    { name: '南瓜', value: 'pumpkins' },
+    { name: '骷髅', value: 'skulls' },
+    { name: '蝙蝠', value: 'bats' },
+    { name: '拐杖糖', value: 'candy-canes' },
+    { name: '雪花', value: 'snowflakes' },
+    { name: '爱心', value: 'hearts' },
+    { name: '星星', value: 'stars' },
+    { name: '花朵', value: 'flowers' },
   ];
 
   return (
     <div className="design-controls mt-4 animate-fade-in">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Design Controls</h3>
+        <h3 className="text-lg font-semibold">设计控制</h3>
         <Button onClick={onRandomDesign} variant="outline" className="text-xs">
-          Random Design
+          随机设计
         </Button>
       </div>
 
       <Card className="mb-4">
         <CardContent className="pt-6">
           <div className="mb-4">
-            <h4 className="text-sm font-medium mb-3">Sock Type</h4>
+            <h4 className="text-sm font-medium mb-3">袜子类型</h4>
             <div className="flex flex-wrap gap-2">
               <Button 
                 variant={currentType === 'no-show' ? 'default' : 'outline'} 
@@ -69,7 +69,7 @@ const DesignControls: React.FC<DesignControlsProps> = ({
                 className={`sock-type-button ${currentType === 'no-show' ? 'active bg-sock-purple hover:bg-sock-dark-purple' : ''}`}
                 onClick={() => onTypeChange('no-show')}
               >
-                No-Show
+                船袜
               </Button>
               <Button 
                 variant={currentType === 'crew' ? 'default' : 'outline'} 
@@ -77,7 +77,7 @@ const DesignControls: React.FC<DesignControlsProps> = ({
                 className={`sock-type-button ${currentType === 'crew' ? 'active bg-sock-purple hover:bg-sock-dark-purple' : ''}`}
                 onClick={() => onTypeChange('crew')}
               >
-                Crew
+                中筒袜
               </Button>
               <Button 
                 variant={currentType === 'knee-high' ? 'default' : 'outline'} 
@@ -85,7 +85,7 @@ const DesignControls: React.FC<DesignControlsProps> = ({
                 className={`sock-type-button ${currentType === 'knee-high' ? 'active bg-sock-purple hover:bg-sock-dark-purple' : ''}`}
                 onClick={() => onTypeChange('knee-high')}
               >
-                Knee-High
+                长筒袜
               </Button>
             </div>
           </div>
@@ -94,8 +94,8 @@ const DesignControls: React.FC<DesignControlsProps> = ({
 
       <Tabs defaultValue="colors" className="w-full">
         <TabsList className="mb-2 w-full">
-          <TabsTrigger value="colors" className="flex-1">Colors</TabsTrigger>
-          <TabsTrigger value="patterns" className="flex-1">Patterns</TabsTrigger>
+          <TabsTrigger value="colors" className="flex-1">颜色</TabsTrigger>
+          <TabsTrigger value="patterns" className="flex-1">图案</TabsTrigger>
         </TabsList>
         
         <TabsContent value="colors" className="space-y-4">

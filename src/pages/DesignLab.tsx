@@ -14,7 +14,7 @@ const DesignLab = () => {
   const [chatInput, setChatInput] = useState('');
   const [chatMode, setChatMode] = useState(true);
   const [messages, setMessages] = useState<{text: string, sender: 'user' | 'ai'}[]>([
-    {text: "What kind of sock design would you like to create today?", sender: 'ai'}
+    {text: "您今天想要创作什么样的袜子设计呢？", sender: 'ai'}
   ]);
   const [designs, setDesigns] = useState<{id: number, imageUrl: string, isEditing?: boolean}[]>([
     {id: 1, imageUrl: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=500&auto=format'},
@@ -49,7 +49,7 @@ const DesignLab = () => {
     setTimeout(() => {
       setMessages(prev => [
         ...prev,
-        {text: "I understand your request. Let me create some sock designs for you.", sender: 'ai' as const}
+        {text: "我理解您的需求。让我为您创作一些袜子设计。", sender: 'ai' as const}
       ]);
     }, 1000);
   };
@@ -65,12 +65,12 @@ const DesignLab = () => {
     setTimeout(() => {
       if (chatMode) {
         setMessages([...newMessages, {
-          text: "I understand your request. Let me think about how to help you with that design.", 
+          text: "我理解您的要求。让我想想如何帮助您实现这个设计。", 
           sender: 'ai' as const
         }]);
       } else {
         setMessages([...newMessages, {
-          text: "I've created some new sock designs based on your input. Check them out on the right!", 
+          text: "我已根据您的输入创建了一些新的袜子设计。请在右侧查看！", 
           sender: 'ai' as const
         }]);
         // In a real app, you'd generate new designs here
@@ -90,7 +90,7 @@ const DesignLab = () => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       // In a real app, you'd handle the file upload here
-      const newMessage = `Uploaded file: ${e.target.files[0].name}`;
+      const newMessage = `已上传文件：${e.target.files[0].name}`;
       setMessages([...messages, {text: newMessage, sender: 'user' as const}]);
     }
   };
@@ -102,13 +102,13 @@ const DesignLab = () => {
   const handleDownload = (id: number) => {
     // In a real app, you'd implement the download functionality here
     console.log('Downloading design:', id);
-    toast.success(`Downloading design #${id}`);
+    toast.success(`正在下载设计 #${id}`);
   };
 
   const handleVectorize = (id: number) => {
     // In a real app, you'd implement the vectorize functionality here
     console.log('Vectorizing design:', id);
-    toast.success(`Vectorizing design #${id}`);
+    toast.success(`正在矢量化设计 #${id}`);
   };
 
   const handleEdit = (id: number) => {
@@ -126,14 +126,14 @@ const DesignLab = () => {
     // Add message to chat about editing this design
     setMessages(prev => [
       ...prev,
-      {text: `I want to edit design #${id}. Can we make some changes to it?`, sender: 'user' as const}
+      {text: `我想编辑设计 #${id}。我们能对它做一些修改吗？`, sender: 'user' as const}
     ]);
     
     // Simulate AI response
     setTimeout(() => {
       setMessages(prev => [
         ...prev,
-        {text: `Perfect! I'm now focused on design #${id}. What changes would you like to make? You can ask me to change colors, patterns, or any other aspects of this design.`, sender: 'ai' as const}
+        {text: `完美！我现在专注于设计 #${id}。您想要做什么修改？您可以要求我改变颜色、图案或这个设计的任何其他方面。`, sender: 'ai' as const}
       ]);
     }, 800);
   };
@@ -151,7 +151,7 @@ const DesignLab = () => {
     // Add message about returning to overview
     setMessages(prev => [
       ...prev,
-      {text: "Thanks for the editing session! I'm back to overview mode. Feel free to edit another design or create new ones.", sender: 'ai' as const}
+      {text: "感谢您的编辑！我回到了概览模式。请随时编辑其他设计或创建新的设计。", sender: 'ai' as const}
     ]);
   };
 
@@ -164,8 +164,8 @@ const DesignLab = () => {
       // In a real app, you would process the message and generate/update designs
       setMessages(prev => [...prev, {
         text: isEditingMode && selectedDesign 
-          ? `I've updated design #${selectedDesign} based on your request. You can see the changes in the preview.`
-          : "I've created some sock designs based on your description!",
+          ? `我已根据您的要求更新了设计 #${selectedDesign}。您可以在预览中看到更改。`
+          : "我已根据您的描述创建了一些袜子设计！",
         sender: 'ai' as const
       }]);
     }, 1500);
@@ -179,15 +179,15 @@ const DesignLab = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white dark:bg-gray-950">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-sock-purple">SoxLab Design Studio</h1>
+          <h1 className="text-2xl font-bold text-sock-purple">袜匠设计工作室</h1>
           <nav className="flex items-center space-x-4">
             <Link to="/drafts" className="text-gray-700 hover:text-sock-purple transition-colors">
-              Drafts
+              草稿
             </Link>
             <Link to="/profile" className="ml-4">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="https://github.com/shadcn.png" alt="User" />
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarImage src="https://github.com/shadcn.png" alt="用户" />
+                <AvatarFallback>用户</AvatarFallback>
               </Avatar>
             </Link>
           </nav>
@@ -221,17 +221,17 @@ const DesignLab = () => {
                       <div className="aspect-square relative">
                         <img 
                           src={design.imageUrl} 
-                          alt={`Sock design ${design.id}`} 
+                          alt={`袜子设计 ${design.id}`} 
                           className="w-full h-full object-cover"
                         />
                         {design.isEditing && (
                           <div className="absolute top-2 right-2 bg-sock-purple text-white text-xs px-2 py-1 rounded">
-                            Editing
+                            编辑中
                           </div>
                         )}
                       </div>
                       <div className="p-3 flex justify-between items-center">
-                        <span className="text-sm font-medium">Design #{design.id}</span>
+                        <span className="text-sm font-medium">设计 #{design.id}</span>
                         <div className="flex space-x-2">
                           <Button variant="ghost" size="icon" onClick={() => handleDownload(design.id)}>
                             <Download className="h-4 w-4" />
