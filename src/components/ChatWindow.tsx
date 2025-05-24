@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onSendMessage }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "欢迎来到袜匠设计工作室！描述您理想的袜子，我会为您创作。例如，试着说：'我想要紫色船袜配白色圆点'或'创作万圣节主题的蝙蝠袜子'",
+      text: "欢迎来到Sox Lab设计工作室！描述您理想的袜子，我会为您创作。例如，试着说：'我想要紫色船袜配白色圆点'或'创作万圣节主题的蝙蝠袜子'",
       isUser: false
     }
   ]);
@@ -77,7 +78,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onSendMessage }) => {
   return (
     <div className="chat-container h-full flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-sm">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold text-sock-purple">袜匠助手聊天</h2>
+        <h2 className="text-lg font-semibold text-sock-purple">Sox Lab助手聊天</h2>
         <p className="text-sm text-muted-foreground">描述您理想的袜子设计</p>
       </div>
       

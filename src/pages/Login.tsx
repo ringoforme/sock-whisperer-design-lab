@@ -24,7 +24,7 @@ const Login = () => {
         <CardHeader>
           <div className="flex items-center mb-2">
             <div className="bg-gradient-to-r from-orange-500 to-pink-500 w-8 h-8 rounded-md mr-2"></div>
-            <h1 className="text-2xl font-bold">袜匠工作室</h1>
+            <h1 className="text-2xl font-bold">Sox Lab工作室</h1>
           </div>
           <CardTitle className="text-2xl">欢迎回来</CardTitle>
           <CardDescription>请输入您的账户信息以登录</CardDescription>

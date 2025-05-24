@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,7 @@ const Home = () => {
         <div className="container mx-auto max-w-7xl flex justify-between items-center">
           <div className="flex items-center">
             <div className="bg-gradient-to-r from-orange-500 to-pink-500 w-8 h-8 rounded-md mr-2"></div>
-            <h1 className="text-2xl font-bold">袜匠工作室</h1>
+            <h1 className="text-2xl font-bold">Sox Lab工作室</h1>
           </div>
           <div className="flex gap-4">
             <Button variant="ghost" onClick={() => navigate('/login')}>登录</Button>
@@ -51,7 +50,7 @@ const Home = () => {
           <div className="container mx-auto max-w-6xl text-center">
             <h1 className="text-5xl md:text-6xl font-bold mb-4">
               创造属于您的 <span className="relative">
-                <span>袜匠作品</span>
+                <span>Sox Lab作品</span>
                 <span className="absolute -right-12 top-0">
                   <div className="bg-gradient-to-r from-orange-500 to-pink-500 w-8 h-8 rounded-md"></div>
                 </span>
@@ -63,7 +62,7 @@ const Home = () => {
             
             {/* Chat box mockup */}
             <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-6 mb-12">
-              <input type="text" placeholder="让袜匠为您创造一个..." className="w-full px-4 py-3 text-lg bg-transparent border-none focus:outline-none" />
+              <input type="text" placeholder="让Sox Lab为您创造一个..." className="w-full px-4 py-3 text-lg bg-transparent border-none focus:outline-none" />
               <div className="flex justify-between items-center mt-4 pt-4 border-t">
                 <div>
                   {/* Hidden file input */}
@@ -117,7 +116,7 @@ const Home = () => {
 
       <footer className="py-8 px-4 text-center text-gray-500 text-sm">
         <div className="container mx-auto">
-          <p>© 2025 袜匠工作室. 由袜匠工作室提供支持。</p>
+          <p>© 2025 Sox Lab工作室. 由Sox Lab工作室提供支持。</p>
         </div>
       </footer>
     </div>;
