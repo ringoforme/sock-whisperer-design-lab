@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Download, File, Edit, PaperclipIcon, MessageSquare, Send } from 'lucide-react';
 import ChatWindow from '@/components/ChatWindow';
+import EditingView from '@/components/EditingView';
 
 const DesignLab = () => {
   const [chatInput, setChatInput] = useState('');
@@ -24,6 +25,7 @@ const DesignLab = () => {
     {id: 6, imageUrl: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=500&auto=format'},
   ]);
   const [selectedDesign, setSelectedDesign] = useState<number | null>(null);
+  const [isEditingMode, setIsEditingMode] = useState(false);
   const location = useLocation();
 
   // Check if there's an initial prompt from the homepage
@@ -112,8 +114,8 @@ const DesignLab = () => {
   const handleEdit = (id: number) => {
     console.log('Editing design:', id);
     
-    // Mark the selected design for editing
     setSelectedDesign(id);
+    setIsEditingMode(true);
     
     // Update the designs to highlight the selected one
     setDesigns(designs.map(design => ({
@@ -122,18 +124,35 @@ const DesignLab = () => {
     })));
     
     // Add message to chat about editing this design
-    setMessages([...messages, {
-      text: `I want to edit design #${id}. Can we make some changes to it?`, 
-      sender: 'user' as const
-    }]);
+    setMessages(prev => [
+      ...prev,
+      {text: `I want to edit design #${id}. Can we make some changes to it?`, sender: 'user' as const}
+    ]);
     
     // Simulate AI response
     setTimeout(() => {
       setMessages(prev => [
         ...prev,
-        {text: `I'll help you edit design #${id}. What changes would you like to make?`, sender: 'ai' as const}
+        {text: `Perfect! I'm now focused on design #${id}. What changes would you like to make? You can ask me to change colors, patterns, or any other aspects of this design.`, sender: 'ai' as const}
       ]);
     }, 800);
+  };
+
+  const handleExitEdit = () => {
+    setIsEditingMode(false);
+    setSelectedDesign(null);
+    
+    // Clear editing state from designs
+    setDesigns(designs.map(design => ({
+      ...design,
+      isEditing: false
+    })));
+    
+    // Add message about returning to overview
+    setMessages(prev => [
+      ...prev,
+      {text: "Thanks for the editing session! I'm back to overview mode. Feel free to edit another design or create new ones.", sender: 'ai' as const}
+    ]);
   };
 
   const handleSockDesignPrompt = (message: string) => {
@@ -144,12 +163,16 @@ const DesignLab = () => {
     setTimeout(() => {
       // In a real app, you would process the message and generate/update designs
       setMessages(prev => [...prev, {
-        text: selectedDesign 
-          ? `I've updated design #${selectedDesign} based on your request.`
+        text: isEditingMode && selectedDesign 
+          ? `I've updated design #${selectedDesign} based on your request. You can see the changes in the preview.`
           : "I've created some sock designs based on your description!",
         sender: 'ai' as const
       }]);
     }, 1500);
+  };
+
+  const getSelectedDesignData = () => {
+    return designs.find(design => design.id === selectedDesign);
   };
 
   return (
@@ -178,50 +201,59 @@ const DesignLab = () => {
             <ChatWindow onSendMessage={handleSockDesignPrompt} />
           </div>
           
-          {/* Designs Area */}
+          {/* Design Area - Dynamic based on editing mode */}
           <div className="h-[80vh] overflow-y-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {designs.map((design) => (
-                <Card 
-                  key={design.id} 
-                  className={`overflow-hidden transition-all ${design.isEditing ? 'ring-2 ring-sock-purple' : ''}`}
-                >
-                  <CardContent className="p-0">
-                    <div className="aspect-square relative">
-                      <img 
-                        src={design.imageUrl} 
-                        alt={`Sock design ${design.id}`} 
-                        className="w-full h-full object-cover"
-                      />
-                      {design.isEditing && (
-                        <div className="absolute top-2 right-2 bg-sock-purple text-white text-xs px-2 py-1 rounded">
-                          Editing
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-3 flex justify-between items-center">
-                      <span className="text-sm font-medium">Design #{design.id}</span>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleDownload(design.id)}>
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleVectorize(design.id)}>
-                          <File className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant={design.isEditing ? "default" : "ghost"} 
-                          size="icon" 
-                          onClick={() => handleEdit(design.id)}
-                          className={design.isEditing ? "text-white bg-sock-purple" : ""}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+            {isEditingMode && selectedDesign && getSelectedDesignData() ? (
+              <EditingView 
+                design={getSelectedDesignData()!}
+                onExitEdit={handleExitEdit}
+                onDownload={handleDownload}
+                onVectorize={handleVectorize}
+              />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {designs.map((design) => (
+                  <Card 
+                    key={design.id} 
+                    className={`overflow-hidden transition-all ${design.isEditing ? 'ring-2 ring-sock-purple' : ''}`}
+                  >
+                    <CardContent className="p-0">
+                      <div className="aspect-square relative">
+                        <img 
+                          src={design.imageUrl} 
+                          alt={`Sock design ${design.id}`} 
+                          className="w-full h-full object-cover"
+                        />
+                        {design.isEditing && (
+                          <div className="absolute top-2 right-2 bg-sock-purple text-white text-xs px-2 py-1 rounded">
+                            Editing
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      <div className="p-3 flex justify-between items-center">
+                        <span className="text-sm font-medium">Design #{design.id}</span>
+                        <div className="flex space-x-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleDownload(design.id)}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleVectorize(design.id)}>
+                            <File className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant={design.isEditing ? "default" : "ghost"} 
+                            size="icon" 
+                            onClick={() => handleEdit(design.id)}
+                            className={design.isEditing ? "text-white bg-sock-purple" : ""}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>
