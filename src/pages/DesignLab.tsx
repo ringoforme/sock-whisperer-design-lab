@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Download, File, Edit, PaperclipIcon, MessageSquare, Send } from 'lucide-react';
 import ChatWindow from '@/components/ChatWindow';
 import EditingView from '@/components/EditingView';
+import RegenerateButton from '@/components/RegenerateButton';
+import { useDesignStorage } from '@/hooks/useDesignStorage';
 
 const DesignLab = () => {
   const [chatInput, setChatInput] = useState('');
@@ -26,7 +27,10 @@ const DesignLab = () => {
   ]);
   const [selectedDesign, setSelectedDesign] = useState<number | null>(null);
   const [isEditingMode, setIsEditingMode] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { addDesign } = useDesignStorage();
 
   // Check if there's an initial prompt from the homepage
   useEffect(() => {
@@ -100,42 +104,87 @@ const DesignLab = () => {
   };
 
   const handleDownload = (id: number) => {
-    // In a real app, you'd implement the download functionality here
     console.log('Downloading design:', id);
-    toast.success(`正在下载设计 #${id}`);
+    const design = designs.find(d => d.id === id);
+    if (design) {
+      // 注释：这里需要实现真实的下载功能
+      // 需要连接文件存储服务，如Supabase Storage
+      addDesign({
+        id: id.toString(),
+        imageUrl: design.imageUrl,
+        title: `设计 #${id}`,
+        createdAt: new Date().toISOString(),
+        type: 'downloaded'
+      }, 'downloaded');
+      toast.success(`正在下载设计 #${id}`);
+    }
   };
 
   const handleVectorize = (id: number) => {
-    // In a real app, you'd implement the vectorize functionality here
     console.log('Vectorizing design:', id);
-    toast.success(`正在矢量化设计 #${id}`);
+    const design = designs.find(d => d.id === id);
+    if (design) {
+      // 注释：这里需要实现矢量化功能
+      // 需要连接矢量化API或服务
+      addDesign({
+        id: id.toString(),
+        imageUrl: design.imageUrl,
+        title: `设计 #${id}`,
+        createdAt: new Date().toISOString(),
+        type: 'vectorized'
+      }, 'vectorized');
+      toast.success(`正在矢量化设计 #${id}`);
+    }
   };
 
   const handleEdit = (id: number) => {
     console.log('Editing design:', id);
     
-    setSelectedDesign(id);
-    setIsEditingMode(true);
+    // 保存到草稿库
+    const design = designs.find(d => d.id === id);
+    if (design) {
+      addDesign({
+        id: id.toString(),
+        imageUrl: design.imageUrl,
+        title: `设计 #${id}`,
+        createdAt: new Date().toISOString(),
+        type: 'draft'
+      }, 'drafts');
+    }
     
-    // Update the designs to highlight the selected one
-    setDesigns(designs.map(design => ({
-      ...design,
-      isEditing: design.id === id
-    })));
+    // 跳转到独立编辑页面
+    navigate(`/edit/${id}`);
+  };
+
+  const handleRegenerate = async () => {
+    setIsRegenerating(true);
     
-    // Add message to chat about editing this design
-    setMessages(prev => [
-      ...prev,
-      {text: `我想编辑设计 #${id}。我们能对它做一些修改吗？`, sender: 'user' as const}
-    ]);
+    // 注释：这里需要连接AI图片生成API
+    // 推荐使用：DALL-E, Midjourney, 或 Stable Diffusion
+    // 通过Supabase Edge Functions调用API
     
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // 模拟API调用
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // 生成新的设计图片URLs
+      const newDesigns = Array.from({ length: 6 }, (_, index) => ({
+        id: Date.now() + index,
+        imageUrl: `https://images.unsplash.com/photo-${Date.now() + index}?w=500&auto=format`
+      }));
+      
+      setDesigns(newDesigns);
+      toast.success('已重新生成6张新设计！');
+      
       setMessages(prev => [
         ...prev,
-        {text: `完美！我现在专注于设计 #${id}。您想要做什么修改？您可以要求我改变颜色、图案或这个设计的任何其他方面。`, sender: 'ai' as const}
+        {text: "我已为您重新生成了6张全新的袜子设计！", sender: 'ai' as const}
       ]);
-    }, 800);
+    } catch (error) {
+      toast.error('重新生成失败，请稍后重试');
+    } finally {
+      setIsRegenerating(false);
+    }
   };
 
   const handleExitEdit = () => {
@@ -211,47 +260,59 @@ const DesignLab = () => {
                 onVectorize={handleVectorize}
               />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {designs.map((design) => (
-                  <Card 
-                    key={design.id} 
-                    className={`overflow-hidden transition-all ${design.isEditing ? 'ring-2 ring-sock-purple' : ''}`}
-                  >
-                    <CardContent className="p-0">
-                      <div className="aspect-square relative">
-                        <img 
-                          src={design.imageUrl} 
-                          alt={`袜子设计 ${design.id}`} 
-                          className="w-full h-full object-cover"
-                        />
-                        {design.isEditing && (
-                          <div className="absolute top-2 right-2 bg-sock-purple text-white text-xs px-2 py-1 rounded">
-                            编辑中
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-3 flex justify-between items-center">
-                        <span className="text-sm font-medium">设计 #{design.id}</span>
-                        <div className="flex space-x-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleDownload(design.id)}>
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleVectorize(design.id)}>
-                            <File className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant={design.isEditing ? "default" : "ghost"} 
-                            size="icon" 
-                            onClick={() => handleEdit(design.id)}
-                            className={design.isEditing ? "text-white bg-sock-purple" : ""}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+              <div>
+                {/* Run 重新生成按钮 */}
+                <div className="mb-4 flex justify-between items-center">
+                  <h2 className="text-lg font-semibold">设计作品</h2>
+                  <RegenerateButton 
+                    onRegenerate={handleRegenerate}
+                    isGenerating={isRegenerating}
+                    label="重新生成6张"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {designs.map((design) => (
+                    <Card 
+                      key={design.id} 
+                      className={`overflow-hidden transition-all ${design.isEditing ? 'ring-2 ring-sock-purple' : ''}`}
+                    >
+                      <CardContent className="p-0">
+                        <div className="aspect-square relative">
+                          <img 
+                            src={design.imageUrl} 
+                            alt={`袜子设计 ${design.id}`} 
+                            className="w-full h-full object-cover"
+                          />
+                          {design.isEditing && (
+                            <div className="absolute top-2 right-2 bg-sock-purple text-white text-xs px-2 py-1 rounded">
+                              编辑中
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        <div className="p-3 flex justify-between items-center">
+                          <span className="text-sm font-medium">设计 #{design.id}</span>
+                          <div className="flex space-x-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleDownload(design.id)}>
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleVectorize(design.id)}>
+                              <File className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant={design.isEditing ? "default" : "ghost"} 
+                              size="icon" 
+                              onClick={() => handleEdit(design.id)}
+                              className={design.isEditing ? "text-white bg-sock-purple" : ""}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             )}
           </div>
