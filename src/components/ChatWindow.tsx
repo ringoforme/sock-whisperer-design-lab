@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +18,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onSendMessage }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "欢迎来到袜匠设计工作室！描述您理想的袜子，我会为您创作。例如，试着说："我想要紫色船袜配白色圆点"或"创作万圣节主题的蝙蝠袜子"",
+      text: "欢迎来到袜匠设计工作室！描述您理想的袜子，我会为您创作。例如，试着说：'我想要紫色船袜配白色圆点'或'创作万圣节主题的蝙蝠袜子'",
       isUser: false
     }
   ]);
