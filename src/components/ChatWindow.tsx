@@ -12,17 +12,18 @@ interface Message {
 }
 
 interface ChatWindowProps {
+  messages: Message[];
   onSendMessage: (message: string) => void;
+  isEditingMode?: boolean;
+  selectedDesignId?: number | null;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ onSendMessage }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      text: "欢迎来到Sox Lab设计工作室！描述您理想的袜子，我会为您创作。例如，试着说：'我想要紫色船袜配白色圆点'或'创作万圣节主题的蝙蝠袜子'",
-      isUser: false
-    }
-  ]);
+const ChatWindow: React.FC<ChatWindowProps> = ({ 
+  messages, 
+  onSendMessage, 
+  isEditingMode = false, 
+  selectedDesignId 
+}) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,45 +42,44 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onSendMessage }) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
-    // Add user message to chat
-    const userMessage = {
-      id: messages.length + 1,
-      text: inputValue,
-      isUser: true
-    };
-    setMessages(prev => [...prev, userMessage]);
-    
     // Pass message to parent component
     onSendMessage(inputValue);
     
     // Clear input
     setInputValue('');
-    
-    // Simulate AI response
-    setTimeout(() => {
-      const designDescriptions = [
-        "我已更新了您的袜子设计！请查看预览。",
-        "您的新袜子设计已准备就绪！",
-        "我已根据您的描述创建了袜子设计。您觉得怎么样？",
-        "设计已更新！请看预览面板。",
-        "您的定制袜子已准备好审查。需要任何调整吗？"
-      ];
-      
-      const aiResponse = {
-        id: messages.length + 2,
-        text: designDescriptions[Math.floor(Math.random() * designDescriptions.length)],
-        isUser: false
-      };
-      
-      setMessages(prev => [...prev, aiResponse]);
-    }, 1000);
+  };
+
+  const getPlaceholderText = () => {
+    if (isEditingMode && selectedDesignId) {
+      return `对设计 #${selectedDesignId} 说些什么...`;
+    }
+    return "描述您理想的袜子...";
+  };
+
+  const getHeaderText = () => {
+    if (isEditingMode && selectedDesignId) {
+      return `编辑设计 #${selectedDesignId}`;
+    }
+    return "Sox Lab助手聊天";
+  };
+
+  const getSubHeaderText = () => {
+    if (isEditingMode && selectedDesignId) {
+      return "告诉我您想对这个设计做什么改动";
+    }
+    return "描述您理想的袜子设计";
   };
 
   return (
     <div className="chat-container h-full flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-sm">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold text-sock-purple">Sox Lab助手聊天</h2>
-        <p className="text-sm text-muted-foreground">描述您理想的袜子设计</p>
+        <h2 className="text-lg font-semibold text-sock-purple">{getHeaderText()}</h2>
+        <p className="text-sm text-muted-foreground">{getSubHeaderText()}</p>
+        {isEditingMode && selectedDesignId && (
+          <div className="mt-2 text-xs bg-sock-light-purple text-sock-purple px-2 py-1 rounded">
+            正在编辑模式
+          </div>
+        )}
       </div>
       
       <div className="messages-container flex-1 overflow-y-auto p-4">
@@ -99,7 +99,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onSendMessage }) => {
           ref={inputRef}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="描述您理想的袜子..."
+          placeholder={getPlaceholderText()}
           className="flex-1"
         />
         <Button type="submit" className="bg-sock-purple hover:bg-sock-dark-purple">

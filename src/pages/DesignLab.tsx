@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
@@ -12,11 +11,21 @@ import EditingView from '@/components/EditingView';
 import RegenerateButton from '@/components/RegenerateButton';
 import { useDesignStorage } from '@/hooks/useDesignStorage';
 
+interface Message {
+  id: number;
+  text: string;
+  isUser: boolean;
+}
+
 const DesignLab = () => {
   const [chatInput, setChatInput] = useState('');
   const [chatMode, setChatMode] = useState(true);
-  const [messages, setMessages] = useState<{text: string, sender: 'user' | 'ai'}[]>([
-    {text: "您今天想要创作什么样的袜子设计呢？", sender: 'ai'}
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 1,
+      text: "欢迎来到Sox Lab设计工作室！描述您理想的袜子，我会为您创作。例如，试着说：'我想要紫色船袜配白色圆点'或'创作万圣节主题的蝙蝠袜子'",
+      isUser: false
+    }
   ]);
   const [designs, setDesigns] = useState<{id: number, imageUrl: string, isEditing?: boolean}[]>([
     {id: 1, imageUrl: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=500&auto=format'},
@@ -39,64 +48,77 @@ const DesignLab = () => {
     const initialPrompt = params.get('prompt');
     
     if (initialPrompt) {
-      // Add user message with the initial prompt
       handleInitialPrompt(initialPrompt);
     }
   }, [location]);
 
   const handleInitialPrompt = (prompt: string) => {
-    setMessages([
+    const newMessages = [
       ...messages,
-      {text: prompt, sender: 'user' as const}
-    ]);
+      {id: messages.length + 1, text: prompt, isUser: true}
+    ];
+    setMessages(newMessages);
     
     // Simulate AI response
     setTimeout(() => {
       setMessages(prev => [
         ...prev,
-        {text: "我理解您的需求。让我为您创作一些袜子设计。", sender: 'ai' as const}
+        {id: prev.length + 1, text: "我理解您的需求。让我为您创作一些袜子设计。", isUser: false}
       ]);
     }, 1000);
   };
-  
-  const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
-    
-    // Add user message to chat
-    const newMessages = [...messages, {text: chatInput, sender: 'user' as const}];
-    setMessages(newMessages);
-    
-    // Simulate AI response
-    setTimeout(() => {
-      if (chatMode) {
-        setMessages([...newMessages, {
-          text: "我理解您的要求。让我想想如何帮助您实现这个设计。", 
-          sender: 'ai' as const
-        }]);
-      } else {
-        setMessages([...newMessages, {
-          text: "我已根据您的输入创建了一些新的袜子设计。请在右侧查看！", 
-          sender: 'ai' as const
-        }]);
-        // In a real app, you'd generate new designs here
-      }
-    }, 1000);
-    
-    setChatInput('');
-  };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+  const handleSendMessage = (userMessage: string) => {
+    // Add user message to chat
+    const userMsg = {id: messages.length + 1, text: userMessage, isUser: true};
+    setMessages(prev => [...prev, userMsg]);
+    
+    // Simulate AI response based on context
+    setTimeout(() => {
+      let aiResponse = "";
+      
+      if (isEditingMode && selectedDesign) {
+        // 注释：这里需要连接图片编辑API
+        // 推荐使用：OpenAI DALL-E Edit API, Adobe Photoshop API, Canva API
+        // 通过Supabase Edge Functions处理API调用
+        // 实现步骤：
+        // 1. 解析用户的编辑指令（颜色、图案、样式等）
+        // 2. 调用图片编辑API
+        // 3. 更新designs中对应图片的imageUrl
+        // 4. 保存编辑历史到数据库
+        
+        aiResponse = `我已根据您的指令"${userMessage}"更新了设计 #${selectedDesign}。请查看预览！`;
+        
+        // 模拟图片更新
+        setTimeout(() => {
+          setDesigns(prev => prev.map(design => 
+            design.id === selectedDesign 
+              ? { ...design, imageUrl: `${design.imageUrl}&t=${Date.now()}` }
+              : design
+          ));
+        }, 1500);
+      } else {
+        // 普通设计对话
+        const responses = [
+          "我已根据您的描述创建了袜子设计！请查看右侧的设计作品。",
+          "您的设计想法很棒！我已为您生成了一些概念。",
+          "根据您的要求，我创建了几种不同的袜子设计方案。"
+        ];
+        aiResponse = responses[Math.floor(Math.random() * responses.length)];
+      }
+      
+      setMessages(prev => [
+        ...prev,
+        {id: prev.length + 1, text: aiResponse, isUser: false}
+      ]);
+    }, 1000);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       // In a real app, you'd handle the file upload here
       const newMessage = `已上传文件：${e.target.files[0].name}`;
-      setMessages([...messages, {text: newMessage, sender: 'user' as const}]);
+      setMessages([...messages, {id: messages.length + 1, text: newMessage, isUser: true}]);
     }
   };
 
@@ -163,10 +185,20 @@ const DesignLab = () => {
       isEditing: design.id === id
     })));
     
-    // 更新聊天上下文
+    // 更新聊天上下文，包含图片信息
     setMessages(prev => [
       ...prev,
-      {text: `现在正在编辑设计 #${id}。请告诉我您想要做什么改动？`, sender: 'ai' as const}
+      {
+        id: prev.length + 1,
+        text: `现在正在编辑设计 #${id}。您可以告诉我想要做什么改动，比如：
+        • 更改颜色："把蓝色改成红色"
+        • 修改图案："添加圆点图案"
+        • 调整样式："改成船袜款式"
+        • 更换主题："改成运动风格"
+        
+        请描述您想要的具体修改！`, 
+        isUser: false
+      }
     ]);
   };
 
@@ -192,7 +224,7 @@ const DesignLab = () => {
       
       setMessages(prev => [
         ...prev,
-        {text: "我已为您重新生成了6张全新的袜子设计！", sender: 'ai' as const}
+        {id: prev.length + 1, text: "我已为您重新生成了6张全新的袜子设计！", isUser: false}
       ]);
     } catch (error) {
       toast.error('重新生成失败，请稍后重试');
@@ -214,24 +246,8 @@ const DesignLab = () => {
     // Add message about returning to overview
     setMessages(prev => [
       ...prev,
-      {text: "感谢您的编辑！我回到了概览模式。请随时编辑其他设计或创建新的设计。", sender: 'ai' as const}
+      {id: prev.length + 1, text: "已退出编辑模式。您可以继续编辑其他设计或创建新的设计。", isUser: false}
     ]);
-  };
-
-  const handleSockDesignPrompt = (message: string) => {
-    // Add user message to chat
-    setMessages(prev => [...prev, {text: message, sender: 'user' as const}]);
-    
-    // Simulate AI processing and response
-    setTimeout(() => {
-      // In a real app, you would process the message and generate/update designs
-      setMessages(prev => [...prev, {
-        text: isEditingMode && selectedDesign 
-          ? `我已根据您的要求更新了设计 #${selectedDesign}。您可以在预览中看到更改。`
-          : "我已根据您的描述创建了一些袜子设计！",
-        sender: 'ai' as const
-      }]);
-    }, 1500);
   };
 
   const getSelectedDesignData = () => {
@@ -261,7 +277,12 @@ const DesignLab = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
           {/* Chat Area */}
           <div className="h-[80vh] flex flex-col border rounded-lg overflow-hidden">
-            <ChatWindow onSendMessage={handleSockDesignPrompt} />
+            <ChatWindow 
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              isEditingMode={isEditingMode}
+              selectedDesignId={selectedDesign}
+            />
           </div>
           
           {/* Design Area - Dynamic based on editing mode */}
