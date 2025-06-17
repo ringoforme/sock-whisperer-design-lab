@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -138,17 +137,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           </div>
           
           <div className="flex gap-2">
-            {!isEditingMode && (
-              <Button
-                type="button"
-                onClick={onGenerateImage}
-                disabled={isGenerating}
-                className="bg-green-600 hover:bg-green-700 text-white px-4"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                {isGenerating ? '生成中...' : '生成图片'}
-              </Button>
-            )}
+            <Button
+              type="button"
+              onClick={onGenerateImage}
+              disabled={isGenerating}
+              className="bg-green-600 hover:bg-green-700 text-white px-4"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              {isGenerating ? '生成中...' : isEditingMode ? '修改图片' : '生成图片'}
+            </Button>
             
             <Button 
               type="submit" 
