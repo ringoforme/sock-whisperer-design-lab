@@ -1,9 +1,10 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toggle } from '@/components/ui/toggle';
 import { useToast } from '@/components/ui/use-toast';
-import { Send, MessageCircle, Image, Paperclip } from 'lucide-react';
+import { Send, MessageCircle, Image, Paperclip, Sparkles } from 'lucide-react';
 
 interface Message {
   id: number;
@@ -14,19 +15,25 @@ interface Message {
 interface ChatWindowProps {
   messages: Message[];
   onSendMessage: (message: string) => void;
+  onGenerateImage: () => void;
   isEditingMode?: boolean;
   selectedDesignId?: number | null;
   isChatMode?: boolean;
   onChatModeToggle?: (enabled: boolean) => void;
+  isGenerating?: boolean;
+  hasDesign?: boolean;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ 
   messages, 
-  onSendMessage, 
+  onSendMessage,
+  onGenerateImage,
   isEditingMode = false, 
   selectedDesignId,
   isChatMode = false,
-  onChatModeToggle
+  onChatModeToggle,
+  isGenerating = false,
+  hasDesign = false
 }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -63,8 +70,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     if (isChatMode) {
       return "和我聊聊您的设计想法...";
     }
-    if (isEditingMode && selectedDesignId) {
-      return `对设计 #${selectedDesignId + 1} 说些什么...`;
+    if (isEditingMode && selectedDesignId !== null) {
+      return `对设计说些什么...`;
     }
     return "描述您理想的袜子...";
   };
@@ -73,8 +80,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     if (isChatMode) {
       return "设计创意聊天";
     }
-    if (isEditingMode && selectedDesignId) {
-      return `编辑设计 #${selectedDesignId + 1}`;
+    if (isEditingMode && selectedDesignId !== null) {
+      return `编辑设计`;
     }
     return "Sox Lab助手聊天";
   };
@@ -83,10 +90,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     if (isChatMode) {
       return "让我们一起探讨您的袜子设计创意";
     }
-    if (isEditingMode && selectedDesignId) {
+    if (isEditingMode && selectedDesignId !== null) {
       return "告诉我您想对这个设计做什么改动";
     }
-    return "描述您理想的袜子设计";
+    return "先聊聊您的设计想法，然后生成图片";
   };
 
   const getHeaderIcon = () => {
@@ -104,7 +111,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           <h2 className="text-lg font-semibold text-sock-purple">{getHeaderText()}</h2>
         </div>
         <p className="text-sm text-muted-foreground">{getSubHeaderText()}</p>
-        {(isEditingMode && selectedDesignId) && (
+        {(isEditingMode && selectedDesignId !== null) && (
           <div className="mt-2 text-xs bg-sock-light-purple text-sock-purple px-2 py-1 rounded">
             正在编辑模式
           </div>
@@ -159,6 +166,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               <MessageCircle className="h-4 w-4 mr-1" />
               聊天模式
             </Toggle>
+
+            {!isChatMode && !isEditingMode && (
+              <Button
+                type="button"
+                onClick={onGenerateImage}
+                disabled={isGenerating}
+                className="bg-green-600 hover:bg-green-700 text-white px-4"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {isGenerating ? '生成中...' : '生成图片'}
+              </Button>
+            )}
           </div>
           
           <Button 

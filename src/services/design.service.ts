@@ -1,3 +1,4 @@
+
 // 导入我们刚刚定义的类型
 import type { DesignData } from "../types/design";
 
@@ -5,11 +6,11 @@ import type { DesignData } from "../types/design";
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 /**
- * 主流程：发送初始想法到后端，获取6个设计方案
+ * 主流程：发送初始想法到后端，获取1个设计方案
  * @param idea - 用户输入的灵感字符串
- * @returns - 返回一个包含6个设计方案的数组
+ * @returns - 返回一个设计方案
  */
-export async function generateDesigns(idea: string): Promise<DesignData[]> {
+export async function generateDesigns(idea: string): Promise<DesignData> {
   const response = await fetch(`${API_BASE_URL}/generate_designs`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -20,7 +21,11 @@ export async function generateDesigns(idea: string): Promise<DesignData[]> {
     const errorData = await response.json();
     throw new Error(errorData.error || "Failed to generate designs.");
   }
-  return response.json();
+  
+  // 假设后端现在返回单个设计而不是数组
+  // 如果后端仍返回数组，我们取第一个
+  const result = await response.json();
+  return Array.isArray(result) ? result[0] : result;
 }
 
 /**

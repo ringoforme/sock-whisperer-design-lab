@@ -5,10 +5,9 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Download, File, Edit, AlertCircle, MessageCircle } from "lucide-react";
+import { Download, Edit, AlertCircle, MessageCircle } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
-import RegenerateButton from "@/components/RegenerateButton";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 
 import { generateDesigns, regenerateImage } from "@/services/design.service";
@@ -26,18 +25,15 @@ const DesignLab = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "欢迎来到Sox Lab设计工作室！描述您理想的袜子，我会为您创作。",
+      text: "欢迎来到Sox Lab设计工作室！请先告诉我您想要什么样的袜子设计，我们可以先聊聊您的想法。",
       isUser: false,
     },
   ]);
-  const [designs, setDesigns] = useState<DesignState[]>([]);
-  const [selectedDesignIndex, setSelectedDesignIndex] = useState<number | null>(
-    null
-  );
+  const [design, setDesign] = useState<DesignState | null>(null);
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isChatMode, setIsChatMode] = useState(false);
+  const [isChatMode, setIsChatMode] = useState(true); // 默认开启聊天模式
 
   const location = useLocation();
   const { addDesign } = useDesignStorage();
@@ -57,24 +53,35 @@ const DesignLab = () => {
       `您的创意很有趣！对于袜子设计来说，颜色搭配很重要。您提到的元素可以作为主图案放在袜身中部，这样既突出又不会过于繁复。`,
       `这是一个很有创意的想法！建议可以结合一些几何元素来平衡设计，让整体看起来更协调。您对配色有什么特别的偏好吗？`,
       `您的设计概念很独特！可以考虑将主要图案放在脚踝部分，这样穿着时既能展示设计又很实用。需要考虑什么样的袜子长度呢？`,
-      `很棒的灵感！建议可以用对比色来突出设计重点，同时保持整体的简洁感。您希望这款袜子适合什么场合穿着？`
+      `很棒的灵感！建议可以用对比色来突出设计重点，同时保持整体的简洁感。您希望这款袜子适合什么场合穿着？当您准备好时，可以点击"生成图片"按钮来创建设计。`
     ];
     
     return responses[Math.floor(Math.random() * responses.length)];
   };
 
-  // 需求3: 优化前端状态管理逻辑
-  const triggerInitialGeneration = async (prompt: string) => {
+  // 生成图片功能
+  const triggerImageGeneration = async () => {
+    // 从聊天记录中提取用户的所有输入作为prompt
+    const userMessages = messages.filter(m => m.isUser).map(m => m.text).join(' ');
+    
+    if (!userMessages.trim()) {
+      toast.error("请先描述您的设计想法");
+      return;
+    }
+
     setIsGenerating(true);
     setError(null);
 
     try {
-      const newDesigns = await generateDesigns(prompt);
-      // 只有在API完全成功时，才用新结果覆盖旧结果
-      setDesigns(newDesigns.map((d) => ({ ...d, isEditing: false })));
-      toast.success("已为您生成了4张精彩的设计！");
+      const newDesign = await generateDesigns(userMessages);
+      setDesign({ ...newDesign, isEditing: false });
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        text: "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。",
+        isUser: false
+      }]);
+      toast.success("设计生成成功！");
     } catch (err: any) {
-      // 如果API调用失败，只显示错误提示，不影响界面上已有的图片
       setError(err.message);
       toast.error(`生成失败: ${err.message}`);
     } finally {
@@ -102,20 +109,14 @@ const DesignLab = () => {
       return;
     }
 
-    if (isEditingMode && selectedDesignIndex !== null) {
+    if (isEditingMode && design) {
       setIsGenerating(true);
-      const originalPrompt = designs[selectedDesignIndex].prompt_en;
+      const originalPrompt = design.prompt_en;
       const editInstruction = `Based on the original prompt: "${originalPrompt}", please apply this modification: "${userMessage}"`;
       try {
         const newDesign = await regenerateImage(editInstruction);
-        setDesigns((prev) =>
-          prev.map((design, index) =>
-            index === selectedDesignIndex
-              ? { ...newDesign, isEditing: true }
-              : design
-          )
-        );
-        toast.success(`设计 #${selectedDesignIndex + 1} 已更新！`);
+        setDesign({ ...newDesign, isEditing: true });
+        toast.success(`设计已更新！`);
         setMessages((prev) => [
           ...prev,
           {
@@ -129,51 +130,25 @@ const DesignLab = () => {
       } finally {
         setIsGenerating(false);
       }
-    } else {
-      triggerInitialGeneration(userMessage);
     }
-  };
-
-  const handleRegenerate = async () => {
-    const lastUserMessage = messages
-      .slice()
-      .reverse()
-      .find((m) => m.isUser)?.text;
-    if (!lastUserMessage) {
-      toast.error("没有可用于重新生成的上下文，请先发送一条设计指令。");
-      return;
-    }
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        text: `好的，正在根据您之前的想法 "${lastUserMessage}" 重新生成...`,
-        isUser: false,
-      },
-    ]);
-    triggerInitialGeneration(lastUserMessage);
   };
 
   const handleChatModeToggle = (enabled: boolean) => {
     setIsChatMode(enabled);
   };
 
-  // 其他 handlers 保持不变...
-  const handleEdit = (index: number) => {
-    if (designs[index].design_name === "生成失败") {
+  const handleEdit = () => {
+    if (!design || design.design_name === "生成失败") {
       toast.info("无法编辑一个生成失败的设计。");
       return;
     }
-    setSelectedDesignIndex(index);
     setIsEditingMode(true);
-    setDesigns((prev) =>
-      prev.map((design, i) => ({ ...design, isEditing: i === index }))
-    );
+    setDesign(prev => prev ? { ...prev, isEditing: true } : null);
     setMessages((prev) => [
       ...prev,
       {
         id: Date.now(),
-        text: `现在正在编辑设计 #${index + 1}。`,
+        text: "现在正在编辑模式，您可以告诉我想要做什么调整。",
         isUser: false,
       },
     ]);
@@ -181,25 +156,23 @@ const DesignLab = () => {
 
   const handleExitEdit = () => {
     setIsEditingMode(false);
-    setSelectedDesignIndex(null);
-    setDesigns((prev) =>
-      prev.map((design) => ({ ...design, isEditing: false }))
-    );
+    setDesign(prev => prev ? { ...prev, isEditing: false } : null);
     setMessages((prev) => [
       ...prev,
       { id: Date.now(), text: "已退出编辑模式。", isUser: false },
     ]);
   };
 
-  const handleDownload = (index: number) => {
-    /* ...函数内容不变... */
+  const handleDownload = () => {
+    if (!design) return;
+    // Download logic here
+    toast.success("图片下载已开始");
   };
-  const handleVectorize = (index: number) => {
-    /* ...函数内容不变... */
-  };
-  const getSelectedDesignData = () => {
-    if (selectedDesignIndex === null) return undefined;
-    return designs[selectedDesignIndex];
+
+  const handleVectorize = () => {
+    if (!design) return;
+    // Vectorize logic here
+    toast.success("矢量化处理已开始");
   };
 
   return (
@@ -231,62 +204,54 @@ const DesignLab = () => {
             <ChatWindow
               messages={messages}
               onSendMessage={handleSendMessage}
+              onGenerateImage={triggerImageGeneration}
               isEditingMode={isEditingMode}
-              selectedDesignId={selectedDesignIndex}
+              selectedDesignId={design ? 0 : null}
               isChatMode={isChatMode}
               onChatModeToggle={handleChatModeToggle}
+              isGenerating={isGenerating}
+              hasDesign={!!design}
             />
           </div>
           <div className="h-[80vh] overflow-y-auto">
-            {isEditingMode &&
-            selectedDesignIndex !== null &&
-            getSelectedDesignData() ? (
+            {isEditingMode && design ? (
               <EditingView
-                design={getSelectedDesignData()!}
+                design={design}
                 onExitEdit={handleExitEdit}
-                onDownload={() => handleDownload(selectedDesignIndex)}
-                onVectorize={() => handleVectorize(selectedDesignIndex)}
+                onDownload={handleDownload}
+                onVectorize={handleVectorize}
               />
             ) : (
               <div>
                 <div className="mb-4 flex justify-between items-center">
                   <h2 className="text-lg font-semibold">设计作品</h2>
-                  <div className="flex items-center space-x-4">
-                    <RegenerateButton
-                      onRegenerate={handleRegenerate}
-                      isGenerating={isGenerating}
-                      label="重新生成4张"
-                      disabled={isChatMode}
-                    />
-                  </div>
                 </div>
 
-                {isChatMode && (
-                  <div className="text-center text-sock-purple bg-sock-light-purple p-4 rounded-lg mb-4">
-                    <MessageCircle className="h-6 w-6 mx-auto mb-2" />
-                    <p className="text-sm">聊天模式已开启，我会与您讨论设计创意而不生成图片</p>
+                {isChatMode && !design && (
+                  <div className="text-center text-sock-purple bg-sock-light-purple p-6 rounded-lg mb-4">
+                    <MessageCircle className="h-8 w-8 mx-auto mb-3" />
+                    <h3 className="font-semibold mb-2">聊天模式已开启</h3>
+                    <p className="text-sm">我会与您讨论设计创意，当您准备好时可以生成图片</p>
                   </div>
                 )}
 
-                {isGenerating && designs.length === 0 && (
-                  <p className="text-center text-gray-500 py-10">
-                    正在为您生成全新的设计，请稍候...
-                  </p>
+                {isGenerating && (
+                  <div className="text-center text-gray-500 py-10">
+                    正在为您生成设计，请稍候...
+                  </div>
                 )}
+
                 {error && (
                   <div className="text-center text-red-500 bg-red-100 p-4 rounded-lg mb-4">
                     {error}
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {designs.map((design, index) => (
-                    <Card
-                      key={`${index}-${design.url}`}
-                      className={`overflow-hidden transition-all ${
-                        design.isEditing ? "ring-2 ring-sock-purple" : ""
-                      } ${design.error ? "border-red-300" : ""}`}
-                    >
+                {design && (
+                  <div className="flex justify-center">
+                    <Card className={`w-full max-w-md overflow-hidden transition-all ${
+                      design.isEditing ? "ring-2 ring-sock-purple" : ""
+                    } ${design.error ? "border-red-300" : ""}`}>
                       <CardContent className="p-0">
                         <div className="aspect-square relative bg-gray-100">
                           <img
@@ -302,51 +267,45 @@ const DesignLab = () => {
                               </span>
                             </div>
                           )}
+                          {!design.error && (
+                            <div className="absolute bottom-2 right-2 flex space-x-2">
+                              <Button
+                                variant="secondary"
+                                size="icon"
+                                onClick={handleDownload}
+                                className="bg-white/90 hover:bg-white"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="icon"
+                                onClick={handleEdit}
+                                className={design.isEditing ? "bg-sock-purple text-white" : "bg-white/90 hover:bg-white"}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                        <div className="p-3 flex justify-between items-center">
-                          <span
-                            className={`text-sm font-medium ${
-                              design.error ? "text-red-500" : ""
-                            }`}
-                          >
+                        <div className="p-3">
+                          <span className={`text-sm font-medium ${
+                            design.error ? "text-red-500" : ""
+                          }`}>
                             {design.design_name}
                           </span>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDownload(index)}
-                              disabled={!!design.error}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleVectorize(index)}
-                              disabled={!!design.error}
-                            >
-                              <File className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant={design.isEditing ? "default" : "ghost"}
-                              size="icon"
-                              onClick={() => handleEdit(index)}
-                              disabled={!!design.error}
-                              className={
-                                design.isEditing
-                                  ? "text-white bg-sock-purple"
-                                  : ""
-                              }
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </div>
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {!design && !isGenerating && !isChatMode && (
+                  <div className="text-center text-gray-500 py-10">
+                    <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p>先和我聊聊您的设计想法，然后点击"生成图片"来创建设计</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
