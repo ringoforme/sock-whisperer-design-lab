@@ -1,9 +1,8 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Download, File } from 'lucide-react';
-import RegenerateButton from '@/components/RegenerateButton';
 import { DesignData } from '@/types/design';
 
 interface EditingViewProps {
@@ -19,27 +18,6 @@ const EditingView: React.FC<EditingViewProps> = ({
   onDownload,
   onVectorize
 }) => {
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    
-    // 注释：这里需要连接AI图片生成API重新生成当前设计
-    // 推荐使用：DALL-E, Midjourney, 或 Stable Diffusion
-    // 通过Supabase Edge Functions调用API
-    
-    try {
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('Refreshing design:', design.design_name);
-      // 在真实实现中，这里会更新设计图片
-    } catch (error) {
-      console.error('Failed to refresh design:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
   return (
     <div className="h-[80vh] flex flex-col animate-fade-in">
       <Card className="flex-1 overflow-hidden">
@@ -54,14 +32,9 @@ const EditingView: React.FC<EditingViewProps> = ({
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <CardTitle>编辑设计: {design.design_name}</CardTitle>
+              <CardTitle>编辑模式</CardTitle>
             </div>
             <div className="flex space-x-2">
-              <RegenerateButton 
-                onRegenerate={handleRefresh}
-                isGenerating={isRefreshing}
-                label="刷新"
-              />
               <Button variant="outline" size="sm" onClick={onDownload}>
                 <Download className="h-4 w-4 mr-2" />
                 下载
