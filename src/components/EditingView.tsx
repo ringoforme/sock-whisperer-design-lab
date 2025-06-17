@@ -4,15 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Download, File } from 'lucide-react';
 import RegenerateButton from '@/components/RegenerateButton';
+import { DesignData } from '@/types/design';
 
 interface EditingViewProps {
-  design: {
-    id: number;
-    imageUrl: string;
-  };
+  design: DesignData;
   onExitEdit: () => void;
-  onDownload: (id: number) => void;
-  onVectorize: (id: number) => void;
+  onDownload: () => void;
+  onVectorize: () => void;
 }
 
 const EditingView: React.FC<EditingViewProps> = ({
@@ -33,7 +31,7 @@ const EditingView: React.FC<EditingViewProps> = ({
     try {
       // 模拟API调用
       await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('Refreshing design:', design.id);
+      console.log('Refreshing design:', design.design_name);
       // 在真实实现中，这里会更新设计图片
     } catch (error) {
       console.error('Failed to refresh design:', error);
@@ -56,7 +54,7 @@ const EditingView: React.FC<EditingViewProps> = ({
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <CardTitle>编辑设计 #{design.id}</CardTitle>
+              <CardTitle>编辑设计: {design.design_name}</CardTitle>
             </div>
             <div className="flex space-x-2">
               <RegenerateButton 
@@ -64,11 +62,11 @@ const EditingView: React.FC<EditingViewProps> = ({
                 isGenerating={isRefreshing}
                 label="刷新"
               />
-              <Button variant="outline" size="sm" onClick={() => onDownload(design.id)}>
+              <Button variant="outline" size="sm" onClick={onDownload}>
                 <Download className="h-4 w-4 mr-2" />
                 下载
               </Button>
-              <Button variant="outline" size="sm" onClick={() => onVectorize(design.id)}>
+              <Button variant="outline" size="sm" onClick={onVectorize}>
                 <File className="h-4 w-4 mr-2" />
                 矢量化
               </Button>
@@ -78,8 +76,8 @@ const EditingView: React.FC<EditingViewProps> = ({
         <CardContent className="flex-1 flex items-center justify-center p-8">
           <div className="max-w-lg w-full">
             <img 
-              src={design.imageUrl} 
-              alt={`袜子设计 ${design.id}`} 
+              src={design.url} 
+              alt={design.design_name} 
               className="w-full h-auto rounded-lg shadow-lg border transition-transform hover:scale-105"
             />
           </div>
