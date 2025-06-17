@@ -1,10 +1,12 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Download, File, Edit, AlertCircle } from "lucide-react";
+import { Toggle } from "@/components/ui/toggle";
+import { Download, File, Edit, AlertCircle, MessageCircle } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import RegenerateButton from "@/components/RegenerateButton";
@@ -36,6 +38,7 @@ const DesignLab = () => {
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isChatMode, setIsChatMode] = useState(false);
 
   const location = useLocation();
   const { addDesign } = useDesignStorage();
@@ -47,6 +50,19 @@ const DesignLab = () => {
       handleSendMessage(initialPrompt);
     }
   }, [location]);
+
+  // 创意设计沟通回复
+  const generateChatResponse = (userMessage: string): string => {
+    const responses = [
+      `关于"${userMessage}"的设计想法很棒！我建议可以考虑使用渐变色彩，这样既时尚又有层次感。您希望偏向什么风格呢？运动风、商务风还是休闲风？`,
+      `您的创意很有趣！对于袜子设计来说，颜色搭配很重要。您提到的元素可以作为主图案放在袜身中部，这样既突出又不会过于繁复。`,
+      `这是一个很有创意的想法！建议可以结合一些几何元素来平衡设计，让整体看起来更协调。您对配色有什么特别的偏好吗？`,
+      `您的设计概念很独特！可以考虑将主要图案放在脚踝部分，这样穿着时既能展示设计又很实用。需要考虑什么样的袜子长度呢？`,
+      `很棒的灵感！建议可以用对比色来突出设计重点，同时保持整体的简洁感。您希望这款袜子适合什么场合穿着？`
+    ];
+    
+    return responses[Math.floor(Math.random() * responses.length)];
+  };
 
   // 需求3: 优化前端状态管理逻辑
   const triggerInitialGeneration = async (prompt: string) => {
@@ -67,11 +83,26 @@ const DesignLab = () => {
     }
   };
 
-  // handleSendMessage 函数无变化...
+  // handleSendMessage 函数修改为支持聊天模式
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating) return;
     const userMsg = { id: Date.now(), text: userMessage, isUser: true };
     setMessages((prev) => [...prev, userMsg]);
+
+    if (isChatMode) {
+      // 聊天模式：只进行设计沟通，不生成图片
+      const chatResponse = generateChatResponse(userMessage);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          text: chatResponse,
+          isUser: false,
+        },
+      ]);
+      return;
+    }
+
     if (isEditingMode && selectedDesignIndex !== null) {
       setIsGenerating(true);
       const originalPrompt = designs[selectedDesignIndex].prompt_en;
@@ -124,7 +155,7 @@ const DesignLab = () => {
     triggerInitialGeneration(lastUserMessage);
   };
 
-  // 其他 handlers (handleEdit, handleExitEdit 等) 保持不变...
+  // 其他 handlers 保持不变...
   const handleEdit = (index: number) => {
     if (designs[index].design_name === "生成失败") {
       toast.info("无法编辑一个生成失败的设计。");
@@ -199,6 +230,7 @@ const DesignLab = () => {
               onSendMessage={handleSendMessage}
               isEditingMode={isEditingMode}
               selectedDesignId={selectedDesignIndex}
+              isChatMode={isChatMode}
             />
           </div>
           <div className="h-[80vh] overflow-y-auto">
@@ -215,12 +247,31 @@ const DesignLab = () => {
               <div>
                 <div className="mb-4 flex justify-between items-center">
                   <h2 className="text-lg font-semibold">设计作品</h2>
-                  <RegenerateButton
-                    onRegenerate={handleRegenerate}
-                    isGenerating={isGenerating}
-                    label="重新生成4张" // 需求1: 修改按钮文字
-                  />
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <MessageCircle className="h-4 w-4 text-sock-purple" />
+                      <span className="text-sm text-gray-600">聊天模式</span>
+                      <Toggle
+                        pressed={isChatMode}
+                        onPressedChange={setIsChatMode}
+                        className="data-[state=on]:bg-sock-purple data-[state=on]:text-white"
+                      />
+                    </div>
+                    <RegenerateButton
+                      onRegenerate={handleRegenerate}
+                      isGenerating={isGenerating}
+                      label="重新生成4张"
+                      disabled={isChatMode}
+                    />
+                  </div>
                 </div>
+
+                {isChatMode && (
+                  <div className="text-center text-sock-purple bg-sock-light-purple p-4 rounded-lg mb-4">
+                    <MessageCircle className="h-6 w-6 mx-auto mb-2" />
+                    <p className="text-sm">聊天模式已开启，我会与您讨论设计创意而不生成图片</p>
+                  </div>
+                )}
 
                 {isGenerating && designs.length === 0 && (
                   <p className="text-center text-gray-500 py-10">
