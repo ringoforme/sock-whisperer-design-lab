@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -57,7 +58,7 @@ const DesignLab = () => {
     return responses[Math.floor(Math.random() * responses.length)];
   };
 
-  // 生成图片功能 - 修改为先显示mock图片
+  // 生成/修改图片功能
   const triggerImageGeneration = async () => {
     // 从聊天记录中提取用户的所有输入作为prompt
     const userMessages = messages.filter(m => m.isUser).map(m => m.text).join(' ');
@@ -70,72 +71,62 @@ const DesignLab = () => {
     setIsGenerating(true);
     setError(null);
 
-    // 先设置mock图片数据
-    const mockDesign: DesignState = {
-      url: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=400&fit=crop",
-      prompt_en: userMessages,
-      design_name: "创意袜子设计",
-      isEditing: false
-    };
+    if (isEditingMode && design) {
+      // 编辑模式：修改现有图片
+      const modifiedDesign: DesignState = {
+        url: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=400&fit=crop", // 不同的mock图片表示修改后的结果
+        prompt_en: `Modified: ${design.prompt_en} + ${userMessages}`,
+        design_name: `修改后的${design.design_name}`,
+        isEditing: true
+      };
 
-    setDesign(mockDesign);
-    setMessages(prev => [...prev, {
-      id: Date.now(),
-      text: "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。",
-      isUser: false
-    }]);
-    toast.success("设计生成成功！");
+      setDesign(modifiedDesign);
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        text: "完美！我已经根据您的指令修改了设计。您可以继续调整或者下载这个新版本。",
+        isUser: false
+      }]);
+      toast.success("设计修改成功！");
+    } else {
+      // 生成模式：创建新图片
+      const mockDesign: DesignState = {
+        url: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=400&fit=crop",
+        prompt_en: userMessages,
+        design_name: "创意袜子设计",
+        isEditing: false
+      };
+
+      setDesign(mockDesign);
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        text: "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。",
+        isUser: false
+      }]);
+      toast.success("设计生成成功！");
+    }
+
     setIsGenerating(false);
-
-    // 这里可以后续添加真实的API调用
-    // try {
-    //   const newDesign = await generateDesigns(userMessages);
-    //   setDesign({ ...newDesign, isEditing: false });
-    // } catch (err: any) {
-    //   setError(err.message);
-    //   toast.error(`生成失败: ${err.message}`);
-    // }
   };
 
-  // handleSendMessage 函数修改为支持聊天
+  // handleSendMessage 函数：只处理聊天，不修改图片
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating) return;
     const userMsg = { id: Date.now(), text: userMessage, isUser: true };
     setMessages((prev) => [...prev, userMsg]);
 
-    if (isEditingMode && design) {
-      setIsGenerating(true);
-      const originalPrompt = design.prompt_en;
-      const editInstruction = `Based on the original prompt: "${originalPrompt}", please apply this modification: "${userMessage}"`;
-      try {
-        const newDesign = await regenerateImage(editInstruction);
-        setDesign({ ...newDesign, isEditing: true });
-        toast.success(`设计已更新！`);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now(),
-            text: "我已根据您的指令更新了设计。",
-            isUser: false,
-          },
-        ]);
-      } catch (err: any) {
-        toast.error(`编辑失败: ${err.message}`);
-      } finally {
-        setIsGenerating(false);
-      }
-    } else {
-      // 默认聊天模式：只进行设计沟通，不生成图片
-      const chatResponse = generateChatResponse(userMessage);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          text: chatResponse,
-          isUser: false,
-        },
-      ]);
-    }
+    // 无论是否在编辑模式，都只进行聊天对话
+    const chatResponse = isEditingMode 
+      ? `我记录了您的修改建议："${userMessage}"。当您准备好时，请点击"修改图片"按钮来应用这些改动。`
+      : generateChatResponse(userMessage);
+    
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now() + 1,
+        text: chatResponse,
+        isUser: false,
+      },
+    ]);
   };
 
   const handleEdit = () => {
@@ -149,7 +140,7 @@ const DesignLab = () => {
       ...prev,
       {
         id: Date.now(),
-        text: "现在正在编辑模式，您可以告诉我想要做什么调整。",
+        text: "现在正在编辑模式，您可以告诉我想要做什么调整，然后点击"修改图片"来应用改动。",
         isUser: false,
       },
     ]);
