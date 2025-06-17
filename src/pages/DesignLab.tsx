@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -140,7 +139,7 @@ const DesignLab = () => {
       ...prev,
       {
         id: Date.now(),
-        text: "现在正在编辑模式，您可以告诉我想要做什么调整，然后点击"修改图片"来应用改动。",
+        text: "现在正在编辑模式，您可以告诉我想要做什么调整，然后点击'修改图片'来应用改动。",
         isUser: false,
       },
     ]);
