@@ -33,7 +33,6 @@ const DesignLab = () => {
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isChatMode, setIsChatMode] = useState(true); // 默认开启聊天模式
 
   const location = useLocation();
   const { addDesign } = useDesignStorage();
@@ -89,25 +88,11 @@ const DesignLab = () => {
     }
   };
 
-  // handleSendMessage 函数修改为支持聊天模式
+  // handleSendMessage 函数修改为支持聊天
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating) return;
     const userMsg = { id: Date.now(), text: userMessage, isUser: true };
     setMessages((prev) => [...prev, userMsg]);
-
-    if (isChatMode) {
-      // 聊天模式：只进行设计沟通，不生成图片
-      const chatResponse = generateChatResponse(userMessage);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          text: chatResponse,
-          isUser: false,
-        },
-      ]);
-      return;
-    }
 
     if (isEditingMode && design) {
       setIsGenerating(true);
@@ -130,11 +115,18 @@ const DesignLab = () => {
       } finally {
         setIsGenerating(false);
       }
+    } else {
+      // 默认聊天模式：只进行设计沟通，不生成图片
+      const chatResponse = generateChatResponse(userMessage);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          text: chatResponse,
+          isUser: false,
+        },
+      ]);
     }
-  };
-
-  const handleChatModeToggle = (enabled: boolean) => {
-    setIsChatMode(enabled);
   };
 
   const handleEdit = () => {
@@ -207,8 +199,6 @@ const DesignLab = () => {
               onGenerateImage={triggerImageGeneration}
               isEditingMode={isEditingMode}
               selectedDesignId={design ? 0 : null}
-              isChatMode={isChatMode}
-              onChatModeToggle={handleChatModeToggle}
               isGenerating={isGenerating}
               hasDesign={!!design}
             />
@@ -226,14 +216,6 @@ const DesignLab = () => {
                 <div className="mb-4 flex justify-between items-center">
                   <h2 className="text-lg font-semibold">设计作品</h2>
                 </div>
-
-                {isChatMode && !design && (
-                  <div className="text-center text-sock-purple bg-sock-light-purple p-6 rounded-lg mb-4">
-                    <MessageCircle className="h-8 w-8 mx-auto mb-3" />
-                    <h3 className="font-semibold mb-2">聊天模式已开启</h3>
-                    <p className="text-sm">我会与您讨论设计创意，当您准备好时可以生成图片</p>
-                  </div>
-                )}
 
                 {isGenerating && (
                   <div className="text-center text-gray-500 py-10">
@@ -300,7 +282,7 @@ const DesignLab = () => {
                   </div>
                 )}
 
-                {!design && !isGenerating && !isChatMode && (
+                {!design && !isGenerating && (
                   <div className="text-center text-gray-500 py-10">
                     <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <p>先和我聊聊您的设计想法，然后点击"生成图片"来创建设计</p>

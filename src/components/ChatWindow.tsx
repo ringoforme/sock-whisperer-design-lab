@@ -2,9 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Toggle } from '@/components/ui/toggle';
 import { useToast } from '@/components/ui/use-toast';
-import { Send, MessageCircle, Image, Paperclip, Sparkles } from 'lucide-react';
+import { Send, Image, Paperclip, Sparkles } from 'lucide-react';
 
 interface Message {
   id: number;
@@ -18,8 +17,6 @@ interface ChatWindowProps {
   onGenerateImage: () => void;
   isEditingMode?: boolean;
   selectedDesignId?: number | null;
-  isChatMode?: boolean;
-  onChatModeToggle?: (enabled: boolean) => void;
   isGenerating?: boolean;
   hasDesign?: boolean;
 }
@@ -30,8 +27,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onGenerateImage,
   isEditingMode = false, 
   selectedDesignId,
-  isChatMode = false,
-  onChatModeToggle,
   isGenerating = false,
   hasDesign = false
 }) => {
@@ -67,9 +62,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   const getPlaceholderText = () => {
-    if (isChatMode) {
-      return "和我聊聊您的设计想法...";
-    }
     if (isEditingMode && selectedDesignId !== null) {
       return `对设计说些什么...`;
     }
@@ -77,29 +69,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   const getHeaderText = () => {
-    if (isChatMode) {
-      return "设计创意聊天";
-    }
     if (isEditingMode && selectedDesignId !== null) {
       return `编辑设计`;
     }
-    return "Sox Lab助手聊天";
+    return "SoxLab创意助手";
   };
 
   const getSubHeaderText = () => {
-    if (isChatMode) {
-      return "让我们一起探讨您的袜子设计创意";
-    }
     if (isEditingMode && selectedDesignId !== null) {
       return "告诉我您想对这个设计做什么改动";
     }
-    return "先聊聊您的设计想法，然后生成图片";
+    return "让我们一起探讨您的袜子设计创意";
   };
 
   const getHeaderIcon = () => {
-    if (isChatMode) {
-      return <MessageCircle className="h-5 w-5 text-sock-purple" />;
-    }
     return <Image className="h-5 w-5 text-sock-purple" />;
   };
 
@@ -114,11 +97,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         {(isEditingMode && selectedDesignId !== null) && (
           <div className="mt-2 text-xs bg-sock-light-purple text-sock-purple px-2 py-1 rounded">
             正在编辑模式
-          </div>
-        )}
-        {isChatMode && (
-          <div className="mt-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-            聊天模式 - 仅讨论创意，不生成图片
           </div>
         )}
       </div>
@@ -157,17 +135,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             >
               <Paperclip className="h-4 w-4" />
             </Button>
-            
-            <Toggle
-              pressed={isChatMode}
-              onPressedChange={onChatModeToggle}
-              className="data-[state=on]:bg-sock-purple data-[state=on]:text-white text-sm px-3"
-            >
-              <MessageCircle className="h-4 w-4 mr-1" />
-              聊天模式
-            </Toggle>
-
-            {!isChatMode && !isEditingMode && (
+          </div>
+          
+          <div className="flex gap-2">
+            {!isEditingMode && (
               <Button
                 type="button"
                 onClick={onGenerateImage}
@@ -178,15 +149,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 {isGenerating ? '生成中...' : '生成图片'}
               </Button>
             )}
+            
+            <Button 
+              type="submit" 
+              size="icon"
+              className="bg-sock-purple hover:bg-sock-dark-purple"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
           </div>
-          
-          <Button 
-            type="submit" 
-            size="icon"
-            className="bg-sock-purple hover:bg-sock-dark-purple"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
         </div>
       </form>
     </div>
