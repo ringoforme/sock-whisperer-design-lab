@@ -5,8 +5,7 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Toggle } from "@/components/ui/toggle";
-import { Download, File, Edit, AlertCircle, MessageCircle } from "lucide-react";
+import { Download, File, Edit, AlertCircle } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import RegenerateButton from "@/components/RegenerateButton";
@@ -155,6 +154,10 @@ const DesignLab = () => {
     triggerInitialGeneration(lastUserMessage);
   };
 
+  const handleChatModeToggle = (enabled: boolean) => {
+    setIsChatMode(enabled);
+  };
+
   // 其他 handlers 保持不变...
   const handleEdit = (index: number) => {
     if (designs[index].design_name === "生成失败") {
@@ -231,6 +234,7 @@ const DesignLab = () => {
               isEditingMode={isEditingMode}
               selectedDesignId={selectedDesignIndex}
               isChatMode={isChatMode}
+              onChatModeToggle={handleChatModeToggle}
             />
           </div>
           <div className="h-[80vh] overflow-y-auto">
@@ -248,15 +252,6 @@ const DesignLab = () => {
                 <div className="mb-4 flex justify-between items-center">
                   <h2 className="text-lg font-semibold">设计作品</h2>
                   <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <MessageCircle className="h-4 w-4 text-sock-purple" />
-                      <span className="text-sm text-gray-600">聊天模式</span>
-                      <Toggle
-                        pressed={isChatMode}
-                        onPressedChange={setIsChatMode}
-                        className="data-[state=on]:bg-sock-purple data-[state=on]:text-white"
-                      />
-                    </div>
                     <RegenerateButton
                       onRegenerate={handleRegenerate}
                       isGenerating={isGenerating}

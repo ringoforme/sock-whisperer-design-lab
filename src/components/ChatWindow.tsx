@@ -2,8 +2,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Toggle } from '@/components/ui/toggle';
 import { useToast } from '@/components/ui/use-toast';
-import { Send, MessageCircle, Image } from 'lucide-react';
+import { Send, MessageCircle, Image, Paperclip } from 'lucide-react';
 
 interface Message {
   id: number;
@@ -17,6 +18,7 @@ interface ChatWindowProps {
   isEditingMode?: boolean;
   selectedDesignId?: number | null;
   isChatMode?: boolean;
+  onChatModeToggle?: (enabled: boolean) => void;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ 
@@ -24,7 +26,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onSendMessage, 
   isEditingMode = false, 
   selectedDesignId,
-  isChatMode = false
+  isChatMode = false,
+  onChatModeToggle
 }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -49,6 +52,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     
     // Clear input
     setInputValue('');
+  };
+
+  const handleAttachFile = () => {
+    toast.info('上传图片功能即将推出');
   };
 
   const getPlaceholderText = () => {
@@ -120,17 +127,47 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         <div ref={messagesEndRef} />
       </div>
       
-      <form onSubmit={handleSend} className="p-4 border-t flex gap-2">
-        <Input
-          ref={inputRef}
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder={getPlaceholderText()}
-          className="flex-1"
-        />
-        <Button type="submit" className="bg-sock-purple hover:bg-sock-dark-purple">
-          <Send className="h-4 w-4" />
-        </Button>
+      <form onSubmit={handleSend} className="p-4 border-t">
+        <div className="flex gap-2 mb-3">
+          <Input
+            ref={inputRef}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder={getPlaceholderText()}
+            className="flex-1"
+          />
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleAttachFile}
+              className="hover:bg-gray-100"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            
+            <Toggle
+              pressed={isChatMode}
+              onPressedChange={onChatModeToggle}
+              className="data-[state=on]:bg-sock-purple data-[state=on]:text-white text-sm px-3"
+            >
+              <MessageCircle className="h-4 w-4 mr-1" />
+              聊天模式
+            </Toggle>
+          </div>
+          
+          <Button 
+            type="submit" 
+            size="icon"
+            className="bg-sock-purple hover:bg-sock-dark-purple"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </form>
     </div>
   );
