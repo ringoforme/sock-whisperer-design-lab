@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Download, File, Edit, AlertCircle } from "lucide-react";
+import { Download, File, Edit, AlertCircle, MessageCircle } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import RegenerateButton from "@/components/RegenerateButton";

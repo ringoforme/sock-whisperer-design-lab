@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,7 +54,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   const handleAttachFile = () => {
-    toast.info('上传图片功能即将推出');
+    toast({
+      title: "上传图片功能即将推出"
+    });
   };
 
   const getPlaceholderText = () => {
