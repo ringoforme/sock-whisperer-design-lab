@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -58,7 +57,7 @@ const DesignLab = () => {
     return responses[Math.floor(Math.random() * responses.length)];
   };
 
-  // 生成图片功能
+  // 生成图片功能 - 修改为先显示mock图片
   const triggerImageGeneration = async () => {
     // 从聊天记录中提取用户的所有输入作为prompt
     const userMessages = messages.filter(m => m.isUser).map(m => m.text).join(' ');
@@ -71,21 +70,31 @@ const DesignLab = () => {
     setIsGenerating(true);
     setError(null);
 
-    try {
-      const newDesign = await generateDesigns(userMessages);
-      setDesign({ ...newDesign, isEditing: false });
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        text: "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。",
-        isUser: false
-      }]);
-      toast.success("设计生成成功！");
-    } catch (err: any) {
-      setError(err.message);
-      toast.error(`生成失败: ${err.message}`);
-    } finally {
-      setIsGenerating(false);
-    }
+    // 先设置mock图片数据
+    const mockDesign: DesignState = {
+      url: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=400&fit=crop",
+      prompt_en: userMessages,
+      design_name: "创意袜子设计",
+      isEditing: false
+    };
+
+    setDesign(mockDesign);
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      text: "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。",
+      isUser: false
+    }]);
+    toast.success("设计生成成功！");
+    setIsGenerating(false);
+
+    // 这里可以后续添加真实的API调用
+    // try {
+    //   const newDesign = await generateDesigns(userMessages);
+    //   setDesign({ ...newDesign, isEditing: false });
+    // } catch (err: any) {
+    //   setError(err.message);
+    //   toast.error(`生成失败: ${err.message}`);
+    // }
   };
 
   // handleSendMessage 函数修改为支持聊天
