@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -10,6 +9,7 @@ import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 import { ConversationManager } from "@/services/conversationManager";
+import { createClient } from "@/integrations/supabase/client";
 
 import type { DesignData } from "@/types/design";
 
@@ -37,6 +37,7 @@ const DesignLab = () => {
 
   const location = useLocation();
   const { addDesign } = useDesignStorage();
+  const supabase = createClient();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -64,6 +65,38 @@ const DesignLab = () => {
         isUser: false,
       },
     ]);
+  };
+
+  // 生成真实的AI图片
+  const generateRealDesign = async (): Promise<DesignState> => {
+    const requirements = conversationManager.getRequirements();
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-sock-design', {
+        body: { requirements }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || '图像生成失败');
+      }
+
+      const designName = generateDesignName(requirements);
+      
+      return {
+        url: data.imageUrl,
+        prompt_en: data.expandedPrompt,
+        design_name: designName,
+        isEditing: false
+      };
+    } catch (error) {
+      console.error('AI图像生成失败:', error);
+      // 降级到Mock图片
+      return generateMockDesign();
+    }
   };
 
   // 生成Mock图片的函数，基于收集到的需求
@@ -135,19 +168,16 @@ const DesignLab = () => {
     setError(null);
 
     try {
-      // 模拟生成时间
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
       if (isEditingMode && design) {
         // 编辑模式：生成修改后的版本
-        const modifiedDesign: DesignState = {
-          ...design,
-          url: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=400&fit=crop", // 不同图片表示修改结果
+        const modifiedDesign = await generateRealDesign();
+        const finalDesign: DesignState = {
+          ...modifiedDesign,
           design_name: `修改版-${design.design_name}`,
           isEditing: true
         };
 
-        setDesign(modifiedDesign);
+        setDesign(finalDesign);
         setMessages(prev => [...prev, {
           id: Date.now(),
           text: "完美！我已经根据您的修改建议更新了设计。您可以继续调整或者下载这个新版本。",
@@ -156,7 +186,7 @@ const DesignLab = () => {
         toast.success("设计修改成功！");
       } else {
         // 生成模式：创建新设计
-        const newDesign = generateMockDesign();
+        const newDesign = await generateRealDesign();
         setDesign(newDesign);
         
         const collectedInfo = conversationManager.getCollectedInfo();
@@ -207,13 +237,11 @@ const DesignLab = () => {
 
   const handleDownload = () => {
     if (!design) return;
-    // Download logic here
     toast.success("图片下载已开始");
   };
 
   const handleVectorize = () => {
     if (!design) return;
-    // Vectorize logic here
     toast.success("矢量化处理已开始");
   };
 

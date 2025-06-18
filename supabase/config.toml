@@ -1,1 +1,5 @@
-project_id = "obmwuieyrhqrgkmjftis"
+
+project_id = "placeholder"
+
+[functions.generate-sock-design]
+verify_jwt = false
