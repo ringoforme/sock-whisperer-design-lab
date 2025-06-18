@@ -1,5 +1,5 @@
 
-import { createClient } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 // LLM服务 - 处理与AI模型的交互
 interface LLMResponse {
@@ -24,16 +24,15 @@ const SYSTEM_PROMPT = `你是Sox Lab袜子设计工作室的专业AI助手。你
 请始终保持专业、友好和创意的回答风格，帮助用户实现他们的袜子设计梦想。`;
 
 export class LLMService {
-  private supabase = createClient();
-
   constructor() {
     // 使用Supabase客户端，API密钥通过环境变量管理
   }
 
   async isConfigured(): Promise<boolean> {
     try {
+      console.log('测试 GPT API 连接...');
       // 测试 GPT API 连接
-      const testResponse = await this.supabase.functions.invoke('chat-with-gpt', {
+      const testResponse = await supabase.functions.invoke('chat-with-gpt', {
         body: { 
           message: '测试连接',
           systemPrompt: '简短回复：连接正常'
@@ -41,9 +40,15 @@ export class LLMService {
       });
 
       console.log('GPT API 连接测试结果:', testResponse);
-      return !testResponse.error && testResponse.data?.success;
+      
+      if (testResponse.error) {
+        console.error('GPT API 连接测试失败:', testResponse.error);
+        return false;
+      }
+      
+      return testResponse.data?.success === true;
     } catch (error) {
-      console.error('GPT API 连接测试失败:', error);
+      console.error('GPT API 连接测试异常:', error);
       return false;
     }
   }
@@ -54,7 +59,7 @@ export class LLMService {
       console.log('调用GPT API，消息:', userMessage);
       
       // 调用Supabase Edge Function进行GPT对话
-      const { data, error } = await this.supabase.functions.invoke('chat-with-gpt', {
+      const { data, error } = await supabase.functions.invoke('chat-with-gpt', {
         body: { 
           message: userMessage,
           systemPrompt: SYSTEM_PROMPT

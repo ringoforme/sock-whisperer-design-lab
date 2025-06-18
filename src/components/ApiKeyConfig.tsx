@@ -24,10 +24,12 @@ const ApiKeyConfig: React.FC<ApiKeyConfigProps> = ({ onConfigured }) => {
       return;
     }
 
-    llmService.setApiKey(apiKey);
+    // 由于现在使用 Supabase Edge Functions，API 密钥在服务端管理
+    // 这里只是展示给用户，实际的 API 密钥应该在 Supabase 项目设置中配置
     toast({
-      title: "成功",
-      description: "API密钥已保存"
+      title: "提示",
+      description: "API密钥应该在 Supabase 项目设置中配置。当前应用使用 Supabase Edge Functions 来安全管理 OpenAI API 调用。",
+      variant: "default"
     });
     onConfigured();
   };
@@ -39,9 +41,9 @@ const ApiKeyConfig: React.FC<ApiKeyConfigProps> = ({ onConfigured }) => {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-gray-600">
-          为了使用AI设计功能，请输入您的OpenAI API密钥。
+          当前应用使用 Supabase Edge Functions 来安全管理 OpenAI API 调用。
           <br />
-          <strong>注意：</strong> 推荐使用Supabase集成来安全管理API密钥。
+          <strong>注意：</strong> API 密钥已在服务端安全配置。
         </p>
         
         <Input
@@ -49,19 +51,17 @@ const ApiKeyConfig: React.FC<ApiKeyConfigProps> = ({ onConfigured }) => {
           placeholder="sk-..."
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
+          disabled
         />
         
         <div className="flex gap-2">
-          <Button onClick={handleSave} className="flex-1">
-            保存配置
-          </Button>
-          <Button variant="outline" onClick={onConfigured}>
-            跳过
+          <Button onClick={onConfigured} className="flex-1">
+            继续使用
           </Button>
         </div>
         
         <p className="text-xs text-gray-500">
-          * API密钥仅保存在您的浏览器本地存储中
+          * API 密钥通过 Supabase Edge Functions 安全管理
         </p>
       </CardContent>
     </Card>

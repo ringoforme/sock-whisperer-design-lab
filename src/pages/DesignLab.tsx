@@ -9,7 +9,7 @@ import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 import { ConversationManager } from "@/services/conversationManager";
-import { createClient } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 import type { DesignData } from "@/types/design";
 
@@ -37,7 +37,6 @@ const DesignLab = () => {
 
   const location = useLocation();
   const { addDesign } = useDesignStorage();
-  const supabase = createClient();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
