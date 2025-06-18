@@ -29,25 +29,26 @@ serve(async (req) => {
       );
     }
 
-    console.log('收到聊天请求:', message);
-    console.log('对话历史长度:', conversationHistory.length);
+    console.log('收到聊天请求，用户消息:', message);
+    console.log('收到对话历史长度:', conversationHistory.length);
+    console.log('完整对话历史:', JSON.stringify(conversationHistory, null, 2));
 
-    // 构建完整的消息数组，包含系统提示词、历史对话和当前消息
+    // 构建完整的消息数组，按照OpenAI官方文档方式
     const messages = [
       { role: 'system', content: systemPrompt || '你是一个专业的袜子设计助手' }
     ];
 
-    // 添加对话历史（最近10轮对话，避免token过多）
-    const recentHistory = conversationHistory.slice(-10);
-    messages.push(...recentHistory);
+    // 添加完整对话历史（保留最近20轮对话，避免token过多）
+    const recentHistory = conversationHistory.slice(-20);
+    console.log('使用的对话历史长度:', recentHistory.length);
+    
+    // 直接添加所有历史消息，不需要额外处理
+    messages.push(...recentHistory.map((msg: ConversationMessage) => ({
+      role: msg.role,
+      content: msg.content
+    })));
 
-    // 添加当前用户消息（如果不在历史记录末尾）
-    const lastMessage = recentHistory[recentHistory.length - 1];
-    if (!lastMessage || lastMessage.role !== 'user' || lastMessage.content !== message) {
-      messages.push({ role: 'user', content: message });
-    }
-
-    console.log('发送到OpenAI的消息数量:', messages.length);
+    console.log('发送到OpenAI的完整消息数组:', JSON.stringify(messages, null, 2));
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -66,6 +67,7 @@ serve(async (req) => {
     const data = await response.json();
     
     if (data.error) {
+      console.error('OpenAI API 错误:', data.error);
       throw new Error(data.error.message);
     }
 

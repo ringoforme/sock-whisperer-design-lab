@@ -1,3 +1,4 @@
+
 import { ConversationState, ConversationPhase, DesignRequirements } from '@/types/conversation';
 import { llmService } from '@/services/llmService';
 
@@ -9,7 +10,7 @@ interface ConversationMessage {
 
 export class ConversationManager {
   private state: ConversationState;
-  private conversationHistory: ConversationMessage[];
+  private conversationHistory: ConversationMessage[] = [];
 
   constructor() {
     this.state = {
@@ -30,11 +31,14 @@ export class ConversationManager {
   }
 
   public addToHistory(role: 'user' | 'assistant', content: string): void {
-    this.conversationHistory.push({
+    const message = {
       role,
       content,
       timestamp: Date.now()
-    });
+    };
+    this.conversationHistory.push(message);
+    console.log('添加到对话历史:', message);
+    console.log('当前历史长度:', this.conversationHistory.length);
   }
 
   public updatePhase(phase: ConversationPhase): void {
@@ -68,17 +72,20 @@ export class ConversationManager {
   public async generateResponse(userMessage: string): Promise<string> {
     console.log('生成回复，用户消息:', userMessage);
     console.log('当前对话阶段:', this.state.phase);
-    console.log('对话历史长度:', this.conversationHistory.length);
+    console.log('发送前对话历史长度:', this.conversationHistory.length);
     
     // 添加用户消息到历史记录
     this.addToHistory('user', userMessage);
     
-    // 优先使用 GPT 进行智能对话，传递完整的对话历史
+    // 准备完整的对话历史，包括刚刚添加的用户消息
+    const fullHistory = [...this.conversationHistory];
+    console.log('传递给GPT的完整历史:', fullHistory);
+    
     try {
       console.log('调用 GPT API，传递完整对话历史...');
       const response = await llmService.sendMessageWithHistory(
         userMessage, 
-        this.conversationHistory,
+        fullHistory,  // 传递完整历史，包括当前用户消息
         {
           currentPhase: this.state.phase,
           collectedInfo: this.state.requirements,
