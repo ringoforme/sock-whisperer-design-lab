@@ -47,29 +47,100 @@ export class ConversationManager {
   }
 
   public async generateResponse(userMessage: string): Promise<string> {
-    const lowerMessage = userMessage.toLowerCase();
+    console.log('生成回复，用户消息:', userMessage);
+    console.log('当前对话阶段:', this.state.phase);
     
-    // 如果LLM服务已配置，使用真实的GPT回复
-    if (llmService.isConfigured()) {
-      try {
-        const context = `你是Sox Lab袜子设计工作室的专业AI助手。
+    // 优先使用 GPT 进行智能对话
+    try {
+      const context = `你是Sox Lab袜子设计工作室的专业AI助手。
 
 当前对话阶段: ${this.state.phase}
 已收集信息: ${JSON.stringify(this.state.requirements, null, 2)}
 用户消息: ${userMessage}
 
-请根据当前阶段和已收集的信息，用中文回复用户。如果需要收集更多设计信息，请引导用户提供。`;
+请根据当前阶段和已收集的信息，用中文回复用户。如果需要收集更多设计信息，请自然地引导用户提供相关信息。`;
+      
+      console.log('调用 GPT API...');
+      const response = await llmService.sendMessage(context);
+      
+      if (response.success && response.message) {
+        console.log('GPT API 成功响应:', response.message);
         
-        const response = await llmService.sendMessage(context);
-        if (response.success) {
-          return response.message;
-        }
-      } catch (error) {
-        console.error('GPT API调用失败，使用结构化回复:', error);
+        // 尝试从 GPT 回复中提取设计需求信息
+        this.extractRequirementsFromGPTResponse(userMessage, response.message);
+        
+        return response.message;
+      } else {
+        console.warn('GPT API 调用失败，使用结构化回复:', response.error);
+        return this.handleStructuredResponse(userMessage.toLowerCase());
       }
+    } catch (error) {
+      console.error('GPT API 调用异常，降级到结构化对话:', error);
+      return this.handleStructuredResponse(userMessage.toLowerCase());
     }
+  }
+
+  // 从 GPT 回复中智能提取用户需求
+  private extractRequirementsFromGPTResponse(userMessage: string, gptResponse: string): void {
+    const lowerMessage = userMessage.toLowerCase();
     
-    // 降级到结构化对话流程
+    // 检测袜子类型
+    if (lowerMessage.includes('船袜') || lowerMessage.includes('短袜')) {
+      this.updateRequirements({ sockType: 'ankle' });
+    } else if (lowerMessage.includes('中筒')) {
+      this.updateRequirements({ sockType: 'crew' });
+    } else if (lowerMessage.includes('长筒')) {
+      this.updateRequirements({ sockType: 'knee-high' });
+    } else if (lowerMessage.includes('过膝')) {
+      this.updateRequirements({ sockType: 'thigh-high' });
+    }
+
+    // 检测颜色
+    const colors = this.extractColors(userMessage);
+    if (colors.length > 0) {
+      this.updateRequirements({ colors });
+    }
+
+    // 检测图案
+    if (lowerMessage.includes('几何')) {
+      this.updateRequirements({ pattern: 'geometric' });
+    } else if (lowerMessage.includes('动物')) {
+      this.updateRequirements({ pattern: 'animal' });
+    } else if (lowerMessage.includes('花') || lowerMessage.includes('花卉')) {
+      this.updateRequirements({ pattern: 'floral' });
+    } else if (lowerMessage.includes('抽象')) {
+      this.updateRequirements({ pattern: 'abstract' });
+    } else if (lowerMessage.includes('万圣节') || lowerMessage.includes('南瓜') || lowerMessage.includes('蝙蝠') || lowerMessage.includes('骷髅')) {
+      this.updateRequirements({ pattern: 'holiday' });
+    }
+
+    // 检测场合
+    if (lowerMessage.includes('日常') || lowerMessage.includes('休闲')) {
+      this.updateRequirements({ occasion: 'daily' });
+    } else if (lowerMessage.includes('运动') || lowerMessage.includes('健身')) {
+      this.updateRequirements({ occasion: 'sport' });
+    } else if (lowerMessage.includes('商务') || lowerMessage.includes('正式')) {
+      this.updateRequirements({ occasion: 'business' });
+    } else if (lowerMessage.includes('特殊') || lowerMessage.includes('万圣节')) {
+      this.updateRequirements({ occasion: 'special' });
+    }
+
+    // 检测风格
+    if (lowerMessage.includes('简约')) {
+      this.updateRequirements({ style: 'minimalist' });
+    } else if (lowerMessage.includes('大胆')) {
+      this.updateRequirements({ style: 'bold' });
+    } else if (lowerMessage.includes('可爱')) {
+      this.updateRequirements({ style: 'cute' });
+    } else if (lowerMessage.includes('优雅')) {
+      this.updateRequirements({ style: 'elegant' });
+    } else if (lowerMessage.includes('潮流') || lowerMessage.includes('时尚')) {
+      this.updateRequirements({ style: 'trendy' });
+    }
+  }
+
+  // 结构化对话降级处理
+  private handleStructuredResponse(lowerMessage: string): string {
     switch (this.state.phase) {
       case 'welcome':
         return this.handleWelcomePhase(lowerMessage);
@@ -220,7 +291,7 @@ export class ConversationManager {
   private handleConfirmation(message: string): string {
     if (message.includes('确认') || message.includes('好的') || message.includes('对') || message.includes('是')) {
       this.updatePhase('ready_to_generate');
-      return "完美！现在我已经收集到了所有设计信息。您可以点击"生成图片"按钮来创建您的专属袜子设计，或者继续和我聊天完善细节。";
+      return "完美！现在我已经收集到了所有设计信息。您可以点击生成图片按钮来创建您的专属袜子设计，或者继续和我聊天完善细节。";
     } else if (message.includes('修改') || message.includes('改')) {
       this.updatePhase('welcome');
       return "没问题！让我们重新开始设计流程。请告诉我您想要什么样的袜子设计？";
@@ -230,11 +301,11 @@ export class ConversationManager {
   }
 
   private handleReadyToGenerate(message: string): string {
-    return "您的设计信息已经完善！随时可以点击"生成图片"按钮来创建设计，或者告诉我还需要调整什么细节。";
+    return "您的设计信息已经完善！随时可以点击生成图片按钮来创建设计，或者告诉我还需要调整什么细节。";
   }
 
   private handleEditingFeedback(message: string): string {
-    return `我记录了您的修改建议："${message}"。当您准备好时，请点击"修改图片"按钮来应用这些改动。如果还有其他调整意见，请继续告诉我。`;
+    return `我记录了您的修改建议："${message}"。当您准备好时，请点击修改图片按钮来应用这些改动。如果还有其他调整意见，请继续告诉我。`;
   }
 
   private generateSummary(): string {

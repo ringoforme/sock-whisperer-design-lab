@@ -30,9 +30,22 @@ export class LLMService {
     // 使用Supabase客户端，API密钥通过环境变量管理
   }
 
-  isConfigured(): boolean {
-    // 检查是否已配置OpenAI API密钥
-    return true; // 假设已在Supabase secrets中配置
+  async isConfigured(): Promise<boolean> {
+    try {
+      // 测试 GPT API 连接
+      const testResponse = await this.supabase.functions.invoke('chat-with-gpt', {
+        body: { 
+          message: '测试连接',
+          systemPrompt: '简短回复：连接正常'
+        }
+      });
+
+      console.log('GPT API 连接测试结果:', testResponse);
+      return !testResponse.error && testResponse.data?.success;
+    } catch (error) {
+      console.error('GPT API 连接测试失败:', error);
+      return false;
+    }
   }
 
   // 发送消息到LLM
@@ -53,13 +66,14 @@ export class LLMService {
         throw new Error(error.message);
       }
 
-      if (data && data.message) {
-        console.log('GPT API响应:', data.message);
+      if (data && data.success && data.message) {
+        console.log('GPT API响应成功:', data.message);
         return {
           message: data.message,
           success: true
         };
       } else {
+        console.error('GPT API返回数据格式错误:', data);
         throw new Error('GPT API返回数据格式错误');
       }
 
