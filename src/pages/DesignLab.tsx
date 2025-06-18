@@ -54,17 +54,29 @@ const DesignLab = () => {
     const userMsg = { id: Date.now(), text: userMessage, isUser: true };
     setMessages((prev) => [...prev, userMsg]);
 
-    // 使用对话管理器生成智能回复
-    const aiResponse = conversationManager.generateResponse(userMessage);
-    
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now() + 1,
-        text: aiResponse,
-        isUser: false,
-      },
-    ]);
+    try {
+      // 使用对话管理器生成智能回复
+      const aiResponse = await conversationManager.generateResponse(userMessage);
+      
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          text: aiResponse,
+          isUser: false,
+        },
+      ]);
+    } catch (error) {
+      console.error('生成回复失败:', error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          text: "抱歉，我暂时无法回应。请稍后再试。",
+          isUser: false,
+        },
+      ]);
+    }
   };
 
   // 生成真实的AI图片

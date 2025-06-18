@@ -1,5 +1,6 @@
 
 import { ConversationState, ConversationPhase, DesignRequirements } from '@/types/conversation';
+import { llmService } from '@/services/llmService';
 
 export class ConversationManager {
   private state: ConversationState;
@@ -45,9 +46,28 @@ export class ConversationManager {
     return !!(req.sockType && req.colors?.length && req.pattern && req.occasion);
   }
 
-  public generateResponse(userMessage: string): string {
+  public async generateResponse(userMessage: string): Promise<string> {
     const lowerMessage = userMessage.toLowerCase();
     
+    // 如果LLM服务已配置，使用真实的GPT回复
+    if (llmService.isConfigured()) {
+      try {
+        const context = `
+当前对话阶段: ${this.state.phase}
+已收集信息: ${JSON.stringify(this.state.requirements, null, 2)}
+用户消息: ${userMessage}
+        `;
+        
+        const response = await llmService.sendMessage(context);
+        if (response.success) {
+          return response.message;
+        }
+      } catch (error) {
+        console.error('GPT API调用失败，使用结构化回复:', error);
+      }
+    }
+    
+    // 降级到结构化对话流程
     switch (this.state.phase) {
       case 'welcome':
         return this.handleWelcomePhase(lowerMessage);
