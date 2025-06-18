@@ -46,6 +46,35 @@ const DesignLab = () => {
     }
   }, [location]);
 
+  // 同步ConversationManager的历史记录与UI消息
+  const syncConversationHistory = () => {
+    const history = conversationManager.getConversationHistory();
+    console.log('同步对话历史，长度:', history.length, '当前UI消息:', messages.length);
+    
+    // 如果历史记录和UI消息不同步，以ConversationManager为准
+    if (history.length > 0) {
+      const syncedMessages: Message[] = [
+        // 保留欢迎消息
+        {
+          id: 1,
+          text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
+          isUser: false,
+        }
+      ];
+      
+      // 添加历史对话
+      history.forEach((msg, index) => {
+        syncedMessages.push({
+          id: index + 2,
+          text: msg.content,
+          isUser: msg.role === 'user'
+        });
+      });
+      
+      setMessages(syncedMessages);
+    }
+  };
+
   // 使用对话管理器生成智能回复
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating) return;
@@ -54,7 +83,7 @@ const DesignLab = () => {
     setMessages((prev) => [...prev, userMsg]);
 
     try {
-      // 使用对话管理器生成智能回复
+      // 使用对话管理器生成智能回复，它会自动管理历史记录
       const aiResponse = await conversationManager.generateResponse(userMessage);
       
       setMessages((prev) => [
@@ -65,6 +94,10 @@ const DesignLab = () => {
           isUser: false,
         },
       ]);
+
+      // 同步对话历史
+      syncConversationHistory();
+      
     } catch (error) {
       console.error('生成回复失败:', error);
       setMessages((prev) => [

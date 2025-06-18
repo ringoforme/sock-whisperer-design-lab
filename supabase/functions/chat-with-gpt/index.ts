@@ -9,13 +9,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { message, systemPrompt } = await req.json();
+    const { message, systemPrompt, conversationHistory = [] } = await req.json();
 
     if (!openAIApiKey) {
       return new Response(
@@ -25,6 +30,24 @@ serve(async (req) => {
     }
 
     console.log('收到聊天请求:', message);
+    console.log('对话历史长度:', conversationHistory.length);
+
+    // 构建完整的消息数组，包含系统提示词、历史对话和当前消息
+    const messages = [
+      { role: 'system', content: systemPrompt || '你是一个专业的袜子设计助手' }
+    ];
+
+    // 添加对话历史（最近10轮对话，避免token过多）
+    const recentHistory = conversationHistory.slice(-10);
+    messages.push(...recentHistory);
+
+    // 添加当前用户消息（如果不在历史记录末尾）
+    const lastMessage = recentHistory[recentHistory.length - 1];
+    if (!lastMessage || lastMessage.role !== 'user' || lastMessage.content !== message) {
+      messages.push({ role: 'user', content: message });
+    }
+
+    console.log('发送到OpenAI的消息数量:', messages.length);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -34,12 +57,9 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt || '你是一个专业的袜子设计助手' },
-          { role: 'user', content: message }
-        ],
+        messages: messages,
         temperature: 0.7,
-        max_tokens: 500
+        max_tokens: 800
       }),
     });
 

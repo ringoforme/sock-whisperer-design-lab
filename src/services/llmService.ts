@@ -8,20 +8,31 @@ interface LLMResponse {
   error?: string;
 }
 
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
+interface ConversationContext {
+  currentPhase: string;
+  collectedInfo: any;
+  isComplete: boolean;
+}
+
 // Sox Lab袜子设计助手的系统提示词
-const SYSTEM_PROMPT = `You are "Sox Lab Assistant", a friendly and helpful AI designer specializing in socks. Your goal is to have a short conversation with the user to help them build a detailed design brief.
+const SYSTEM_PROMPT = `You are "Sox Lab Assistant", a friendly and helpful AI designer specializing in socks. Your goal is to have a natural conversation with the user to help them build a detailed design brief.
 
-Follow these steps:
-1.  Start by greeting the user and acknowledging their initial idea if they provided one.
-2.  Ask clarifying questions to gather information on the following key aspects, one or two at a time:
-    - Sock Length (e.g., ankle, crew, knee-high)
-    - Primary Theme or Motif (e.g., space, cats, geometric patterns)
-    - Intended Use (e.g., sports, casual, formal)
-    - Main Colors (ask for 2-3 main colors)
-3.  Be conversational and friendly. Do not just list questions.
-4.  Once you believe you have enough information to create a detailed design, end your message with a summary of the brief
+Key guidelines:
+1. Remember and reference previous conversation context
+2. Don't repeat questions you've already asked
+3. Build naturally on the information already provided
+4. Be conversational and avoid listing questions mechanically
+5. When you have enough information, summarize the design brief
 
-Example of a final message: "好的，我们来设计一款以太空为主题的蓝色和银色船袜，适合日常穿着。您可以点击“生成图片”按钮立马查看效果！"`;
+Current conversation context will be provided to help you maintain continuity.
+
+Always respond in Chinese and provide helpful, contextual responses based on the full conversation history.`;
 
 export class LLMService {
   constructor() {
@@ -53,16 +64,41 @@ export class LLMService {
     }
   }
 
-  // 发送消息到LLM
+  // 原有的单消息发送方法，保持向后兼容
   async sendMessage(userMessage: string): Promise<LLMResponse> {
+    return this.sendMessageWithHistory(userMessage, []);
+  }
+
+  // 新的支持对话历史的方法
+  async sendMessageWithHistory(
+    userMessage: string, 
+    conversationHistory: ConversationMessage[],
+    context?: ConversationContext
+  ): Promise<LLMResponse> {
     try {
       console.log('调用GPT API，消息:', userMessage);
+      console.log('对话历史长度:', conversationHistory.length);
+      console.log('对话上下文:', context);
       
+      // 构建增强的系统提示词，包含上下文信息
+      const enhancedSystemPrompt = `${SYSTEM_PROMPT}
+
+当前对话状态：
+- 对话阶段：${context?.currentPhase || 'unknown'}
+- 已收集信息：${JSON.stringify(context?.collectedInfo || {}, null, 2)}
+- 信息收集完成度：${context?.isComplete ? '完成' : '进行中'}
+
+请基于以上上下文和对话历史，提供自然、连贯的回复。避免重复询问已经回答过的问题。`;
+
       // 调用Supabase Edge Function进行GPT对话
       const { data, error } = await supabase.functions.invoke('chat-with-gpt', {
         body: { 
           message: userMessage,
-          systemPrompt: SYSTEM_PROMPT
+          systemPrompt: enhancedSystemPrompt,
+          conversationHistory: conversationHistory.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
         }
       });
 

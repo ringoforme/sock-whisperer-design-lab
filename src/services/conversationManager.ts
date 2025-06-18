@@ -1,9 +1,15 @@
-
 import { ConversationState, ConversationPhase, DesignRequirements } from '@/types/conversation';
 import { llmService } from '@/services/llmService';
 
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
 export class ConversationManager {
   private state: ConversationState;
+  private conversationHistory: ConversationMessage[];
 
   constructor() {
     this.state = {
@@ -12,10 +18,23 @@ export class ConversationManager {
       collectedInfo: [],
       isComplete: false
     };
+    this.conversationHistory = [];
   }
 
   public getState(): ConversationState {
     return { ...this.state };
+  }
+
+  public getConversationHistory(): ConversationMessage[] {
+    return [...this.conversationHistory];
+  }
+
+  public addToHistory(role: 'user' | 'assistant', content: string): void {
+    this.conversationHistory.push({
+      role,
+      content,
+      timestamp: Date.now()
+    });
   }
 
   public updatePhase(phase: ConversationPhase): void {
@@ -49,22 +68,29 @@ export class ConversationManager {
   public async generateResponse(userMessage: string): Promise<string> {
     console.log('生成回复，用户消息:', userMessage);
     console.log('当前对话阶段:', this.state.phase);
+    console.log('对话历史长度:', this.conversationHistory.length);
     
-    // 优先使用 GPT 进行智能对话
+    // 添加用户消息到历史记录
+    this.addToHistory('user', userMessage);
+    
+    // 优先使用 GPT 进行智能对话，传递完整的对话历史
     try {
-      const context = `你是Sox Lab袜子设计工作室的专业AI助手。
-
-当前对话阶段: ${this.state.phase}
-已收集信息: ${JSON.stringify(this.state.requirements, null, 2)}
-用户消息: ${userMessage}
-
-请根据当前阶段和已收集的信息，用中文回复用户。如果需要收集更多设计信息，请自然地引导用户提供相关信息。`;
-      
-      console.log('调用 GPT API...');
-      const response = await llmService.sendMessage(context);
+      console.log('调用 GPT API，传递完整对话历史...');
+      const response = await llmService.sendMessageWithHistory(
+        userMessage, 
+        this.conversationHistory,
+        {
+          currentPhase: this.state.phase,
+          collectedInfo: this.state.requirements,
+          isComplete: this.state.isComplete
+        }
+      );
       
       if (response.success && response.message) {
         console.log('GPT API 成功响应:', response.message);
+        
+        // 添加AI回复到历史记录
+        this.addToHistory('assistant', response.message);
         
         // 尝试从 GPT 回复中提取设计需求信息
         this.extractRequirementsFromGPTResponse(userMessage, response.message);
@@ -72,11 +98,15 @@ export class ConversationManager {
         return response.message;
       } else {
         console.warn('GPT API 调用失败，使用结构化回复:', response.error);
-        return this.handleStructuredResponse(userMessage.toLowerCase());
+        const fallbackResponse = this.handleStructuredResponse(userMessage.toLowerCase());
+        this.addToHistory('assistant', fallbackResponse);
+        return fallbackResponse;
       }
     } catch (error) {
       console.error('GPT API 调用异常，降级到结构化对话:', error);
-      return this.handleStructuredResponse(userMessage.toLowerCase());
+      const fallbackResponse = this.handleStructuredResponse(userMessage.toLowerCase());
+      this.addToHistory('assistant', fallbackResponse);
+      return fallbackResponse;
     }
   }
 
