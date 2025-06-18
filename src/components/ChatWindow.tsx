@@ -1,8 +1,11 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { Send, Image, Paperclip, Sparkles } from 'lucide-react';
+import { Send, Image, Paperclip, Sparkles, Info } from 'lucide-react';
+import { ConversationManager } from '@/services/conversationManager';
 
 interface Message {
   id: number;
@@ -30,6 +33,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   hasDesign = false
 }) => {
   const [inputValue, setInputValue] = useState('');
+  const [conversationManager] = useState(() => new ConversationManager());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -38,6 +42,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     scrollToBottom();
     inputRef.current?.focus();
   }, [messages]);
+
+  useEffect(() => {
+    if (isEditingMode) {
+      conversationManager.setEditingMode();
+    }
+  }, [isEditingMode, conversationManager]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -62,9 +72,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const getPlaceholderText = () => {
     if (isEditingMode && selectedDesignId !== null) {
-      return `对设计说些什么...`;
+      return `告诉我您想要的修改...`;
     }
-    return "描述您理想的袜子...";
+    
+    const state = conversationManager.getState();
+    switch (state.phase) {
+      case 'welcome':
+        return "描述您想要的袜子设计...";
+      case 'collecting_type':
+        return "选择袜子类型：船袜、中筒袜、长筒袜...";
+      case 'collecting_colors':
+        return "告诉我您喜欢的颜色...";
+      case 'collecting_pattern':
+        return "选择图案风格...";
+      case 'collecting_occasion':
+        return "这双袜子用于什么场合...";
+      case 'collecting_style':
+        return "您偏好什么设计风格...";
+      default:
+        return "继续聊天或点击生成图片...";
+    }
   };
 
   const getHeaderText = () => {
@@ -78,11 +105,41 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     if (isEditingMode && selectedDesignId !== null) {
       return "告诉我您想对这个设计做什么改动";
     }
-    return "让我们一起探讨您的袜子设计创意";
+    
+    const state = conversationManager.getState();
+    const phaseDescriptions = {
+      'welcome': '让我们一起探讨您的袜子设计创意',
+      'collecting_type': '正在收集：袜子类型',
+      'collecting_colors': '正在收集：颜色偏好',
+      'collecting_pattern': '正在收集：图案风格',
+      'collecting_occasion': '正在收集：使用场合',
+      'collecting_style': '正在收集：设计风格',
+      'confirming': '请确认设计信息',
+      'ready_to_generate': '设计信息已完善，可以生成图片',
+      'editing_feedback': '编辑模式：收集修改建议'
+    };
+    
+    return phaseDescriptions[state.phase] || '让我们一起探讨您的袜子设计创意';
   };
 
   const getHeaderIcon = () => {
     return <Image className="h-5 w-5 text-sock-purple" />;
+  };
+
+  const getCollectedInfo = () => {
+    const info = conversationManager.getCollectedInfo();
+    return info;
+  };
+
+  const isReadyToGenerate = () => {
+    return conversationManager.isReadyToGenerate();
+  };
+
+  const getGenerateButtonText = () => {
+    if (isGenerating) return '生成中...';
+    if (isEditingMode) return '修改图片';
+    if (isReadyToGenerate()) return '生成图片';
+    return '生成图片';
   };
 
   return (
@@ -93,6 +150,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           <h2 className="text-lg font-semibold text-sock-purple">{getHeaderText()}</h2>
         </div>
         <p className="text-sm text-muted-foreground">{getSubHeaderText()}</p>
+        
+        {/* 显示收集到的设计信息 */}
+        {!isEditingMode && getCollectedInfo().length > 0 && (
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Info className="h-3 w-3" />
+              <span>已收集的设计信息：</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {getCollectedInfo().map((info, index) => (
+                <Badge key={index} variant="secondary" className="text-xs">
+                  {info}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+        
         {(isEditingMode && selectedDesignId !== null) && (
           <div className="mt-2 text-xs bg-sock-light-purple text-sock-purple px-2 py-1 rounded">
             正在编辑模式
@@ -104,9 +179,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`message ${message.isUser ? 'user-message' : 'ai-message'}`}
+            className={`message mb-4 ${
+              message.isUser 
+                ? 'ml-8 text-right' 
+                : 'mr-8 text-left'
+            }`}
           >
-            {message.text}
+            <div className={`inline-block max-w-full px-4 py-2 rounded-lg ${
+              message.isUser 
+                ? 'bg-sock-purple text-white' 
+                : 'bg-gray-100 text-gray-900'
+            }`}>
+              <div className="whitespace-pre-wrap text-sm">
+                {message.text}
+              </div>
+            </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
@@ -141,10 +228,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               type="button"
               onClick={onGenerateImage}
               disabled={isGenerating}
-              className="bg-green-600 hover:bg-green-700 text-white px-4"
+              className={`px-4 ${
+                isReadyToGenerate() && !isEditingMode
+                  ? 'bg-green-600 hover:bg-green-700 text-white animate-pulse'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
             >
               <Sparkles className="h-4 w-4 mr-2" />
-              {isGenerating ? '生成中...' : isEditingMode ? '修改图片' : '生成图片'}
+              {getGenerateButtonText()}
             </Button>
             
             <Button 

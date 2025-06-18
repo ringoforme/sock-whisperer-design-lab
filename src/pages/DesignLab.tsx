@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -8,8 +9,8 @@ import { Download, Edit, AlertCircle, MessageCircle } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
+import { ConversationManager } from "@/services/conversationManager";
 
-import { generateDesigns, regenerateImage } from "@/services/design.service";
 import type { DesignData } from "@/types/design";
 
 interface Message {
@@ -24,7 +25,7 @@ const DesignLab = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "欢迎来到Sox Lab设计工作室！请先告诉我您想要什么样的袜子设计，我们可以先聊聊您的想法。",
+      text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
       isUser: false,
     },
   ]);
@@ -32,6 +33,7 @@ const DesignLab = () => {
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conversationManager] = useState(() => new ConversationManager());
 
   const location = useLocation();
   const { addDesign } = useDesignStorage();
@@ -44,88 +46,137 @@ const DesignLab = () => {
     }
   }, [location]);
 
-  // 创意设计沟通回复
-  const generateChatResponse = (userMessage: string): string => {
-    const responses = [
-      `关于"${userMessage}"的设计想法很棒！我建议可以考虑使用渐变色彩，这样既时尚又有层次感。您希望偏向什么风格呢？运动风、商务风还是休闲风？`,
-      `您的创意很有趣！对于袜子设计来说，颜色搭配很重要。您提到的元素可以作为主图案放在袜身中部，这样既突出又不会过于繁复。`,
-      `这是一个很有创意的想法！建议可以结合一些几何元素来平衡设计，让整体看起来更协调。您对配色有什么特别的偏好吗？`,
-      `您的设计概念很独特！可以考虑将主要图案放在脚踝部分，这样穿着时既能展示设计又很实用。需要考虑什么样的袜子长度呢？`,
-      `很棒的灵感！建议可以用对比色来突出设计重点，同时保持整体的简洁感。您希望这款袜子适合什么场合穿着？当您准备好时，可以点击"生成图片"按钮来创建设计。`
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
-
-  // 生成/修改图片功能
-  const triggerImageGeneration = async () => {
-    // 从聊天记录中提取用户的所有输入作为prompt
-    const userMessages = messages.filter(m => m.isUser).map(m => m.text).join(' ');
-    
-    if (!userMessages.trim()) {
-      toast.error("请先描述您的设计想法");
-      return;
-    }
-
-    setIsGenerating(true);
-    setError(null);
-
-    if (isEditingMode && design) {
-      // 编辑模式：修改现有图片
-      const modifiedDesign: DesignState = {
-        url: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=400&fit=crop", // 不同的mock图片表示修改后的结果
-        prompt_en: `Modified: ${design.prompt_en} + ${userMessages}`,
-        design_name: `修改后的${design.design_name}`,
-        isEditing: true
-      };
-
-      setDesign(modifiedDesign);
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        text: "完美！我已经根据您的指令修改了设计。您可以继续调整或者下载这个新版本。",
-        isUser: false
-      }]);
-      toast.success("设计修改成功！");
-    } else {
-      // 生成模式：创建新图片
-      const mockDesign: DesignState = {
-        url: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=400&fit=crop",
-        prompt_en: userMessages,
-        design_name: "创意袜子设计",
-        isEditing: false
-      };
-
-      setDesign(mockDesign);
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        text: "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。",
-        isUser: false
-      }]);
-      toast.success("设计生成成功！");
-    }
-
-    setIsGenerating(false);
-  };
-
-  // handleSendMessage 函数：只处理聊天，不修改图片
+  // 使用对话管理器生成智能回复
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating) return;
+    
     const userMsg = { id: Date.now(), text: userMessage, isUser: true };
     setMessages((prev) => [...prev, userMsg]);
 
-    // 无论是否在编辑模式，都只进行聊天对话
-    const chatResponse = isEditingMode 
-      ? `我记录了您的修改建议："${userMessage}"。当您准备好时，请点击"修改图片"按钮来应用这些改动。`
-      : generateChatResponse(userMessage);
+    // 使用对话管理器生成智能回复
+    const aiResponse = conversationManager.generateResponse(userMessage);
     
     setMessages((prev) => [
       ...prev,
       {
         id: Date.now() + 1,
-        text: chatResponse,
+        text: aiResponse,
         isUser: false,
       },
     ]);
+  };
+
+  // 生成Mock图片的函数，基于收集到的需求
+  const generateMockDesign = (): DesignState => {
+    const requirements = conversationManager.getRequirements();
+    const mockImages = [
+      "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=400&fit=crop", 
+      "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"
+    ];
+    
+    // 根据需求选择不同的mock图片
+    let imageIndex = 0;
+    if (requirements.pattern === 'geometric') imageIndex = 1;
+    else if (requirements.pattern === 'animal') imageIndex = 2; 
+    else if (requirements.sockType === 'knee-high') imageIndex = 3;
+    
+    const designName = generateDesignName(requirements);
+    
+    return {
+      url: mockImages[imageIndex],
+      prompt_en: JSON.stringify(requirements),
+      design_name: designName,
+      isEditing: false
+    };
+  };
+
+  // 根据需求生成设计名称
+  const generateDesignName = (requirements: any): string => {
+    const { sockType, colors, pattern, style } = requirements;
+    let name = "";
+    
+    if (style) {
+      const styleNames = {
+        'minimalist': '简约',
+        'bold': '大胆',
+        'cute': '可爱',
+        'elegant': '优雅',
+        'trendy': '潮流'
+      };
+      name += styleNames[style as keyof typeof styleNames] || '';
+    }
+    
+    if (pattern) {
+      const patternNames = {
+        'geometric': '几何',
+        'animal': '动物',
+        'floral': '花卉',
+        'abstract': '抽象',
+        'text': '文字',
+        'holiday': '节日',
+        'sports': '运动'
+      };
+      name += patternNames[pattern as keyof typeof patternNames] || '';
+    }
+    
+    if (colors && colors.length > 0) {
+      name += colors[0];
+    }
+    
+    name += '袜子设计';
+    return name || '创意袜子设计';
+  };
+
+  // 生成/修改图片功能
+  const triggerImageGeneration = async () => {
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      // 模拟生成时间
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      if (isEditingMode && design) {
+        // 编辑模式：生成修改后的版本
+        const modifiedDesign: DesignState = {
+          ...design,
+          url: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=400&fit=crop", // 不同图片表示修改结果
+          design_name: `修改版-${design.design_name}`,
+          isEditing: true
+        };
+
+        setDesign(modifiedDesign);
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          text: "完美！我已经根据您的修改建议更新了设计。您可以继续调整或者下载这个新版本。",
+          isUser: false
+        }]);
+        toast.success("设计修改成功！");
+      } else {
+        // 生成模式：创建新设计
+        const newDesign = generateMockDesign();
+        setDesign(newDesign);
+        
+        const collectedInfo = conversationManager.getCollectedInfo();
+        const summary = collectedInfo.length > 0 
+          ? `根据您的需求（${collectedInfo.join('、')}），我为您生成了这个设计。`
+          : '我已经为您生成了一个创意设计。';
+        
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          text: `${summary}您可以下载它或者点击编辑来进一步调整。如果不满意，也可以继续和我聊天来完善需求后重新生成。`,
+          isUser: false
+        }]);
+        toast.success("设计生成成功！");
+      }
+    } catch (error) {
+      setError("生成失败，请重试");
+      toast.error("生成失败，请重试");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleEdit = () => {
@@ -139,7 +190,7 @@ const DesignLab = () => {
       ...prev,
       {
         id: Date.now(),
-        text: "现在正在编辑模式，您可以告诉我想要做什么调整，然后点击'修改图片'来应用改动。",
+        text: "已进入编辑模式！现在您可以告诉我想要做什么调整，比如：\n• 改变颜色搭配\n• 调整图案风格\n• 修改设计元素\n• 或者其他任何想法\n\n描述完您的修改需求后，点击'修改图片'按钮来应用改动。",
         isUser: false,
       },
     ]);
@@ -150,7 +201,7 @@ const DesignLab = () => {
     setDesign(prev => prev ? { ...prev, isEditing: false } : null);
     setMessages((prev) => [
       ...prev,
-      { id: Date.now(), text: "已退出编辑模式。", isUser: false },
+      { id: Date.now(), text: "已退出编辑模式。您可以继续和我聊天或开始新的设计。", isUser: false },
     ]);
   };
 
@@ -218,6 +269,7 @@ const DesignLab = () => {
 
                 {isGenerating && (
                   <div className="text-center text-gray-500 py-10">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sock-purple mx-auto mb-4"></div>
                     正在为您生成设计，请稍候...
                   </div>
                 )}
@@ -284,7 +336,8 @@ const DesignLab = () => {
                 {!design && !isGenerating && (
                   <div className="text-center text-gray-500 py-10">
                     <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p>先和我聊聊您的设计想法，然后点击"生成图片"来创建设计</p>
+                    <p className="mb-2">和我聊聊您的设计想法</p>
+                    <p className="text-sm">我会引导您完善需求，然后生成专属设计</p>
                   </div>
                 )}
               </div>
