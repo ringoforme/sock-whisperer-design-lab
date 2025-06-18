@@ -1,5 +1,8 @@
 
-project_id = "placeholder"
+project_id = "obmwuieyrhqrgkmjftis"
 
 [functions.generate-sock-design]
+verify_jwt = false
+
+[functions.chat-with-gpt]
 verify_jwt = false

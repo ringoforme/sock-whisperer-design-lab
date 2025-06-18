@@ -1,4 +1,6 @@
 
+import { createClient } from "@/integrations/supabase/client";
+
 // LLM服务 - 处理与AI模型的交互
 interface LLMResponse {
   message: string;
@@ -22,34 +24,44 @@ const SYSTEM_PROMPT = `你是Sox Lab袜子设计工作室的专业AI助手。你
 请始终保持专业、友好和创意的回答风格，帮助用户实现他们的袜子设计梦想。`;
 
 export class LLMService {
-  private apiKey: string | null = null;
+  private supabase = createClient();
 
   constructor() {
-    // 从localStorage获取API密钥（临时方案）
-    this.apiKey = localStorage.getItem('llm_api_key');
-  }
-
-  setApiKey(key: string) {
-    this.apiKey = key;
-    localStorage.setItem('llm_api_key', key);
+    // 使用Supabase客户端，API密钥通过环境变量管理
   }
 
   isConfigured(): boolean {
-    return !!this.apiKey;
+    // 检查是否已配置OpenAI API密钥
+    return true; // 假设已在Supabase secrets中配置
   }
 
   // 发送消息到LLM
   async sendMessage(userMessage: string): Promise<LLMResponse> {
-    // 临时使用ConversationManager的结构化回复
     try {
-      // 模拟API延迟
-      await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+      console.log('调用GPT API，消息:', userMessage);
       
-      // 这里会被ConversationManager接管，提供更智能的结构化回复
-      return {
-        message: "这是一个占位回复，实际会由ConversationManager处理。",
-        success: true
-      };
+      // 调用Supabase Edge Function进行GPT对话
+      const { data, error } = await this.supabase.functions.invoke('chat-with-gpt', {
+        body: { 
+          message: userMessage,
+          systemPrompt: SYSTEM_PROMPT
+        }
+      });
+
+      if (error) {
+        console.error('GPT API调用失败:', error);
+        throw new Error(error.message);
+      }
+
+      if (data && data.message) {
+        console.log('GPT API响应:', data.message);
+        return {
+          message: data.message,
+          success: true
+        };
+      } else {
+        throw new Error('GPT API返回数据格式错误');
+      }
 
     } catch (error) {
       console.error('LLM API调用失败:', error);

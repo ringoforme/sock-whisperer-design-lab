@@ -52,11 +52,13 @@ export class ConversationManager {
     // 如果LLM服务已配置，使用真实的GPT回复
     if (llmService.isConfigured()) {
       try {
-        const context = `
+        const context = `你是Sox Lab袜子设计工作室的专业AI助手。
+
 当前对话阶段: ${this.state.phase}
 已收集信息: ${JSON.stringify(this.state.requirements, null, 2)}
 用户消息: ${userMessage}
-        `;
+
+请根据当前阶段和已收集的信息，用中文回复用户。如果需要收集更多设计信息，请引导用户提供。`;
         
         const response = await llmService.sendMessage(context);
         if (response.success) {
