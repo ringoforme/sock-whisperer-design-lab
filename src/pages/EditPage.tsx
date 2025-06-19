@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Download, File, Save } from 'lucide-react';
 import RegenerateButton from '@/components/RegenerateButton';
+import ImageModal from '@/components/ImageModal';
 import { useDesignStorage } from '@/hooks/useDesignStorage';
 import { Design } from '@/types/design';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ const EditPage = () => {
   const { library, updateDesign, addDesign } = useDesignStorage();
   const [currentDesign, setCurrentDesign] = useState<Design | null>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   useEffect(() => {
     if (designId) {
@@ -109,6 +110,10 @@ const EditPage = () => {
     toast.success('设计已添加到矢量化库');
   };
 
+  const handleImageClick = () => {
+    setIsImageModalOpen(true);
+  };
+
   if (!currentDesign) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -161,7 +166,8 @@ const EditPage = () => {
               <img 
                 src={currentDesign.imageUrl} 
                 alt={currentDesign.title}
-                className="w-full h-full object-cover rounded-lg shadow-lg"
+                className="w-full h-full object-cover rounded-lg shadow-lg cursor-pointer hover:scale-105 transition-transform"
+                onClick={handleImageClick}
               />
             </div>
             
@@ -178,6 +184,14 @@ const EditPage = () => {
           </CardContent>
         </Card>
       </main>
+
+      {/* 图片预览模态框 */}
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={currentDesign.imageUrl}
+        imageTitle={currentDesign.title}
+      />
     </div>
   );
 };

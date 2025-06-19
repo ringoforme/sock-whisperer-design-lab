@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Download, Edit, AlertCircle, MessageCircle } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
+import ImageModal from "@/components/ImageModal";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 
 import { generateDesigns, editImage } from "@/services/design.service";
@@ -39,6 +40,9 @@ const DesignStudio = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [conversationManager] = useState(() => new ConversationManager());
   const [pendingEditInstruction, setPendingEditInstruction] = useState<string>('');
+  
+  // 新增图片预览状态
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const location = useLocation();
   const { addDesign } = useDesignStorage();
@@ -281,6 +285,13 @@ const DesignStudio = () => {
     toast.success("矢量化处理已开始");
   };
 
+  // 新增：处理图片点击放大
+  const handleImageClick = () => {
+    if (design && !design.error) {
+      setIsImageModalOpen(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white dark:bg-gray-950">
@@ -326,6 +337,7 @@ const DesignStudio = () => {
                 onExitEdit={handleExitEdit}
                 onDownload={handleDownload}
                 onVectorize={handleVectorize}
+                onImageClick={handleImageClick}
               />
             ) : (
               <div>
@@ -360,7 +372,10 @@ const DesignStudio = () => {
                           <img
                             src={design.url}
                             alt={design.design_name}
-                            className="w-full h-full object-cover"
+                            className={`w-full h-full object-cover transition-transform ${
+                              !design.error ? "cursor-pointer hover:scale-105" : ""
+                            }`}
+                            onClick={handleImageClick}
                           />
                           {design.error && (
                             <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex flex-col items-center justify-center text-white p-2">
@@ -414,6 +429,16 @@ const DesignStudio = () => {
           </div>
         </div>
       </main>
+
+      {/* 图片预览模态框 */}
+      {design && (
+        <ImageModal
+          isOpen={isImageModalOpen}
+          onClose={() => setIsImageModalOpen(false)}
+          imageUrl={design.url}
+          imageTitle={design.design_name}
+        />
+      )}
     </div>
   );
 };

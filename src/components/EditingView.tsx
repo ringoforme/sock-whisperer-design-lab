@@ -10,13 +10,15 @@ interface EditingViewProps {
   onExitEdit: () => void;
   onDownload: () => void;
   onVectorize: () => void;
+  onImageClick?: () => void;
 }
 
 const EditingView: React.FC<EditingViewProps> = ({
   design,
   onExitEdit,
   onDownload,
-  onVectorize
+  onVectorize,
+  onImageClick
 }) => {
   return (
     <div className="h-[80vh] flex flex-col animate-fade-in">
@@ -51,7 +53,8 @@ const EditingView: React.FC<EditingViewProps> = ({
             <img 
               src={design.url} 
               alt={design.design_name} 
-              className="w-full h-auto rounded-lg shadow-lg border transition-transform hover:scale-105"
+              className="w-full h-auto rounded-lg shadow-lg border transition-transform hover:scale-105 cursor-pointer"
+              onClick={onImageClick}
             />
           </div>
         </CardContent>
