@@ -52,14 +52,18 @@ const DesignStudio = () => {
 
   const initializeSession = async () => {
     try {
+      console.log('开始初始化会话...');
       // 创建新的设计会话
       const session = await sessionService.createSession("开始新的袜子设计会话");
       setCurrentSessionId(session.id);
       llmService.setCurrentSession(session.id);
       console.log('会话已初始化:', session.id);
+      
+      // 添加系统消息到数据库
+      await sessionService.addMessage(session.id, 'assistant', '欢迎来到Sox Lab设计工作室！请先告诉我您想要什么样的袜子设计，我们可以先聊聊您的想法。');
     } catch (error) {
       console.error('初始化会话失败:', error);
-      // 如果会话创建失败，仍可继续使用但不会记录到数据库
+      toast.error('会话初始化失败，但可以继续使用');
     }
   };
 
@@ -90,13 +94,22 @@ const DesignStudio = () => {
     setError(null);
 
     try {
+      console.log('开始生成设计，会话ID:', currentSessionId);
       const newDesign = await generateDesigns(userMessages, currentSessionId);
       setDesign({ ...newDesign, isEditing: false });
+      
+      const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
       setMessages(prev => [...prev, {
         id: Date.now(),
-        text: "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。",
+        text: successMessage,
         isUser: false
       }]);
+      
+      // 记录助手消息到数据库
+      if (currentSessionId) {
+        await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
+      }
+      
       toast.success("设计生成成功！");
       
       // 更新会话状态为已完成
@@ -104,6 +117,7 @@ const DesignStudio = () => {
         await sessionService.updateSessionStatus(currentSessionId, 'completed');
       }
     } catch (err: any) {
+      console.error('生成设计失败:', err);
       setError(err.message);
       toast.error(`生成失败: ${err.message}`);
     } finally {
@@ -114,8 +128,18 @@ const DesignStudio = () => {
   // handleSendMessage 函数修改为支持聊天
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating) return;
+    
     const userMsg = { id: Date.now(), text: userMessage, isUser: true };
     setMessages((prev) => [...prev, userMsg]);
+
+    // 记录用户消息到数据库
+    if (currentSessionId) {
+      try {
+        await sessionService.addMessage(currentSessionId, 'user', userMessage);
+      } catch (error) {
+        console.error('记录用户消息失败:', error);
+      }
+    }
 
     if (isEditingMode && design) {
       setIsGenerating(true);
@@ -125,14 +149,21 @@ const DesignStudio = () => {
         const newDesign = await regenerateImage(editInstruction, currentSessionId);
         setDesign({ ...newDesign, isEditing: true });
         toast.success(`设计已更新！`);
+        
+        const responseMessage = "我已根据您的指令更新了设计。";
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now(),
-            text: "我已根据您的指令更新了设计。",
+            text: responseMessage,
             isUser: false,
           },
         ]);
+        
+        // 记录助手回复到数据库
+        if (currentSessionId) {
+          await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
+        }
       } catch (err: any) {
         toast.error(`编辑失败: ${err.message}`);
       } finally {
@@ -149,6 +180,15 @@ const DesignStudio = () => {
           isUser: false,
         },
       ]);
+      
+      // 记录助手回复到数据库
+      if (currentSessionId) {
+        try {
+          await sessionService.addMessage(currentSessionId, 'assistant', chatResponse);
+        } catch (error) {
+          console.error('记录助手消息失败:', error);
+        }
+      }
     }
   };
 

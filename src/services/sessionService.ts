@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -16,23 +15,32 @@ export type DesignBriefInsert = Database['public']['Tables']['design_briefs']['I
 export type ExpandedPromptInsert = Database['public']['Tables']['expanded_prompts']['Insert'];
 export type GeneratedImageInsert = Database['public']['Tables']['generated_images']['Insert'];
 
+// 测试用户ID - 用于没有登录用户时的测试
+const TEST_USER_ID = '00000000-0000-0000-0000-000000000000';
+
 export class SessionService {
   // 创建新的设计会话
   async createSession(initialIdea: string): Promise<DesignSession> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('用户未登录');
+    const userId = user?.id || TEST_USER_ID;
+
+    console.log('创建会话，用户ID:', userId);
 
     const { data, error } = await supabase
       .from('design_sessions')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         initial_idea: initialIdea,
         status: 'active'
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('创建会话失败:', error);
+      throw error;
+    }
+    console.log('会话创建成功:', data);
     return data;
   }
 
