@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ import { useDesignStorage } from "@/hooks/useDesignStorage";
 import { generateDesigns, regenerateImage } from "@/services/design.service";
 import { sessionService } from "@/services/sessionService";
 import { llmService } from "@/services/llmService";
+import { ConversationManager } from "@/services/conversationManager";
 import type { DesignData } from "@/types/design";
 
 interface Message {
@@ -33,8 +35,10 @@ const DesignStudio = () => {
   const [design, setDesign] = useState<DesignState | null>(null);
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [conversationManager] = useState(() => new ConversationManager());
 
   const location = useLocation();
   const { addDesign } = useDesignStorage();
@@ -65,19 +69,6 @@ const DesignStudio = () => {
       console.error('初始化会话失败:', error);
       toast.error('会话初始化失败，但可以继续使用');
     }
-  };
-
-  // 创意设计沟通回复
-  const generateChatResponse = (userMessage: string): string => {
-    const responses = [
-      `关于"${userMessage}"的设计想法很棒！我建议可以考虑使用渐变色彩，这样既时尚又有层次感。您希望偏向什么风格呢？运动风、商务风还是休闲风？`,
-      `您的创意很有趣！对于袜子设计来说，颜色搭配很重要。您提到的元素可以作为主图案放在袜身中部，这样既突出又不会过于繁复。`,
-      `这是一个很有创意的想法！建议可以结合一些几何元素来平衡设计，让整体看起来更协调。您对配色有什么特别的偏好吗？`,
-      `您的设计概念很独特！可以考虑将主要图案放在脚踝部分，这样穿着时既能展示设计又很实用。需要考虑什么样的袜子长度呢？`,
-      `很棒的灵感！建议可以用对比色来突出设计重点，同时保持整体的简洁感。您希望这款袜子适合什么场合穿着？当您准备好时，可以点击"生成图片"按钮来创建设计。`
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
   };
 
   // 生成图片功能
@@ -125,9 +116,9 @@ const DesignStudio = () => {
     }
   };
 
-  // handleSendMessage 函数修改为支持聊天
+  // 使用真正的 GPT 连接进行聊天
   const handleSendMessage = async (userMessage: string) => {
-    if (!userMessage.trim() || isGenerating) return;
+    if (!userMessage.trim() || isGenerating || isChatLoading) return;
     
     const userMsg = { id: Date.now(), text: userMessage, isUser: true };
     setMessages((prev) => [...prev, userMsg]);
@@ -170,24 +161,51 @@ const DesignStudio = () => {
         setIsGenerating(false);
       }
     } else {
-      // 默认聊天模式：只进行设计沟通，不生成图片
-      const chatResponse = generateChatResponse(userMessage);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          text: chatResponse,
-          isUser: false,
-        },
-      ]);
-      
-      // 记录助手回复到数据库
-      if (currentSessionId) {
-        try {
-          await sessionService.addMessage(currentSessionId, 'assistant', chatResponse);
-        } catch (error) {
-          console.error('记录助手消息失败:', error);
+      // 使用真正的 GPT API 进行对话
+      setIsChatLoading(true);
+      try {
+        console.log('发送消息到 ConversationManager:', userMessage);
+        
+        // 将当前消息历史传递给 ConversationManager
+        conversationManager.addToHistory('user', userMessage);
+        
+        const gptResponse = await conversationManager.generateResponse(userMessage);
+        console.log('收到 GPT 回复:', gptResponse);
+        
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + 1,
+            text: gptResponse,
+            isUser: false,
+          },
+        ]);
+        
+        // 记录助手回复到数据库
+        if (currentSessionId) {
+          try {
+            await sessionService.addMessage(currentSessionId, 'assistant', gptResponse);
+          } catch (error) {
+            console.error('记录助手消息失败:', error);
+          }
         }
+      } catch (error) {
+        console.error('GPT 聊天失败:', error);
+        
+        // 降级到简单回复
+        const fallbackResponse = "抱歉，AI 服务暂时不可用。请继续描述您的设计想法，稍后我会为您生成设计。";
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + 1,
+            text: fallbackResponse,
+            isUser: false,
+          },
+        ]);
+        
+        toast.error("AI 聊天服务暂时不可用");
+      } finally {
+        setIsChatLoading(false);
       }
     }
   };
@@ -199,6 +217,7 @@ const DesignStudio = () => {
     }
     setIsEditingMode(true);
     setDesign(prev => prev ? { ...prev, isEditing: true } : null);
+    conversationManager.setEditingMode();
     setMessages((prev) => [
       ...prev,
       {
@@ -262,7 +281,7 @@ const DesignStudio = () => {
               onGenerateImage={triggerImageGeneration}
               isEditingMode={isEditingMode}
               selectedDesignId={design ? 0 : null}
-              isGenerating={isGenerating}
+              isGenerating={isGenerating || isChatLoading}
               hasDesign={!!design}
             />
           </div>
@@ -285,9 +304,9 @@ const DesignStudio = () => {
                   )}
                 </div>
 
-                {isGenerating && (
+                {(isGenerating || isChatLoading) && (
                   <div className="text-center text-gray-500 py-10">
-                    正在为您生成设计，请稍候...
+                    {isGenerating ? "正在为您生成设计，请稍候..." : "正在思考回复，请稍候..."}
                   </div>
                 )}
 
@@ -350,7 +369,7 @@ const DesignStudio = () => {
                   </div>
                 )}
 
-                {!design && !isGenerating && (
+                {!design && !isGenerating && !isChatLoading && (
                   <div className="text-center text-gray-500 py-10">
                     <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <p>先和我聊聊您的设计想法，然后点击"生成图片"来创建设计</p>
