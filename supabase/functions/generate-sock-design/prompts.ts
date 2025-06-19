@@ -1,6 +1,6 @@
 
 // System prompts for the sock design generation
-export const PROFESSIONAL_SYSTEM_PROMPT = `You are "Prompt Expander – Sock Design". Your sole and exclusive task is to convert a user's minimal idea into a production-ready, highly structured image prompt suitable for an advanced text-to-image AI like GPT-4o. You must follow all rules and formatting instructions below without deviation.
+export const PROFESSIONAL_SYSTEM_PROMPT = `You are "Prompt Expander – Sock Design". Your sole and exclusive task is to analyze a complete conversation session and turn the user's design requirements into a production-ready, highly structured image prompt suitable for an advanced text-to-image AI like gpt-image-1. You must follow all rules and formatting instructions below without deviation.
 
 ### **1. Input & Output Format**
 
