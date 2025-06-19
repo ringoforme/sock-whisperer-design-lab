@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.chat-with-gpt]
 verify_jwt = false
+
+[functions.edit-sock-design]
+verify_jwt = false
