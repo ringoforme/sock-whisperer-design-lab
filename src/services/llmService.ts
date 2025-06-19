@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { sessionService } from "./sessionService";
 
 // LLM服务 - 处理与AI模型的交互
 interface LLMResponse {
@@ -18,6 +19,7 @@ interface ConversationContext {
   currentPhase: string;
   collectedInfo: any;
   isComplete: boolean;
+  sessionId?: string;
 }
 
 // Sox Lab袜子设计助手的系统提示词
@@ -50,8 +52,15 @@ Current conversation context will be provided to help you maintain continuity.
 Always respond concisely in Chinese and provide helpful, contextual responses based on the full conversation history.`;
 
 export class LLMService {
+  private currentSessionId: string | null = null;
+
   constructor() {
     // 使用Supabase客户端，API密钥通过环境变量管理
+  }
+
+  // 设置当前会话ID
+  setCurrentSession(sessionId: string) {
+    this.currentSessionId = sessionId;
   }
 
   async isConfigured(): Promise<boolean> {
@@ -84,7 +93,7 @@ export class LLMService {
     return this.sendMessageWithHistory(userMessage, []);
   }
 
-  // 新的支持对话历史的方法
+  // 新的支持对话历史和会话管理的方法
   async sendMessageWithHistory(
     userMessage: string, 
     conversationHistory: ConversationMessage[],
@@ -94,6 +103,14 @@ export class LLMService {
       console.log('调用GPT API，消息:', userMessage);
       console.log('对话历史长度:', conversationHistory.length);
       console.log('对话上下文:', context);
+      
+      // 如果有当前会话，先保存用户消息
+      if (this.currentSessionId) {
+        await sessionService.addMessage(this.currentSessionId, 'user', userMessage, {
+          phase: context?.currentPhase,
+          collectedInfo: context?.collectedInfo
+        });
+      }
       
       // 构建增强的系统提示词，包含上下文信息
       const enhancedSystemPrompt = `${SYSTEM_PROMPT}
@@ -124,6 +141,15 @@ export class LLMService {
 
       if (data && data.success && data.message) {
         console.log('GPT API响应成功:', data.message);
+        
+        // 如果有当前会话，保存助手回复
+        if (this.currentSessionId) {
+          await sessionService.addMessage(this.currentSessionId, 'assistant', data.message, {
+            phase: context?.currentPhase,
+            collectedInfo: context?.collectedInfo
+          });
+        }
+        
         return {
           message: data.message,
           success: true

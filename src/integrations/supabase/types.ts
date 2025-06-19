@@ -9,7 +9,211 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      conversation_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          role: string
+          session_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "design_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      design_briefs: {
+        Row: {
+          additional_notes: string | null
+          colors: Json | null
+          completion_status: string
+          created_at: string
+          id: string
+          occasion: string | null
+          pattern: string | null
+          session_id: string
+          sock_type: string | null
+          style: string | null
+          updated_at: string
+        }
+        Insert: {
+          additional_notes?: string | null
+          colors?: Json | null
+          completion_status?: string
+          created_at?: string
+          id?: string
+          occasion?: string | null
+          pattern?: string | null
+          session_id: string
+          sock_type?: string | null
+          style?: string | null
+          updated_at?: string
+        }
+        Update: {
+          additional_notes?: string | null
+          colors?: Json | null
+          completion_status?: string
+          created_at?: string
+          id?: string
+          occasion?: string | null
+          pattern?: string | null
+          session_id?: string
+          sock_type?: string | null
+          style?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_briefs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "design_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      design_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          initial_idea: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          initial_idea: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          initial_idea?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      expanded_prompts: {
+        Row: {
+          brief_id: string
+          created_at: string
+          expanded_prompt: string
+          id: string
+          original_brief: string
+          prompt_version: number
+          session_id: string
+        }
+        Insert: {
+          brief_id: string
+          created_at?: string
+          expanded_prompt: string
+          id?: string
+          original_brief: string
+          prompt_version?: number
+          session_id: string
+        }
+        Update: {
+          brief_id?: string
+          created_at?: string
+          expanded_prompt?: string
+          id?: string
+          original_brief?: string
+          prompt_version?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expanded_prompts_brief_id_fkey"
+            columns: ["brief_id"]
+            isOneToOne: false
+            referencedRelation: "design_briefs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expanded_prompts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "design_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generated_images: {
+        Row: {
+          created_at: string
+          design_name: string
+          error_message: string | null
+          generation_status: string
+          id: string
+          image_url: string
+          prompt_id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          design_name: string
+          error_message?: string | null
+          generation_status?: string
+          id?: string
+          image_url: string
+          prompt_id: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          design_name?: string
+          error_message?: string | null
+          generation_status?: string
+          id?: string
+          image_url?: string
+          prompt_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_images_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "expanded_prompts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_images_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "design_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

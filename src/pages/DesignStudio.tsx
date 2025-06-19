@@ -10,6 +10,8 @@ import EditingView from "@/components/EditingView";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 
 import { generateDesigns, regenerateImage } from "@/services/design.service";
+import { sessionService } from "@/services/sessionService";
+import { llmService } from "@/services/llmService";
 import type { DesignData } from "@/types/design";
 
 interface Message {
@@ -32,17 +34,34 @@ const DesignStudio = () => {
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   const location = useLocation();
   const { addDesign } = useDesignStorage();
 
   useEffect(() => {
+    // 初始化会话
+    initializeSession();
+    
     const params = new URLSearchParams(location.search);
     const initialPrompt = params.get("prompt");
     if (initialPrompt) {
       handleSendMessage(initialPrompt);
     }
   }, [location]);
+
+  const initializeSession = async () => {
+    try {
+      // 创建新的设计会话
+      const session = await sessionService.createSession("开始新的袜子设计会话");
+      setCurrentSessionId(session.id);
+      llmService.setCurrentSession(session.id);
+      console.log('会话已初始化:', session.id);
+    } catch (error) {
+      console.error('初始化会话失败:', error);
+      // 如果会话创建失败，仍可继续使用但不会记录到数据库
+    }
+  };
 
   // 创意设计沟通回复
   const generateChatResponse = (userMessage: string): string => {
@@ -71,7 +90,7 @@ const DesignStudio = () => {
     setError(null);
 
     try {
-      const newDesign = await generateDesigns(userMessages);
+      const newDesign = await generateDesigns(userMessages, currentSessionId);
       setDesign({ ...newDesign, isEditing: false });
       setMessages(prev => [...prev, {
         id: Date.now(),
@@ -79,6 +98,11 @@ const DesignStudio = () => {
         isUser: false
       }]);
       toast.success("设计生成成功！");
+      
+      // 更新会话状态为已完成
+      if (currentSessionId) {
+        await sessionService.updateSessionStatus(currentSessionId, 'completed');
+      }
     } catch (err: any) {
       setError(err.message);
       toast.error(`生成失败: ${err.message}`);
@@ -98,7 +122,7 @@ const DesignStudio = () => {
       const originalPrompt = design.prompt_en;
       const editInstruction = `Based on the original prompt: "${originalPrompt}", please apply this modification: "${userMessage}"`;
       try {
-        const newDesign = await regenerateImage(editInstruction);
+        const newDesign = await regenerateImage(editInstruction, currentSessionId);
         setDesign({ ...newDesign, isEditing: true });
         toast.success(`设计已更新！`);
         setMessages((prev) => [
@@ -214,6 +238,11 @@ const DesignStudio = () => {
               <div>
                 <div className="mb-4 flex justify-between items-center">
                   <h2 className="text-lg font-semibold">设计作品</h2>
+                  {currentSessionId && (
+                    <div className="text-xs text-muted-foreground">
+                      会话ID: {currentSessionId.slice(-8)}
+                    </div>
+                  )}
                 </div>
 
                 {isGenerating && (
