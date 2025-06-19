@@ -41,7 +41,7 @@ serve(async (req) => {
     formData.append('image', imageBlob, 'image.png');
     formData.append('prompt', editInstruction);
     formData.append('model', 'gpt-image-1');
-    formData.append('size', '1024x1024');
+    formData.append('size', '1024x1536');
     formData.append('background', 'opaque');
     formData.append('output_format', 'png');
     formData.append('quality', 'high');
