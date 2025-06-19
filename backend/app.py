@@ -1,3 +1,4 @@
+
 # backend/app.py
 
 import os
@@ -14,6 +15,9 @@ load_dotenv() # 在程序启动时自动加载.env文件中的环境变量
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}) 
+
+# 支持不同部署环境的端口配置
+port = int(os.environ.get("PORT", 5001))
 
 try:
     client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
@@ -84,7 +88,7 @@ def expand_prompt_with_gpt(user_idea):
 
         # 需求5：改变prompt模板
         instruction_prompt = f"""
-        You are “Prompt Expander – Sock Design”; your sole task is to turn a user’s minimal idea into a production-ready image prompt for GPT-4o. Accept input as ShortDescription: <idea> plus optional ColorPalette, AccentColors, and SockLength (view is always a flat-lay). Return one Markdown code block with five titled sections—Subject & Layout, Background, Design Zones, Design Style & Motifs, Color Scheme (Pantone)—followed by a single line with the negative prompt. In Subject & Layout always write: “Realistic vector-style {{SockLength}} sock, flat-lay view showing a single side, vertically centered, occupying full height with ~5 % top-bottom margin.” In Background always output exactly: “solid white.” Map motifs, colours, and knit textures across the six areas (Upper, Shin, Foot, Arch/instep, Heel & Toe, Cuff); for unspecified zones use “solid <Colour>” or “plain knit.” Production constraints: (1) the cuff may be only solid colour or simple horizontal stripes—no icons or complex patterns; (2) heel and toe must share one identical colour, either matching the body’s main colour or forming a deliberate contrast; (3) the entire palette must contain no more than seven distinct solid colours and must never include gradients—merge or drop hues if necessary; (4) the background must always remain solid white; (5) the transition between the shin area and the foot section must be a clean, straight horizontal line across the sock silhouette—no curves, waves, or angled cuts. Prefer Pantone IDs; if any field is missing, infer a sensible value and wrap it in square brackets. If the request is ambiguous, ask at most one clarifying question; otherwise respond directly, concisely, and without explanations. Use this exact negative prompt: low-res, blurry, uneven stitches, extra toes, detached heel, distortion, watermark, logo, text, noisy background, unsymmetrical design, gradient, copyright symbol.
+        You are "Prompt Expander – Sock Design"; your sole task is to turn a user's minimal idea into a production-ready image prompt for GPT-4o. Accept input as ShortDescription: <idea> plus optional ColorPalette, AccentColors, and SockLength (view is always a flat-lay). Return one Markdown code block with five titled sections—Subject & Layout, Background, Design Zones, Design Style & Motifs, Color Scheme (Pantone)—followed by a single line with the negative prompt. In Subject & Layout always write: "Realistic vector-style {{SockLength}} sock, flat-lay view showing a single side, vertically centered, occupying full height with ~5 % top-bottom margin." In Background always output exactly: "solid white." Map motifs, colours, and knit textures across the six areas (Upper, Shin, Foot, Arch/instep, Heel & Toe, Cuff); for unspecified zones use "solid <Colour>" or "plain knit." Production constraints: (1) the cuff may be only solid colour or simple horizontal stripes—no icons or complex patterns; (2) heel and toe must share one identical colour, either matching the body's main colour or forming a deliberate contrast; (3) the entire palette must contain no more than seven distinct solid colours and must never include gradients—merge or drop hues if necessary; (4) the background must always remain solid white; (5) the transition between the shin area and the foot section must be a clean, straight horizontal line across the sock silhouette—no curves, waves, or angled cuts. Prefer Pantone IDs; if any field is missing, infer a sensible value and wrap it in square brackets. If the request is ambiguous, ask at most one clarifying question; otherwise respond directly, concisely, and without explanations. Use this exact negative prompt: low-res, blurry, uneven stitches, extra toes, detached heel, distortion, watermark, logo, text, noisy background, unsymmetrical design, gradient, copyright symbol.
         """
         
         final_user_content = f"{variation_instruction}\n\nShortDescription: {user_idea}"
@@ -178,7 +182,11 @@ def handle_regenerate_image():
         print(f"--- DEBUG: /regenerate_image 发生错误: {e} ---")
         return jsonify({"error": str(e)}), 500
 
+# 健康检查端点
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy", "message": "Sox Lab Backend is running"})
+
 if __name__ == '__main__':
     print("--- DEBUG: 启动Flask服务器 ---")
-    app.run(host='0.0.0.0', port=5001, debug=True)
-
+    app.run(host='0.0.0.0', port=port, debug=True)

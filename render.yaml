@@ -1,0 +1,13 @@
+
+services:
+  - type: web
+    name: sox-lab-backend
+    env: python
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "gunicorn --bind 0.0.0.0:$PORT backend.app:app"
+    envVars:
+      - key: OPENAI_API_KEY
+        value: your_openai_api_key_here
+      - key: PORT
+        value: 5000
+    autoDeploy: false
