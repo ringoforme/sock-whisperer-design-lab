@@ -47,7 +47,7 @@ IMPORTANT RESTRICTIONS:
 
 Current conversation context will be provided to help you maintain continuity.
 
-Always respond in Chinese and provide helpful, contextual responses based on the full conversation history.`;
+Always respond concisely in Chinese and provide helpful, contextual responses based on the full conversation history.`;
 
 export class LLMService {
   constructor() {
