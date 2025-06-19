@@ -135,8 +135,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   const getGenerateButtonText = () => {
-    if (isGenerating) return '生成中...';
-    if (isEditingMode) return '修改图片';
+    if (isGenerating) return '处理中...';
+    if (isEditingMode) return '编辑图片';
     if (isReadyToGenerate()) return '生成图片';
     return '生成图片';
   };

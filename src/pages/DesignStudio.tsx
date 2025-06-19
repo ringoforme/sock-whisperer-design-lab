@@ -9,7 +9,7 @@ import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 
-import { generateDesigns, regenerateImage } from "@/services/design.service";
+import { generateDesigns, editImage } from "@/services/design.service";
 import { sessionService } from "@/services/sessionService";
 import { llmService } from "@/services/llmService";
 import { ConversationManager } from "@/services/conversationManager";
@@ -135,14 +135,13 @@ const DesignStudio = () => {
 
     if (isEditingMode && design) {
       setIsGenerating(true);
-      const originalPrompt = design.prompt_en;
-      const editInstruction = `Based on the original prompt: "${originalPrompt}", please apply this modification: "${userMessage}"`;
       try {
-        const newDesign = await regenerateImage(editInstruction, currentSessionId);
-        setDesign({ ...newDesign, isEditing: true });
+        // 使用新的 editImage 函数而不是 regenerateImage
+        const editedDesign = await editImage(design.url, userMessage, currentSessionId);
+        setDesign({ ...editedDesign, isEditing: true });
         toast.success(`设计已更新！`);
         
-        const responseMessage = "我已根据您的指令更新了设计。";
+        const responseMessage = "我已根据您的指令编辑了设计。";
         setMessages((prev) => [
           ...prev,
           {
