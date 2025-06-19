@@ -1,58 +1,20 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export interface DesignSession {
-  id: string;
-  user_id: string;
-  initial_idea: string;
-  status: 'active' | 'completed' | 'abandoned';
-  created_at: string;
-  updated_at: string;
-}
+// Use Supabase generated types directly
+export type DesignSession = Database['public']['Tables']['design_sessions']['Row'];
+export type ConversationMessage = Database['public']['Tables']['conversation_messages']['Row'];
+export type DesignBrief = Database['public']['Tables']['design_briefs']['Row'];
+export type ExpandedPrompt = Database['public']['Tables']['expanded_prompts']['Row'];
+export type GeneratedImage = Database['public']['Tables']['generated_images']['Row'];
 
-export interface ConversationMessage {
-  id: string;
-  session_id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  metadata?: any;
-  created_at: string;
-}
-
-export interface DesignBrief {
-  id: string;
-  session_id: string;
-  sock_type?: string;
-  colors?: any;
-  pattern?: string;
-  occasion?: string;
-  style?: string;
-  additional_notes?: string;
-  completion_status: 'in_progress' | 'completed';
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ExpandedPrompt {
-  id: string;
-  session_id: string;
-  brief_id: string;
-  original_brief: string;
-  expanded_prompt: string;
-  prompt_version: number;
-  created_at: string;
-}
-
-export interface GeneratedImage {
-  id: string;
-  session_id: string;
-  prompt_id: string;
-  image_url: string;
-  design_name: string;
-  generation_status: 'success' | 'failed' | 'pending';
-  error_message?: string;
-  created_at: string;
-}
+// Insert types for creating new records
+export type DesignSessionInsert = Database['public']['Tables']['design_sessions']['Insert'];
+export type ConversationMessageInsert = Database['public']['Tables']['conversation_messages']['Insert'];
+export type DesignBriefInsert = Database['public']['Tables']['design_briefs']['Insert'];
+export type ExpandedPromptInsert = Database['public']['Tables']['expanded_prompts']['Insert'];
+export type GeneratedImageInsert = Database['public']['Tables']['generated_images']['Insert'];
 
 export class SessionService {
   // 创建新的设计会话
@@ -126,7 +88,7 @@ export class SessionService {
   }
 
   // 创建或更新设计简报
-  async upsertDesignBrief(sessionId: string, brief: Partial<DesignBrief>): Promise<DesignBrief> {
+  async upsertDesignBrief(sessionId: string, brief: Partial<Omit<DesignBrief, 'id' | 'session_id' | 'created_at' | 'updated_at'>>): Promise<DesignBrief> {
     // 先查找是否已存在
     const { data: existing } = await supabase
       .from('design_briefs')
