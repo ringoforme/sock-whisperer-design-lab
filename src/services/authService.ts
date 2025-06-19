@@ -78,28 +78,6 @@ class AuthService {
 
     return { data, error };
   }
-
-  // 创建测试管理员账号的辅助方法
-  async createTestAdmin() {
-    try {
-      const { data, error } = await this.signUp(
-        'admin@soxlab.com', 
-        'admin123456',
-        '测试管理员'
-      );
-      
-      if (error) {
-        console.error('创建测试管理员失败:', error);
-        return { success: false, error };
-      }
-
-      console.log('测试管理员账号创建成功，请查看邮箱确认');
-      return { success: true, data };
-    } catch (error) {
-      console.error('创建测试管理员异常:', error);
-      return { success: false, error };
-    }
-  }
 }
 
 export const authService = new AuthService();

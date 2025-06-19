@@ -56,29 +56,6 @@ const Auth = () => {
     }
   };
 
-  const createTestAdmin = async () => {
-    setIsLoading(true);
-    try {
-      // 直接尝试登录测试管理员
-      const { error } = await signIn('admin@soxlab.com', 'admin123456');
-      if (error) {
-        // 如果登录失败，说明账号不存在，创建它
-        const { error: signUpError } = await signUp('admin@soxlab.com', 'admin123456', '测试管理员');
-        if (signUpError) {
-          toast.error(`创建测试管理员失败: ${signUpError.message}`);
-        } else {
-          toast.success('测试管理员账号已创建，请查看邮箱确认');
-        }
-      } else {
-        toast.success('测试管理员登录成功！');
-      }
-    } catch (error) {
-      toast.error('操作失败');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 via-purple-50 to-red-50 flex items-center justify-center">
@@ -157,20 +134,6 @@ const Auth = () => {
               >
                 {isSignUp ? '登录' : '注册'}
               </button>
-            </div>
-            <div className="w-full border-t pt-4">
-              <Button 
-                type="button"
-                variant="outline" 
-                onClick={createTestAdmin}
-                disabled={isLoading}
-                className="w-full"
-              >
-                创建/登录测试管理员
-              </Button>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                邮箱: admin@soxlab.com 密码: admin123456
-              </p>
             </div>
           </CardFooter>
         </form>
