@@ -118,11 +118,12 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-image-1',
+        model: 'dall-e-3',
         prompt: parsedPrompt.prompt_en,
         n: 1,
         size: '1024x1024',
-        quality: 'standard'
+        quality: 'standard',
+        response_format: 'url'
       }),
     });
 
@@ -133,9 +134,7 @@ serve(async (req) => {
       throw new Error(imageData.error.message);
     }
 
-    // gpt-image-1 总是返回base64格式
-    const base64Image = imageData.data[0].b64_json;
-    const imageUrl = `data:image/png;base64,${base64Image}`;
+    const imageUrl = imageData.data[0].url;
 
     return new Response(JSON.stringify({ 
       imageUrl,
