@@ -2,9 +2,7 @@
 // 导入我们刚刚定义的类型
 import type { DesignData } from "../types/design";
 import { sessionService } from "./sessionService";
-
-// 从环境变量中安全地获取后端API的基础URL
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * 主流程：发送初始想法到后端，获取1个设计方案
@@ -16,21 +14,26 @@ export async function generateDesigns(idea: string, sessionId?: string): Promise
   console.log('开始生成设计，会话ID:', sessionId);
   
   try {
-    const response = await fetch(`${API_BASE_URL}/generate_designs`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idea }),
+    // 调用 Supabase Edge Function
+    const { data, error } = await supabase.functions.invoke('generate-sock-design', {
+      body: { requirements: idea }
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to generate designs.");
+    if (error) {
+      throw new Error(error.message || "Failed to generate designs.");
     }
     
-    // 假设后端现在返回单个设计而不是数组
-    // 如果后端仍返回数组，我们取第一个
-    const result = await response.json();
-    const designData = Array.isArray(result) ? result[0] : result;
+    if (!data.success) {
+      throw new Error(data.error || "Failed to generate designs.");
+    }
+    
+    // 构造返回的设计数据
+    const designData: DesignData = {
+      url: data.imageUrl,
+      prompt_en: data.expandedPrompt,
+      design_name: data.designName || '未命名设计',
+      style: 'ai-generated'
+    };
     
     // 如果有会话ID，记录设计过程到数据库
     if (sessionId && designData) {
@@ -56,8 +59,7 @@ export async function generateDesigns(idea: string, sessionId?: string): Promise
             expandedPrompt.id,
             designData.url,
             designData.design_name || '未命名设计',
-            designData.url ? 'success' : 'failed',
-            designData.error
+            designData.url ? 'success' : 'failed'
           );
         }
         
@@ -115,18 +117,26 @@ export async function regenerateImage(prompt: string, sessionId?: string): Promi
   console.log('开始重新生成图片，会话ID:', sessionId);
   
   try {
-    const response = await fetch(`${API_BASE_URL}/regenerate_image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
+    // 调用 Supabase Edge Function 
+    const { data, error } = await supabase.functions.invoke('generate-sock-design', {
+      body: { requirements: prompt }
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to regenerate image.");
+    if (error) {
+      throw new Error(error.message || "Failed to regenerate image.");
     }
     
-    const designData = await response.json();
+    if (!data.success) {
+      throw new Error(data.error || "Failed to regenerate image.");
+    }
+    
+    // 构造返回的设计数据
+    const designData: DesignData = {
+      url: data.imageUrl,
+      prompt_en: data.expandedPrompt,
+      design_name: data.designName || '修改后设计',
+      style: 'ai-generated'
+    };
     
     // 如果有会话ID，记录重新生成过程
     if (sessionId && designData) {
@@ -150,8 +160,7 @@ export async function regenerateImage(prompt: string, sessionId?: string): Promi
             expandedPrompt.id,
             designData.url,
             designData.design_name || '修改后设计',
-            designData.url ? 'success' : 'failed',
-            designData.error
+            designData.url ? 'success' : 'failed'
           );
         }
         
