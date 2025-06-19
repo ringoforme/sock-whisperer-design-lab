@@ -1,3 +1,4 @@
+
 export interface Design {
   id: string;
   imageUrl: string;
@@ -28,4 +29,11 @@ export interface DesignData {
   url: string;
   prompt_en: string;
   design_name: string;
+}
+
+export interface DesignExample {
+  id: number;
+  imageUrl: string;
+  prompt: string;
+  label: string;
 }

@@ -1,3 +1,4 @@
+
 import { DesignExample } from '@/types/design';
 
 export interface QuickPrompt {

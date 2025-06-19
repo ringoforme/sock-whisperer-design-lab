@@ -3,7 +3,8 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { designExamples, DesignExample } from '@/data/designExamples';
+import { designExamples } from '@/data/designExamples';
+import { DesignExample } from '@/types/design';
 
 interface DesignExamplesProps {
   onExampleClick: (example: DesignExample) => void;
@@ -40,30 +41,14 @@ const DesignExamples: React.FC<DesignExamplesProps> = ({ onExampleClick }) => {
               <div className="aspect-square relative overflow-hidden">
                 <img 
                   src={example.imageUrl} 
-                  alt={example.title}
+                  alt={example.label}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-2 right-2">
-                  <Badge className={getStyleColor(example.style)}>
-                    {example.style === 'casual' && '休闲'}
-                    {example.style === 'business' && '商务'}
-                    {example.style === 'sport' && '运动'}
-                    {example.style === 'festive' && '节日'}
-                  </Badge>
-                </div>
               </div>
               
               <CardContent className="p-4">
-                <h3 className="font-semibold text-lg mb-2">{example.title}</h3>
-                <p className="text-gray-600 text-sm mb-3">{example.description}</p>
-                
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {example.tags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
+                <h3 className="font-semibold text-lg mb-2">{example.label}</h3>
+                <p className="text-gray-600 text-sm mb-3">{example.prompt}</p>
                 
                 <Button 
                   className="w-full bg-sock-purple hover:bg-sock-dark-purple"
