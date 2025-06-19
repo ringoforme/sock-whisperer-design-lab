@@ -1,0 +1,182 @@
+
+import React, { useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+
+const Auth = () => {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { user, signIn, signUp, loading } = useAuth();
+
+  // 如果已登录，重定向到设计工作室
+  if (!loading && user) {
+    return <Navigate to="/design" replace />;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      if (isSignUp) {
+        const { error } = await signUp(email, password, fullName);
+        if (error) {
+          if (error.message.includes('User already registered')) {
+            toast.error('该邮箱已注册，请直接登录');
+          } else {
+            toast.error(`注册失败: ${error.message}`);
+          }
+        } else {
+          toast.success('注册成功！请查看邮箱确认链接');
+        }
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            toast.error('邮箱或密码错误');
+          } else {
+            toast.error(`登录失败: ${error.message}`);
+          }
+        } else {
+          toast.success('登录成功！');
+        }
+      }
+    } catch (error) {
+      toast.error('操作失败，请重试');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const createTestAdmin = async () => {
+    setIsLoading(true);
+    try {
+      // 直接尝试登录测试管理员
+      const { error } = await signIn('admin@soxlab.com', 'admin123456');
+      if (error) {
+        // 如果登录失败，说明账号不存在，创建它
+        const { error: signUpError } = await signUp('admin@soxlab.com', 'admin123456', '测试管理员');
+        if (signUpError) {
+          toast.error(`创建测试管理员失败: ${signUpError.message}`);
+        } else {
+          toast.success('测试管理员账号已创建，请查看邮箱确认');
+        }
+      } else {
+        toast.success('测试管理员登录成功！');
+      }
+    } catch (error) {
+      toast.error('操作失败');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 via-purple-50 to-red-50 flex items-center justify-center">
+        <div>加载中...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-purple-50 to-red-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <div className="flex items-center mb-2">
+            <div className="bg-gradient-to-r from-orange-500 to-pink-500 w-8 h-8 rounded-md mr-2"></div>
+            <h1 className="text-2xl font-bold">Sox Lab工作室</h1>
+          </div>
+          <CardTitle className="text-2xl">
+            {isSignUp ? '注册账户' : '欢迎回来'}
+          </CardTitle>
+          <CardDescription>
+            {isSignUp ? '创建您的账户开始设计' : '请输入您的账户信息以登录'}
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            {isSignUp && (
+              <div className="space-y-2">
+                <label htmlFor="fullName" className="text-sm font-medium">姓名</label>
+                <Input 
+                  id="fullName"
+                  type="text" 
+                  placeholder="您的姓名"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required={isSignUp}
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium">邮箱</label>
+              <Input 
+                id="email"
+                type="email" 
+                placeholder="your.email@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium">密码</label>
+              <Input 
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button 
+              type="submit" 
+              className="w-full bg-sock-purple hover:bg-sock-dark-purple text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? '处理中...' : (isSignUp ? '注册' : '登录')}
+            </Button>
+            <div className="text-center text-sm">
+              {isSignUp ? '已有账户？' : '还没有账户？'}{" "}
+              <button 
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sock-purple hover:underline"
+              >
+                {isSignUp ? '登录' : '注册'}
+              </button>
+            </div>
+            <div className="w-full border-t pt-4">
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={createTestAdmin}
+                disabled={isLoading}
+                className="w-full"
+              >
+                创建/登录测试管理员
+              </Button>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                邮箱: admin@soxlab.com 密码: admin123456
+              </p>
+            </div>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
+  );
+};
+
+export default Auth;

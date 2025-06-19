@@ -126,8 +126,8 @@ const Home = () => {
             <h1 className="text-2xl font-bold">Sox Lab工作室</h1>
           </div>
           <div className="flex gap-4">
-            <Button variant="ghost" onClick={() => navigate('/login')}>登录</Button>
-            <Button className="bg-black hover:bg-gray-800 text-white">免费开始</Button>
+            <Button variant="ghost" onClick={() => navigate('/auth')}>登录</Button>
+            <Button className="bg-black hover:bg-gray-800 text-white" onClick={() => navigate('/auth')}>免费开始</Button>
           </div>
         </div>
       </header>

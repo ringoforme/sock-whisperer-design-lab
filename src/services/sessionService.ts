@@ -22,14 +22,18 @@ export class SessionService {
   // 创建新的设计会话
   async createSession(initialIdea: string): Promise<DesignSession> {
     const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || TEST_USER_ID;
+    
+    // 确保用户已登录
+    if (!user) {
+      throw new Error('用户未登录，无法创建会话');
+    }
 
-    console.log('创建会话，用户ID:', userId);
+    console.log('创建会话，用户ID:', user.id);
 
     const { data, error } = await supabase
       .from('design_sessions')
       .insert({
-        user_id: userId,
+        user_id: user.id,
         initial_idea: initialIdea,
         status: 'active'
       })
