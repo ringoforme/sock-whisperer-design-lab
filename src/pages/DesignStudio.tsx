@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -71,22 +70,24 @@ const DesignStudio = () => {
     }
   };
 
-  // 生成图片功能
+  // 生成图片功能 - 现在传递完整的会话上下文
   const triggerImageGeneration = async () => {
-    // 从聊天记录中提取用户的所有输入作为prompt
-    const userMessages = messages.filter(m => m.isUser).map(m => m.text).join(' ');
-    
-    if (!userMessages.trim()) {
-      toast.error("请先描述您的设计想法");
-      return;
-    }
-
     setIsGenerating(true);
     setError(null);
 
     try {
       console.log('开始生成设计，会话ID:', currentSessionId);
-      const newDesign = await generateDesigns(userMessages, currentSessionId);
+      
+      // 收集完整的会话上下文
+      const sessionContext = {
+        sessionId: currentSessionId,
+        messages: messages,
+        conversationState: conversationManager.getState(),
+        collectedInfo: conversationManager.getCollectedInfo(),
+        requirements: conversationManager.getRequirements()
+      };
+      
+      const newDesign = await generateDesigns(sessionContext);
       setDesign({ ...newDesign, isEditing: false });
       
       const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";

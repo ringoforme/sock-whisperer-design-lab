@@ -1,5 +1,4 @@
 
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -10,8 +9,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// 专业的袜子设计图像生成提示词专家系统 - 移植自backend/app.py
-const PROFESSIONAL_SYSTEM_PROMPT = `You are "Prompt Expander – Sock Design"; your sole task is to turn a user's minimal idea into a production-ready image prompt for GPT-4o. Accept input as ShortDescription: <idea> plus optional ColorPalette, AccentColors, and SockLength (view is always a flat-lay). Return one Markdown code block with five titled sections—Subject & Layout, Background, Design Zones, Design Style & Motifs, Color Scheme (Pantone)—followed by a single line with the negative prompt. In Subject & Layout always write: "Realistic vector-style {SockLength} sock, flat-lay view showing a single side, vertically centered, occupying full height with ~5% top-bottom margin." In Background always output exactly: "solid white." Map motifs, colours, and knit textures across the six areas (Upper, Shin, Foot, Arch/instep, Heel & Toe, Cuff); for unspecified zones use "solid <Colour>" or "plain knit." Production constraints: (1) the cuff may be only solid colour or simple horizontal stripes—no icons or complex patterns; (2) heel and toe must share one identical colour, either matching the body's main colour or forming a deliberate contrast; (3) the entire palette must contain no more than seven distinct solid colours and must never include gradients—merge or drop hues if necessary; (4) the background must always remain solid white; (5) the transition between the shin area and the foot section must be a clean, straight horizontal line across the sock silhouette—no curves, waves, or angled cuts. Prefer Pantone IDs; if any field is missing, infer a sensible value and wrap it in square brackets. If the request is ambiguous, ask at most one clarifying question; otherwise respond directly, concisely, and without explanations. Use this exact negative prompt: low-res, blurry, uneven stitches, extra toes, detached heel, distortion, watermark, logo, text, noisy background, unsymmetrical design, gradient, copyright symbol.`;
+// 专业的袜子设计图像生成提示词专家系统 - 现在支持完整会话上下文
+const PROFESSIONAL_SYSTEM_PROMPT = `You are "Prompt Expander – Sock Design"; your task is to analyze a complete conversation session and turn the user's design requirements into a production-ready image prompt for GPT-4o. 
+
+You will receive a sessionContext containing:
+- messages: full conversation history between user and assistant
+- conversationState: current conversation phase and collected information
+- collectedInfo: summarized design requirements
+- requirements: structured design data
+
+Your task is to synthesize this information into a comprehensive design prompt. Return one Markdown code block with five titled sections—Subject & Layout, Background, Design Zones, Design Style & Motifs, Color Scheme (Pantone)—followed by a single line with the negative prompt.
+
+In Subject & Layout always write: "Realistic vector-style {SockLength} sock, flat-lay view showing a single side, vertically centered, occupying full height with ~5% top-bottom margin."
+
+In Background always output exactly: "solid white."
+
+Map motifs, colours, and knit textures across the six areas (Upper, Shin, Foot, Arch/instep, Heel & Toe, Cuff); for unspecified zones use "solid <Colour>" or "plain knit."
+
+Production constraints: (1) the cuff may be only solid colour or simple horizontal stripes—no icons or complex patterns; (2) heel and toe must share one identical colour, either matching the body's main colour or forming a deliberate contrast; (3) the entire palette must contain no more than seven distinct solid colours and must never include gradients—merge or drop hues if necessary; (4) the background must always remain solid white; (5) the transition between the shin area and the foot section must be a clean, straight horizontal line across the sock silhouette—no curves, waves, or angled cuts.
+
+Prefer Pantone IDs; if any field is missing, infer a sensible value and wrap it in square brackets.
+
+Use this exact negative prompt: low-res, blurry, uneven stitches, extra toes, detached heel, distortion, watermark, logo, text, noisy background, unsymmetrical design, gradient, copyright symbol.`;
 
 // Markdown解析函数 - 移植自backend/app.py
 function parseDetailedMarkdownPrompt(markdownText: string): { design_name: string; prompt_en: string } {
@@ -68,8 +87,8 @@ serve(async (req) => {
   }
 
   try {
-    const { requirements } = await req.json();
-
+    const body = await req.json();
+    
     if (!openAIApiKey) {
       return new Response(
         JSON.stringify({ error: 'OpenAI API key not configured' }),
@@ -77,9 +96,36 @@ serve(async (req) => {
       );
     }
 
-    console.log('收到设计需求:', JSON.stringify(requirements, null, 2));
+    console.log('收到请求体:', JSON.stringify(body, null, 2));
 
-    // 第一步：使用GPT将用户需求扩写为专业的图像生成提示
+    let userInput = '';
+    
+    // 处理两种输入格式：新的 sessionContext 和旧的 requirements
+    if (body.sessionContext) {
+      // 新格式：完整会话上下文
+      const { sessionContext } = body;
+      console.log('处理完整会话上下文:', sessionContext);
+      
+      // 构建用于扩展的上下文描述
+      const conversationSummary = sessionContext.messages
+        .filter((m: any) => m.isUser)
+        .map((m: any) => m.text)
+        .join(' ');
+      
+      userInput = `会话上下文: ${JSON.stringify(sessionContext.requirements)}
+对话摘要: ${conversationSummary}
+收集的信息: ${JSON.stringify(sessionContext.collectedInfo)}
+对话状态: ${JSON.stringify(sessionContext.conversationState)}`;
+    } else if (body.requirements) {
+      // 旧格式：简单需求
+      userInput = JSON.stringify(body.requirements);
+    } else {
+      throw new Error('缺少必要的输入参数');
+    }
+
+    console.log('处理后的用户输入:', userInput);
+
+    // 第一步：使用GPT-4o将用户需求扩写为专业的图像生成提示
     const expandResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -87,10 +133,10 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: PROFESSIONAL_SYSTEM_PROMPT },
-          { role: 'user', content: `ShortDescription: ${JSON.stringify(requirements, null, 2)}` }
+          { role: 'user', content: userInput }
         ],
         temperature: 0.7,
         max_tokens: 500
@@ -161,4 +207,3 @@ serve(async (req) => {
     );
   }
 });
-

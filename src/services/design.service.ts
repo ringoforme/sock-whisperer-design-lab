@@ -3,19 +3,26 @@ import type { DesignData } from "../types/design";
 import { sessionService } from "./sessionService";
 import { supabase } from "@/integrations/supabase/client";
 
+interface SessionContext {
+  sessionId?: string;
+  messages: Array<{ id: number; text: string; isUser: boolean }>;
+  conversationState: any;
+  collectedInfo: string[];
+  requirements: any;
+}
+
 /**
- * 主流程：发送初始想法到后端，获取1个设计方案
- * @param idea - 用户输入的灵感字符串
- * @param sessionId - 可选的会话ID，用于跟踪设计过程
+ * 主流程：发送完整会话上下文到后端，获取1个设计方案
+ * @param sessionContext - 完整的会话上下文
  * @returns - 返回一个设计方案
  */
-export async function generateDesigns(idea: string, sessionId?: string): Promise<DesignData> {
-  console.log('开始生成设计，会话ID:', sessionId);
+export async function generateDesigns(sessionContext: SessionContext): Promise<DesignData> {
+  console.log('开始生成设计，会话上下文:', sessionContext);
   
   try {
-    // 调用 Supabase Edge Function
+    // 调用 Supabase Edge Function，传递完整的会话上下文
     const { data, error } = await supabase.functions.invoke('generate-sock-design', {
-      body: { requirements: idea }
+      body: { sessionContext }
     });
 
     if (error) {
@@ -34,26 +41,26 @@ export async function generateDesigns(idea: string, sessionId?: string): Promise
     };
     
     // 如果有会话ID，记录设计过程到数据库
-    if (sessionId && designData) {
+    if (sessionContext.sessionId && designData) {
       try {
         // 1. 创建或更新设计简报
-        const brief = await sessionService.upsertDesignBrief(sessionId, {
+        const brief = await sessionService.upsertDesignBrief(sessionContext.sessionId, {
           completion_status: 'completed',
-          additional_notes: `基于用户想法生成：${idea}`
+          additional_notes: `基于完整会话上下文生成`
         });
         
         // 2. 记录扩展提示词（从后端返回的prompt）
         if (designData.prompt_en) {
           const expandedPrompt = await sessionService.addExpandedPrompt(
-            sessionId,
+            sessionContext.sessionId,
             brief.id,
-            idea, // 原始简报
+            JSON.stringify(sessionContext.collectedInfo), // 原始简报
             designData.prompt_en // 扩展后的提示词
           );
           
           // 3. 记录生成的图片
           await sessionService.addGeneratedImage(
-            sessionId,
+            sessionContext.sessionId,
             expandedPrompt.id,
             designData.url,
             designData.design_name || '未命名设计',
@@ -73,23 +80,23 @@ export async function generateDesigns(idea: string, sessionId?: string): Promise
     console.error('生成设计失败:', error);
     
     // 如果有会话ID，记录失败状态
-    if (sessionId) {
+    if (sessionContext.sessionId) {
       try {
-        const brief = await sessionService.upsertDesignBrief(sessionId, {
+        const brief = await sessionService.upsertDesignBrief(sessionContext.sessionId, {
           completion_status: 'completed',
           additional_notes: `生成失败：${error instanceof Error ? error.message : '未知错误'}`
         });
         
         // 记录失败的扩展提示词和图片
         const expandedPrompt = await sessionService.addExpandedPrompt(
-          sessionId,
+          sessionContext.sessionId,
           brief.id,
-          idea,
+          JSON.stringify(sessionContext.collectedInfo),
           `生成失败：${error instanceof Error ? error.message : '未知错误'}`
         );
         
         await sessionService.addGeneratedImage(
-          sessionId,
+          sessionContext.sessionId,
           expandedPrompt.id,
           'https://placehold.co/1024x1024/f87171/ffffff?text=Generation+Failed',
           '生成失败',

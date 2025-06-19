@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -179,10 +178,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`message mb-4 ${
+            className={`message mb-4 flex ${
               message.isUser 
-                ? 'ml-8 text-right' 
-                : 'mr-8 text-left'
+                ? 'justify-end' 
+                : 'justify-start'
             }`}
           >
             <div className={`inline-block max-w-full px-4 py-2 rounded-lg ${
@@ -190,7 +189,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 ? 'bg-sock-purple text-white' 
                 : 'bg-gray-100 text-gray-900'
             }`}>
-              <div className="whitespace-pre-wrap text-sm">
+              <div className={`whitespace-pre-wrap text-sm ${
+                message.isUser ? 'text-left' : 'text-left'
+              }`}>
                 {message.text}
               </div>
             </div>
