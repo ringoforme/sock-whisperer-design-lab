@@ -8,6 +8,8 @@ import ImageModal from '@/components/ImageModal';
 import { useDesignStorage } from '@/hooks/useDesignStorage';
 import { Design } from '@/types/design';
 import { toast } from 'sonner';
+import DownloadPathDialog from '@/components/DownloadPathDialog';
+import { downloadService } from '@/services/downloadService';
 
 const EditPage = () => {
   const { designId } = useParams<{ designId: string }>();
@@ -16,6 +18,7 @@ const EditPage = () => {
   const [currentDesign, setCurrentDesign] = useState<Design | null>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
 
   useEffect(() => {
     if (designId) {
@@ -88,15 +91,35 @@ const EditPage = () => {
     toast.success('设计已保存到编辑库');
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!currentDesign) return;
     
-    // 注释：这里需要实现真实的下载功能
-    // 需要连接文件存储服务，如Supabase Storage
-    console.log('Downloading design:', currentDesign.id);
+    // 检查是否已设置默认路径
+    if (downloadService.hasDefaultPath()) {
+      // 直接下载
+      const success = await downloadService.downloadImage(currentDesign.imageUrl, currentDesign.title);
+      if (success) {
+        toast.success("图片下载成功！");
+        addDesign({ ...currentDesign, type: 'downloaded' }, 'downloaded');
+      } else {
+        toast.error("下载失败，请重试");
+      }
+    } else {
+      // 打开设置对话框
+      setIsDownloadDialogOpen(true);
+    }
+  };
+
+  const handleDownloadConfirm = async () => {
+    if (!currentDesign) return;
     
-    addDesign({ ...currentDesign, type: 'downloaded' }, 'downloaded');
-    toast.success('设计已添加到下载库');
+    const success = await downloadService.downloadImage(currentDesign.imageUrl, currentDesign.title);
+    if (success) {
+      toast.success("图片下载成功！");
+      addDesign({ ...currentDesign, type: 'downloaded' }, 'downloaded');
+    } else {
+      toast.error("下载失败，请重试");
+    }
   };
 
   const handleVectorize = () => {
@@ -191,6 +214,14 @@ const EditPage = () => {
         onClose={() => setIsImageModalOpen(false)}
         imageUrl={currentDesign.imageUrl}
         imageTitle={currentDesign.title}
+      />
+
+      {/* 下载路径设置对话框 */}
+      <DownloadPathDialog
+        isOpen={isDownloadDialogOpen}
+        onClose={() => setIsDownloadDialogOpen(false)}
+        onConfirm={handleDownloadConfirm}
+        designName={currentDesign?.title || "设计作品"}
       />
     </div>
   );

@@ -9,6 +9,8 @@ import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import ImageModal from "@/components/ImageModal";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
+import DownloadPathDialog from "@/components/DownloadPathDialog";
+import { downloadService } from "@/services/downloadService";
 
 import { generateDesigns, editImage } from "@/services/design.service";
 import { sessionService } from "@/services/sessionService";
@@ -43,6 +45,9 @@ const DesignStudio = () => {
   
   // 新增图片预览状态
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
+  // 新增下载相关状态
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
 
   const location = useLocation();
   const { addDesign } = useDesignStorage();
@@ -273,10 +278,33 @@ const DesignStudio = () => {
     ]);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!design) return;
-    // Download logic here
-    toast.success("图片下载已开始");
+
+    // 检查是否已设置默认路径
+    if (downloadService.hasDefaultPath()) {
+      // 直接下载
+      const success = await downloadService.downloadImage(design.url, design.design_name);
+      if (success) {
+        toast.success("图片下载成功！");
+      } else {
+        toast.error("下载失败，请重试");
+      }
+    } else {
+      // 打开设置对话框
+      setIsDownloadDialogOpen(true);
+    }
+  };
+
+  const handleDownloadConfirm = async () => {
+    if (!design) return;
+    
+    const success = await downloadService.downloadImage(design.url, design.design_name);
+    if (success) {
+      toast.success("图片下载成功！");
+    } else {
+      toast.error("下载失败，请重试");
+    }
   };
 
   const handleVectorize = () => {
@@ -439,6 +467,14 @@ const DesignStudio = () => {
           imageTitle={design.design_name}
         />
       )}
+
+      {/* 下载路径设置对话框 */}
+      <DownloadPathDialog
+        isOpen={isDownloadDialogOpen}
+        onClose={() => setIsDownloadDialogOpen(false)}
+        onConfirm={handleDownloadConfirm}
+        designName={design?.design_name || "设计作品"}
+      />
     </div>
   );
 };
