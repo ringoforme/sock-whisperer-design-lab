@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -177,7 +176,7 @@ const DesignStudio = () => {
       // 在编辑模式下，只保存编辑指令，不立即执行编辑
       setPendingEditInstruction(userMessage);
       
-      const responseMessage = "我已收到您的编辑指令。请点击"编辑图片"按钮来应用修改。";
+      const responseMessage = "我已收到您的编辑指令。请点击编辑图片按钮来应用修改。";
       setMessages((prev) => [
         ...prev,
         {
