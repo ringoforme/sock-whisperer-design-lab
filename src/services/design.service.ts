@@ -1,4 +1,3 @@
-
 // 导入我们刚刚定义的类型
 import type { DesignData } from "../types/design";
 import { sessionService } from "./sessionService";
@@ -31,8 +30,7 @@ export async function generateDesigns(idea: string, sessionId?: string): Promise
     const designData: DesignData = {
       url: data.imageUrl,
       prompt_en: data.expandedPrompt,
-      design_name: data.designName || '未命名设计',
-      style: 'ai-generated'
+      design_name: data.designName || '未命名设计'
     };
     
     // 如果有会话ID，记录设计过程到数据库
@@ -134,8 +132,7 @@ export async function regenerateImage(prompt: string, sessionId?: string): Promi
     const designData: DesignData = {
       url: data.imageUrl,
       prompt_en: data.expandedPrompt,
-      design_name: data.designName || '修改后设计',
-      style: 'ai-generated'
+      design_name: data.designName || '修改后设计'
     };
     
     // 如果有会话ID，记录重新生成过程
