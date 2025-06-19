@@ -131,7 +131,6 @@ export class LLMService {
   // 生成设计建议
   async generateDesignSuggestions(prompt: string): Promise<string[]> {
     const suggestions = [
-      "渐变色彩搭配",
       "几何图案设计", 
       "季节性主题",
       "运动风格",
