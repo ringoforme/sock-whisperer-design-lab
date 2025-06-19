@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import DesignExamples from '@/components/DesignExamples';
 import QuickPrompts from '@/components/QuickPrompts';
 import ApiKeyConfig from '@/components/ApiKeyConfig';
-import { DesignExample } from '@/types/design';
+import { DesignExample } from '@/data/designExamples';
 import { llmService } from '@/services/llmService';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
