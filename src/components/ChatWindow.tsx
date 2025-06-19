@@ -1,9 +1,10 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { Send, Image, Paperclip, Sparkles, Info } from 'lucide-react';
+import { Send, Image, Paperclip, Sparkles, Info, Edit } from 'lucide-react';
 import { ConversationManager } from '@/services/conversationManager';
 
 interface Message {
@@ -16,20 +17,24 @@ interface ChatWindowProps {
   messages: Message[];
   onSendMessage: (message: string) => void;
   onGenerateImage: () => void;
+  onEditImage?: () => void;
   isEditingMode?: boolean;
   selectedDesignId?: number | null;
   isGenerating?: boolean;
   hasDesign?: boolean;
+  hasPendingEditInstruction?: boolean;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ 
   messages, 
   onSendMessage,
   onGenerateImage,
+  onEditImage,
   isEditingMode = false, 
   selectedDesignId,
   isGenerating = false,
-  hasDesign = false
+  hasDesign = false,
+  hasPendingEditInstruction = false
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [conversationManager] = useState(() => new ConversationManager());
@@ -141,6 +146,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     return '生成图片';
   };
 
+  const handleActionButtonClick = () => {
+    if (isEditingMode && onEditImage) {
+      onEditImage();
+    } else {
+      onGenerateImage();
+    }
+  };
+
+  const isActionButtonEnabled = () => {
+    if (isEditingMode) {
+      return hasPendingEditInstruction && !isGenerating;
+    }
+    return !isGenerating;
+  };
+
   return (
     <div className="chat-container h-full flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-sm">
       <div className="p-4 border-b">
@@ -169,7 +189,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         
         {(isEditingMode && selectedDesignId !== null) && (
           <div className="mt-2 text-xs bg-sock-light-purple text-sock-purple px-2 py-1 rounded">
-            正在编辑模式
+            正在编辑模式 {hasPendingEditInstruction && "- 有待处理的编辑指令"}
           </div>
         )}
       </div>
@@ -227,15 +247,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           <div className="flex gap-2">
             <Button
               type="button"
-              onClick={onGenerateImage}
-              disabled={isGenerating}
+              onClick={handleActionButtonClick}
+              disabled={!isActionButtonEnabled()}
               className={`px-4 ${
                 isReadyToGenerate() && !isEditingMode
                   ? 'bg-green-600 hover:bg-green-700 text-white animate-pulse'
+                  : isEditingMode && hasPendingEditInstruction
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
                   : 'bg-green-600 hover:bg-green-700 text-white'
               }`}
             >
-              <Sparkles className="h-4 w-4 mr-2" />
+              {isEditingMode ? (
+                <Edit className="h-4 w-4 mr-2" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
               {getGenerateButtonText()}
             </Button>
             

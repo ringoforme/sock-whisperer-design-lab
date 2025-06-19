@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ const DesignStudio = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [conversationManager] = useState(() => new ConversationManager());
+  const [pendingEditInstruction, setPendingEditInstruction] = useState<string>('');
 
   const location = useLocation();
   const { addDesign } = useDesignStorage();
@@ -117,7 +119,45 @@ const DesignStudio = () => {
     }
   };
 
-  // 使用真正的 GPT 连接进行聊天
+  // 新增：触发图像编辑功能
+  const triggerImageEdit = async () => {
+    if (!design || !pendingEditInstruction.trim()) {
+      toast.error("请先输入编辑指令");
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      // 使用 editImage 函数编辑图片
+      const editedDesign = await editImage(design.url, pendingEditInstruction, currentSessionId);
+      setDesign({ ...editedDesign, isEditing: true });
+      toast.success(`设计已更新！`);
+      
+      const responseMessage = "我已根据您的指令编辑了设计。";
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          text: responseMessage,
+          isUser: false,
+        },
+      ]);
+      
+      // 记录助手回复到数据库
+      if (currentSessionId) {
+        await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
+      }
+
+      // 清空待处理的编辑指令
+      setPendingEditInstruction('');
+    } catch (err: any) {
+      toast.error(`编辑失败: ${err.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // 修改后的消息处理函数
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating || isChatLoading) return;
     
@@ -134,31 +174,22 @@ const DesignStudio = () => {
     }
 
     if (isEditingMode && design) {
-      setIsGenerating(true);
-      try {
-        // 使用新的 editImage 函数而不是 regenerateImage
-        const editedDesign = await editImage(design.url, userMessage, currentSessionId);
-        setDesign({ ...editedDesign, isEditing: true });
-        toast.success(`设计已更新！`);
-        
-        const responseMessage = "我已根据您的指令编辑了设计。";
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now(),
-            text: responseMessage,
-            isUser: false,
-          },
-        ]);
-        
-        // 记录助手回复到数据库
-        if (currentSessionId) {
-          await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
-        }
-      } catch (err: any) {
-        toast.error(`编辑失败: ${err.message}`);
-      } finally {
-        setIsGenerating(false);
+      // 在编辑模式下，只保存编辑指令，不立即执行编辑
+      setPendingEditInstruction(userMessage);
+      
+      const responseMessage = "我已收到您的编辑指令。请点击"编辑图片"按钮来应用修改。";
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          text: responseMessage,
+          isUser: false,
+        },
+      ]);
+      
+      // 记录助手回复到数据库
+      if (currentSessionId) {
+        await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
       }
     } else {
       // 使用真正的 GPT API 进行对话
@@ -218,6 +249,7 @@ const DesignStudio = () => {
     setIsEditingMode(true);
     setDesign(prev => prev ? { ...prev, isEditing: true } : null);
     conversationManager.setEditingMode();
+    setPendingEditInstruction(''); // 清空之前的编辑指令
     setMessages((prev) => [
       ...prev,
       {
@@ -230,6 +262,7 @@ const DesignStudio = () => {
 
   const handleExitEdit = () => {
     setIsEditingMode(false);
+    setPendingEditInstruction(''); // 清空编辑指令
     setDesign(prev => prev ? { ...prev, isEditing: false } : null);
     setMessages((prev) => [
       ...prev,
@@ -279,10 +312,12 @@ const DesignStudio = () => {
               messages={messages}
               onSendMessage={handleSendMessage}
               onGenerateImage={triggerImageGeneration}
+              onEditImage={triggerImageEdit}
               isEditingMode={isEditingMode}
               selectedDesignId={design ? 0 : null}
               isGenerating={isGenerating || isChatLoading}
               hasDesign={!!design}
+              hasPendingEditInstruction={!!pendingEditInstruction.trim()}
             />
           </div>
           <div className="h-[80vh] overflow-y-auto">
