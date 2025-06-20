@@ -16,6 +16,7 @@ import { sessionService } from "@/services/sessionService";
 import { llmService } from "@/services/llmService";
 import { ConversationManager } from "@/services/conversationManager";
 import type { DesignData } from "@/types/design";
+
 interface Message {
   id: number;
   text: string;
@@ -33,7 +34,7 @@ const DesignStudio = () => {
   }]);
   const [design, setDesign] = useState<DesignState | null>(null);
   const [isEditingMode, setIsEditingMode] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(isGenerating);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
