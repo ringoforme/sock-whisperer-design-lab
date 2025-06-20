@@ -7,10 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Download, Edit, AlertCircle, MessageCircle } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
+import AppHeader from "@/components/AppHeader";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 import { ConversationManager } from "@/services/conversationManager";
 import { supabase } from "@/integrations/supabase/client";
 import type { DesignData } from "@/types/design";
+
 interface Message {
   id: number;
   text: string;
@@ -266,7 +268,7 @@ const DesignLab = () => {
   return <div className="min-h-screen bg-background">
       <header className="border-b bg-white dark:bg-gray-950">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-sock-purple">SoxLab工作室</h1>
+          <AppHeader />
           <nav className="flex items-center space-x-4">
             <Link to="/drafts" className="text-gray-700 hover:text-sock-purple transition-colors">
               草稿

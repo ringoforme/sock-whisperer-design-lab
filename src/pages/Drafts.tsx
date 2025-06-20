@@ -2,8 +2,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus } from 'lucide-react';
 import DesignLibrary from '@/components/DesignLibrary';
+import AppHeader from '@/components/AppHeader';
 import { useDesignStorage } from '@/hooks/useDesignStorage';
 import { Design } from '@/types/design';
 import { toast } from 'sonner';
@@ -44,8 +47,15 @@ const Drafts = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white dark:bg-gray-950">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-sock-purple">设计库</h1>
+          <AppHeader title="设计库" />
           <nav className="flex items-center space-x-4">
+            <Button 
+              onClick={() => navigate('/design')}
+              className="bg-sock-purple hover:bg-sock-dark-purple text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Design
+            </Button>
             <Link to="/design" className="text-gray-700 hover:text-sock-purple transition-colors">
               设计工作室
             </Link>

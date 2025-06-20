@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Download, File, Save } from 'lucide-react';
 import RegenerateButton from '@/components/RegenerateButton';
 import ImageModal from '@/components/ImageModal';
+import AppHeader from '@/components/AppHeader';
 import { useDesignStorage } from '@/hooks/useDesignStorage';
 import { Design } from '@/types/design';
 import { toast } from 'sonner';
-import DownloadPathDialog from '@/components/DownloadPathDialog';
 import { downloadService } from '@/services/downloadService';
 
 const EditPage = () => {
@@ -95,18 +95,12 @@ const EditPage = () => {
     if (!currentDesign) return;
     
     // 检查是否已设置默认路径
-    if (downloadService.hasDefaultPath()) {
-      // 直接下载
-      const success = await downloadService.downloadImage(currentDesign.imageUrl, currentDesign.title);
-      if (success) {
-        toast.success("图片下载成功！");
-        addDesign({ ...currentDesign, type: 'downloaded' }, 'downloaded');
-      } else {
-        toast.error("下载失败，请重试");
-      }
+    const success = await downloadService.downloadImage(currentDesign.imageUrl, currentDesign.title);
+    if (success) {
+      toast.success("图片下载成功！");
+      addDesign({ ...currentDesign, type: 'downloaded' }, 'downloaded');
     } else {
-      // 打开设置对话框
-      setIsDownloadDialogOpen(true);
+      toast.error("下载失败，请重试");
     }
   };
 
@@ -158,7 +152,7 @@ const EditPage = () => {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-2xl font-bold text-sock-purple">编辑设计</h1>
+            <AppHeader title="编辑设计" />
           </div>
           <div className="flex space-x-2">
             <RegenerateButton 
@@ -214,14 +208,6 @@ const EditPage = () => {
         onClose={() => setIsImageModalOpen(false)}
         imageUrl={currentDesign.imageUrl}
         imageTitle={currentDesign.title}
-      />
-
-      {/* 下载路径设置对话框 */}
-      <DownloadPathDialog
-        isOpen={isDownloadDialogOpen}
-        onClose={() => setIsDownloadDialogOpen(false)}
-        onConfirm={handleDownloadConfirm}
-        designName={currentDesign?.title || "设计作品"}
       />
     </div>
   );
