@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Folder, Download } from 'lucide-react';
 import { downloadService, DownloadPreferences } from '@/services/downloadService';
+import { toast } from 'sonner';
 
 interface DownloadPathDialogProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ const DownloadPathDialog: React.FC<DownloadPathDialogProps> = ({
     downloadService.getPreferences()
   );
   const [customPath, setCustomPath] = useState(preferences.defaultPath || '');
+  const [isSelectingFolder, setIsSelectingFolder] = useState(false);
 
   const handleConfirm = () => {
     const finalPreferences: DownloadPreferences = {
@@ -45,15 +47,29 @@ const DownloadPathDialog: React.FC<DownloadPathDialogProps> = ({
   };
 
   const handleBrowse = async () => {
+    setIsSelectingFolder(true);
+    
     try {
-      // 注意：由于浏览器安全限制，这里主要是 UI 演示
-      // 实际的目录选择需要用户手动输入或使用其他方式
-      const path = prompt('请输入下载路径 (例如: /Users/username/Downloads):');
-      if (path) {
-        setCustomPath(path);
+      // 检查是否支持 File System Access API
+      if ('showDirectoryPicker' in window) {
+        const directoryHandle = await (window as any).showDirectoryPicker();
+        setCustomPath(directoryHandle.name);
+        toast.success('文件夹选择成功');
+      } else {
+        // 降级方案：使用输入框提示
+        toast.info('您的浏览器不支持文件夹选择器，请手动输入路径');
+        const path = prompt('请输入下载路径 (例如: /Users/username/Downloads):');
+        if (path) {
+          setCustomPath(path);
+        }
       }
-    } catch (error) {
-      console.error('Directory selection failed:', error);
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Directory selection failed:', error);
+        toast.error('文件夹选择失败，请手动输入路径');
+      }
+    } finally {
+      setIsSelectingFolder(false);
     }
   };
 
@@ -105,10 +121,21 @@ const DownloadPathDialog: React.FC<DownloadPathDialogProps> = ({
                 value={customPath}
                 onChange={(e) => setCustomPath(e.target.value)}
               />
-              <Button type="button" variant="outline" size="icon" onClick={handleBrowse}>
-                <Folder className="h-4 w-4" />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="icon" 
+                onClick={handleBrowse}
+                disabled={isSelectingFolder}
+              >
+                <Folder className={`h-4 w-4 ${isSelectingFolder ? 'animate-pulse' : ''}`} />
               </Button>
             </div>
+            {!('showDirectoryPicker' in window) && (
+              <p className="text-xs text-amber-600">
+                ⚠️ 您的浏览器不支持文件夹选择器，请手动输入路径或使用现代浏览器
+              </p>
+            )}
           </div>
 
           <div className="flex items-center space-x-2">

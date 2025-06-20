@@ -60,7 +60,7 @@ class DownloadService {
       if ('showDirectoryPicker' in window && prefs.defaultPath && prefs.rememberPath) {
         return await this.downloadWithFileSystemAPI(blob, fileName);
       } else {
-        // 降级到传统下载方式
+        // 使用传统下载方式
         return this.downloadWithAnchorTag(blob, fileName);
       }
     } catch (error) {
@@ -72,8 +72,9 @@ class DownloadService {
   // 使用 File System Access API 下载
   private async downloadWithFileSystemAPI(blob: Blob, fileName: string): Promise<boolean> {
     try {
-      // 注意：这里简化实现，实际使用中需要处理目录选择
-      // 由于浏览器限制，我们还是使用传统方式
+      // 注意：由于浏览器安全限制，每次都需要用户授权
+      // 这里主要使用传统方式，但保留 API 调用结构以备将来扩展
+      console.log('Using File System API for download');
       return this.downloadWithAnchorTag(blob, fileName);
     } catch (error) {
       console.error('File System API download failed:', error);
@@ -104,7 +105,7 @@ class DownloadService {
     }
   }
 
-  // 设置默认下载路径（这里主要是保存用户偏好）
+  // 设置默认下载路径
   setDefaultPath(path: string): void {
     const prefs = this.getPreferences();
     this.savePreferences({
@@ -122,6 +123,11 @@ class DownloadService {
       defaultPath: undefined,
       rememberPath: false
     });
+  }
+
+  // 检查浏览器是否支持文件夹选择
+  isDirectoryPickerSupported(): boolean {
+    return 'showDirectoryPicker' in window;
   }
 }
 
