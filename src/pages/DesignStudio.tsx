@@ -301,7 +301,7 @@ const DesignStudio = () => {
   return <div className="min-h-screen bg-background">
       <header className="border-b bg-white dark:bg-gray-950">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-sock-purple">SoxLab</h1>
+          <h1 className="text-2xl font-bold text-sock-purple">SoxLab工作室</h1>
           <nav className="flex items-center space-x-4">
             <Link to="/drafts" className="text-gray-700 hover:text-sock-purple transition-colors">
               草稿
