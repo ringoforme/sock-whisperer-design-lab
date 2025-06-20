@@ -8,8 +8,8 @@ import { Download, Edit, AlertCircle, MessageCircle } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import ImageModal from "@/components/ImageModal";
+import AppHeader from "@/components/AppHeader";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
-import DownloadPathDialog from "@/components/DownloadPathDialog";
 import { downloadService } from "@/services/downloadService";
 import { generateDesigns, editImage } from "@/services/design.service";
 import { sessionService } from "@/services/sessionService";
@@ -33,7 +33,7 @@ const DesignStudio = () => {
   }]);
   const [design, setDesign] = useState<DesignState | null>(null);
   const [isEditingMode, setIsEditingMode] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(isGenerating);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -43,8 +43,6 @@ const DesignStudio = () => {
   // 新增图片预览状态
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
-  // 新增下载相关状态
-  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
   const location = useLocation();
   const {
     addDesign
@@ -263,22 +261,7 @@ const DesignStudio = () => {
   const handleDownload = async () => {
     if (!design) return;
 
-    // 检查是否已设置默认路径
-    if (downloadService.hasDefaultPath()) {
-      // 直接下载
-      const success = await downloadService.downloadImage(design.url, design.design_name);
-      if (success) {
-        toast.success("图片下载成功！");
-      } else {
-        toast.error("下载失败，请重试");
-      }
-    } else {
-      // 打开设置对话框
-      setIsDownloadDialogOpen(true);
-    }
-  };
-  const handleDownloadConfirm = async () => {
-    if (!design) return;
+    // Simplified download - directly to browser default folder
     const success = await downloadService.downloadImage(design.url, design.design_name);
     if (success) {
       toast.success("图片下载成功！");
@@ -301,7 +284,7 @@ const DesignStudio = () => {
   return <div className="min-h-screen bg-background">
       <header className="border-b bg-white dark:bg-gray-950">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-sock-purple">SoxLab工作室</h1>
+          <AppHeader title="SoxLab工作室" />
           <nav className="flex items-center space-x-4">
             <Link to="/drafts" className="text-gray-700 hover:text-sock-purple transition-colors">
               草稿
@@ -377,9 +360,6 @@ const DesignStudio = () => {
 
       {/* 图片预览模态框 */}
       {design && <ImageModal isOpen={isImageModalOpen} onClose={() => setIsImageModalOpen(false)} imageUrl={design.url} imageTitle={design.design_name} />}
-
-      {/* 下载路径设置对话框 */}
-      <DownloadPathDialog isOpen={isDownloadDialogOpen} onClose={() => setIsDownloadDialogOpen(false)} onConfirm={handleDownloadConfirm} designName={design?.design_name || "设计作品"} />
     </div>;
 };
 export default DesignStudio;
