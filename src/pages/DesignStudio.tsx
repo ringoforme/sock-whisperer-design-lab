@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Download, Edit, AlertCircle, MessageCircle } from "lucide-react";
+import { Download, Edit, AlertCircle, MessageCircle, Plus } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import ImageModal from "@/components/ImageModal";
@@ -45,6 +45,7 @@ const DesignStudio = () => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     addDesign
   } = useDesignStorage();
@@ -282,11 +283,41 @@ const DesignStudio = () => {
       setIsImageModalOpen(true);
     }
   };
+
+  // 新增：处理新设计按钮点击
+  const handleNewDesign = () => {
+    // 重置所有状态
+    setMessages([{
+      id: 1,
+      text: "欢迎来到Sox Lab设计工作室！请先告诉我您想要什么样的袜子设计，我们可以先聊聊您的想法。",
+      isUser: false
+    }]);
+    setDesign(null);
+    setIsEditingMode(false);
+    setIsGenerating(false);
+    setIsChatLoading(false);
+    setError(null);
+    setPendingEditInstruction('');
+    setIsImageModalOpen(false);
+    
+    // 重新初始化会话
+    initializeSession();
+    
+    toast.success("已开始新的设计会话");
+  };
+
   return <div className="min-h-screen bg-background">
       <header className="border-b bg-white dark:bg-gray-950">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
           <AppHeader title="SoxLab工作室" />
           <nav className="flex items-center space-x-4">
+            <Button
+              onClick={handleNewDesign}
+              className="bg-sock-purple hover:bg-sock-purple/90 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Design
+            </Button>
             <Link to="/drafts" className="text-gray-700 hover:text-sock-purple transition-colors">
               草稿
             </Link>
@@ -299,6 +330,7 @@ const DesignStudio = () => {
           </nav>
         </div>
       </header>
+      
       <main className="container mx-auto py-6 px-4 md:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
           <div className="h-[80vh] flex flex-col border rounded-lg overflow-hidden">
@@ -363,4 +395,5 @@ const DesignStudio = () => {
       {design && <ImageModal isOpen={isImageModalOpen} onClose={() => setIsImageModalOpen(false)} imageUrl={design.url} imageTitle={design.design_name} />}
     </div>;
 };
+
 export default DesignStudio;

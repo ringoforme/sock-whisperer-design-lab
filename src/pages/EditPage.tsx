@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Download, File, Save } from 'lucide-react';
+import { ArrowLeft, Download, File, Save, Plus } from 'lucide-react';
 import RegenerateButton from '@/components/RegenerateButton';
 import ImageModal from '@/components/ImageModal';
 import AppHeader from '@/components/AppHeader';
@@ -131,6 +131,11 @@ const EditPage = () => {
     setIsImageModalOpen(true);
   };
 
+  const handleNewDesign = () => {
+    navigate('/design');
+    toast.success("已跳转到新设计页面");
+  };
+
   if (!currentDesign) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -155,6 +160,13 @@ const EditPage = () => {
             <AppHeader title="编辑设计" />
           </div>
           <div className="flex space-x-2">
+            <Button
+              onClick={handleNewDesign}
+              className="bg-sock-purple hover:bg-sock-purple/90 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Design
+            </Button>
             <RegenerateButton 
               onRegenerate={handleRegenerate}
               isGenerating={isRegenerating}
