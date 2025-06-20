@@ -11,29 +11,26 @@ import ImageModal from "@/components/ImageModal";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 import DownloadPathDialog from "@/components/DownloadPathDialog";
 import { downloadService } from "@/services/downloadService";
-
 import { generateDesigns, editImage } from "@/services/design.service";
 import { sessionService } from "@/services/sessionService";
 import { llmService } from "@/services/llmService";
 import { ConversationManager } from "@/services/conversationManager";
 import type { DesignData } from "@/types/design";
-
 interface Message {
   id: number;
   text: string;
   isUser: boolean;
 }
-
-type DesignState = DesignData & { isEditing?: boolean; error?: string };
-
+type DesignState = DesignData & {
+  isEditing?: boolean;
+  error?: string;
+};
 const DesignStudio = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      text: "欢迎来到Sox Lab设计工作室！请先告诉我您想要什么样的袜子设计，我们可以先聊聊您的想法。",
-      isUser: false,
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([{
+    id: 1,
+    text: "欢迎来到Sox Lab设计工作室！请先告诉我您想要什么样的袜子设计，我们可以先聊聊您的想法。",
+    isUser: false
+  }]);
   const [design, setDesign] = useState<DesignState | null>(null);
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -42,27 +39,25 @@ const DesignStudio = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [conversationManager] = useState(() => new ConversationManager());
   const [pendingEditInstruction, setPendingEditInstruction] = useState<string>('');
-  
+
   // 新增图片预览状态
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   // 新增下载相关状态
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
-
   const location = useLocation();
-  const { addDesign } = useDesignStorage();
-
+  const {
+    addDesign
+  } = useDesignStorage();
   useEffect(() => {
     // 初始化会话
     initializeSession();
-    
     const params = new URLSearchParams(location.search);
     const initialPrompt = params.get("prompt");
     if (initialPrompt) {
       handleSendMessage(initialPrompt);
     }
   }, [location]);
-
   const initializeSession = async () => {
     try {
       console.log('开始初始化会话...');
@@ -71,7 +66,7 @@ const DesignStudio = () => {
       setCurrentSessionId(session.id);
       llmService.setCurrentSession(session.id);
       console.log('会话已初始化:', session.id);
-      
+
       // 添加系统消息到数据库
       await sessionService.addMessage(session.id, 'assistant', '欢迎来到Sox Lab设计工作室！请先告诉我您想要什么样的袜子设计，我们可以先聊聊您的想法。');
     } catch (error) {
@@ -84,10 +79,9 @@ const DesignStudio = () => {
   const triggerImageGeneration = async () => {
     setIsGenerating(true);
     setError(null);
-
     try {
       console.log('开始生成设计，会话ID:', currentSessionId);
-      
+
       // 收集完整的会话上下文
       const sessionContext = {
         sessionId: currentSessionId,
@@ -96,24 +90,24 @@ const DesignStudio = () => {
         collectedInfo: conversationManager.getCollectedInfo(),
         requirements: conversationManager.getRequirements()
       };
-      
       const newDesign = await generateDesigns(sessionContext);
-      setDesign({ ...newDesign, isEditing: false });
-      
+      setDesign({
+        ...newDesign,
+        isEditing: false
+      });
       const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
       setMessages(prev => [...prev, {
         id: Date.now(),
         text: successMessage,
         isUser: false
       }]);
-      
+
       // 记录助手消息到数据库
       if (currentSessionId) {
         await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
       }
-      
       toast.success("设计生成成功！");
-      
+
       // 更新会话状态为已完成
       if (currentSessionId) {
         await sessionService.updateSessionStatus(currentSessionId, 'completed');
@@ -133,24 +127,22 @@ const DesignStudio = () => {
       toast.error("请先输入编辑指令");
       return;
     }
-
     setIsGenerating(true);
     try {
       // 使用 editImage 函数编辑图片
       const editedDesign = await editImage(design.url, pendingEditInstruction, currentSessionId);
-      setDesign({ ...editedDesign, isEditing: true });
+      setDesign({
+        ...editedDesign,
+        isEditing: true
+      });
       toast.success(`设计已更新！`);
-      
       const responseMessage = "我已根据您的指令编辑了设计。";
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          text: responseMessage,
-          isUser: false,
-        },
-      ]);
-      
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        text: responseMessage,
+        isUser: false
+      }]);
+
       // 记录助手回复到数据库
       if (currentSessionId) {
         await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
@@ -168,9 +160,12 @@ const DesignStudio = () => {
   // 修改后的消息处理函数
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating || isChatLoading) return;
-    
-    const userMsg = { id: Date.now(), text: userMessage, isUser: true };
-    setMessages((prev) => [...prev, userMsg]);
+    const userMsg = {
+      id: Date.now(),
+      text: userMessage,
+      isUser: true
+    };
+    setMessages(prev => [...prev, userMsg]);
 
     // 记录用户消息到数据库
     if (currentSessionId) {
@@ -180,21 +175,16 @@ const DesignStudio = () => {
         console.error('记录用户消息失败:', error);
       }
     }
-
     if (isEditingMode && design) {
       // 在编辑模式下，只保存编辑指令，不立即执行编辑
       setPendingEditInstruction(userMessage);
-      
       const responseMessage = "我已收到您的编辑指令。请点击编辑图片按钮来应用修改。";
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          text: responseMessage,
-          isUser: false,
-        },
-      ]);
-      
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        text: responseMessage,
+        isUser: false
+      }]);
+
       // 记录助手回复到数据库
       if (currentSessionId) {
         await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
@@ -204,22 +194,17 @@ const DesignStudio = () => {
       setIsChatLoading(true);
       try {
         console.log('发送消息到 ConversationManager:', userMessage);
-        
+
         // 将当前消息历史传递给 ConversationManager
         conversationManager.addToHistory('user', userMessage);
-        
         const gptResponse = await conversationManager.generateResponse(userMessage);
         console.log('收到 GPT 回复:', gptResponse);
-        
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now() + 1,
-            text: gptResponse,
-            isUser: false,
-          },
-        ]);
-        
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          text: gptResponse,
+          isUser: false
+        }]);
+
         // 记录助手回复到数据库
         if (currentSessionId) {
           try {
@@ -230,54 +215,51 @@ const DesignStudio = () => {
         }
       } catch (error) {
         console.error('GPT 聊天失败:', error);
-        
+
         // 降级到简单回复
         const fallbackResponse = "抱歉，AI 服务暂时不可用。请继续描述您的设计想法，稍后我会为您生成设计。";
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now() + 1,
-            text: fallbackResponse,
-            isUser: false,
-          },
-        ]);
-        
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          text: fallbackResponse,
+          isUser: false
+        }]);
         toast.error("AI 聊天服务暂时不可用");
       } finally {
         setIsChatLoading(false);
       }
     }
   };
-
   const handleEdit = () => {
     if (!design || design.design_name === "生成失败") {
       toast.info("无法编辑一个生成失败的设计。");
       return;
     }
     setIsEditingMode(true);
-    setDesign(prev => prev ? { ...prev, isEditing: true } : null);
+    setDesign(prev => prev ? {
+      ...prev,
+      isEditing: true
+    } : null);
     conversationManager.setEditingMode();
     setPendingEditInstruction(''); // 清空之前的编辑指令
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        text: "现在正在编辑模式，您可以告诉我想要做什么调整。",
-        isUser: false,
-      },
-    ]);
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      text: "现在正在编辑模式，您可以告诉我想要做什么调整。",
+      isUser: false
+    }]);
   };
-
   const handleExitEdit = () => {
     setIsEditingMode(false);
     setPendingEditInstruction(''); // 清空编辑指令
-    setDesign(prev => prev ? { ...prev, isEditing: false } : null);
-    setMessages((prev) => [
+    setDesign(prev => prev ? {
       ...prev,
-      { id: Date.now(), text: "已退出编辑模式。", isUser: false },
-    ]);
+      isEditing: false
+    } : null);
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      text: "已退出编辑模式。",
+      isUser: false
+    }]);
   };
-
   const handleDownload = async () => {
     if (!design) return;
 
@@ -295,10 +277,8 @@ const DesignStudio = () => {
       setIsDownloadDialogOpen(true);
     }
   };
-
   const handleDownloadConfirm = async () => {
     if (!design) return;
-    
     const success = await downloadService.downloadImage(design.url, design.design_name);
     if (success) {
       toast.success("图片下载成功！");
@@ -306,7 +286,6 @@ const DesignStudio = () => {
       toast.error("下载失败，请重试");
     }
   };
-
   const handleVectorize = () => {
     if (!design) return;
     // Vectorize logic here
@@ -319,19 +298,12 @@ const DesignStudio = () => {
       setIsImageModalOpen(true);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <header className="border-b bg-white dark:bg-gray-950">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-sock-purple">
-            袜匠设计工作室
-          </h1>
+          <h1 className="text-2xl font-bold text-sock-purple">SoxLab</h1>
           <nav className="flex items-center space-x-4">
-            <Link
-              to="/drafts"
-              className="text-gray-700 hover:text-sock-purple transition-colors"
-            >
+            <Link to="/drafts" className="text-gray-700 hover:text-sock-purple transition-colors">
               草稿
             </Link>
             <Link to="/profile" className="ml-4">
@@ -346,137 +318,68 @@ const DesignStudio = () => {
       <main className="container mx-auto py-6 px-4 md:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
           <div className="h-[80vh] flex flex-col border rounded-lg overflow-hidden">
-            <ChatWindow
-              messages={messages}
-              onSendMessage={handleSendMessage}
-              onGenerateImage={triggerImageGeneration}
-              onEditImage={triggerImageEdit}
-              isEditingMode={isEditingMode}
-              selectedDesignId={design ? 0 : null}
-              isGenerating={isGenerating || isChatLoading}
-              hasDesign={!!design}
-              hasPendingEditInstruction={!!pendingEditInstruction.trim()}
-            />
+            <ChatWindow messages={messages} onSendMessage={handleSendMessage} onGenerateImage={triggerImageGeneration} onEditImage={triggerImageEdit} isEditingMode={isEditingMode} selectedDesignId={design ? 0 : null} isGenerating={isGenerating || isChatLoading} hasDesign={!!design} hasPendingEditInstruction={!!pendingEditInstruction.trim()} />
           </div>
           <div className="h-[80vh] overflow-y-auto">
-            {isEditingMode && design ? (
-              <EditingView
-                design={design}
-                onExitEdit={handleExitEdit}
-                onDownload={handleDownload}
-                onVectorize={handleVectorize}
-                onImageClick={handleImageClick}
-              />
-            ) : (
-              <div>
+            {isEditingMode && design ? <EditingView design={design} onExitEdit={handleExitEdit} onDownload={handleDownload} onVectorize={handleVectorize} onImageClick={handleImageClick} /> : <div>
                 <div className="mb-4 flex justify-between items-center">
                   <h2 className="text-lg font-semibold">设计作品</h2>
-                  {currentSessionId && (
-                    <div className="text-xs text-muted-foreground">
+                  {currentSessionId && <div className="text-xs text-muted-foreground">
                       会话ID: {currentSessionId.slice(-8)}
-                    </div>
-                  )}
+                    </div>}
                 </div>
 
-                {(isGenerating || isChatLoading) && (
-                  <div className="text-center text-gray-500 py-10">
+                {(isGenerating || isChatLoading) && <div className="text-center text-gray-500 py-10">
                     {isGenerating ? "正在为您生成设计，请稍候..." : "正在思考回复，请稍候..."}
-                  </div>
-                )}
+                  </div>}
 
-                {error && (
-                  <div className="text-center text-red-500 bg-red-100 p-4 rounded-lg mb-4">
+                {error && <div className="text-center text-red-500 bg-red-100 p-4 rounded-lg mb-4">
                     {error}
-                  </div>
-                )}
+                  </div>}
 
-                {design && (
-                  <div className="flex justify-center">
-                    <Card className={`w-full max-w-md overflow-hidden transition-all ${
-                      design.isEditing ? "ring-2 ring-sock-purple" : ""
-                    } ${design.error ? "border-red-300" : ""}`}>
+                {design && <div className="flex justify-center">
+                    <Card className={`w-full max-w-md overflow-hidden transition-all ${design.isEditing ? "ring-2 ring-sock-purple" : ""} ${design.error ? "border-red-300" : ""}`}>
                       <CardContent className="p-0">
                         <div className="aspect-square relative bg-gray-100">
-                          <img
-                            src={design.url}
-                            alt={design.design_name}
-                            className={`w-full h-full object-cover transition-transform ${
-                              !design.error ? "cursor-pointer hover:scale-105" : ""
-                            }`}
-                            onClick={handleImageClick}
-                          />
-                          {design.error && (
-                            <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex flex-col items-center justify-center text-white p-2">
+                          <img src={design.url} alt={design.design_name} className={`w-full h-full object-cover transition-transform ${!design.error ? "cursor-pointer hover:scale-105" : ""}`} onClick={handleImageClick} />
+                          {design.error && <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex flex-col items-center justify-center text-white p-2">
                               <AlertCircle className="h-8 w-8 mb-2" />
                               <span className="text-sm font-bold text-center">
                                 生成失败
                               </span>
-                            </div>
-                          )}
-                          {!design.error && (
-                            <div className="absolute bottom-2 right-2 flex space-x-2">
-                              <Button
-                                variant="secondary"
-                                size="icon"
-                                onClick={handleDownload}
-                                className="bg-white/90 hover:bg-white"
-                              >
+                            </div>}
+                          {!design.error && <div className="absolute bottom-2 right-2 flex space-x-2">
+                              <Button variant="secondary" size="icon" onClick={handleDownload} className="bg-white/90 hover:bg-white">
                                 <Download className="h-4 w-4" />
                               </Button>
-                              <Button
-                                variant="secondary"
-                                size="icon"
-                                onClick={handleEdit}
-                                className={design.isEditing ? "bg-sock-purple text-white" : "bg-white/90 hover:bg-white"}
-                              >
+                              <Button variant="secondary" size="icon" onClick={handleEdit} className={design.isEditing ? "bg-sock-purple text-white" : "bg-white/90 hover:bg-white"}>
                                 <Edit className="h-4 w-4" />
                               </Button>
-                            </div>
-                          )}
+                            </div>}
                         </div>
                         <div className="p-3">
-                          <span className={`text-sm font-medium ${
-                            design.error ? "text-red-500" : ""
-                          }`}>
+                          <span className={`text-sm font-medium ${design.error ? "text-red-500" : ""}`}>
                             {design.design_name}
                           </span>
                         </div>
                       </CardContent>
                     </Card>
-                  </div>
-                )}
+                  </div>}
 
-                {!design && !isGenerating && !isChatLoading && (
-                  <div className="text-center text-gray-500 py-10">
+                {!design && !isGenerating && !isChatLoading && <div className="text-center text-gray-500 py-10">
                     <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <p>先和我聊聊您的设计想法，然后点击"生成图片"来创建设计</p>
-                  </div>
-                )}
-              </div>
-            )}
+                  </div>}
+              </div>}
           </div>
         </div>
       </main>
 
       {/* 图片预览模态框 */}
-      {design && (
-        <ImageModal
-          isOpen={isImageModalOpen}
-          onClose={() => setIsImageModalOpen(false)}
-          imageUrl={design.url}
-          imageTitle={design.design_name}
-        />
-      )}
+      {design && <ImageModal isOpen={isImageModalOpen} onClose={() => setIsImageModalOpen(false)} imageUrl={design.url} imageTitle={design.design_name} />}
 
       {/* 下载路径设置对话框 */}
-      <DownloadPathDialog
-        isOpen={isDownloadDialogOpen}
-        onClose={() => setIsDownloadDialogOpen(false)}
-        onConfirm={handleDownloadConfirm}
-        designName={design?.design_name || "设计作品"}
-      />
-    </div>
-  );
+      <DownloadPathDialog isOpen={isDownloadDialogOpen} onClose={() => setIsDownloadDialogOpen(false)} onConfirm={handleDownloadConfirm} designName={design?.design_name || "设计作品"} />
+    </div>;
 };
-
 export default DesignStudio;
