@@ -40,8 +40,7 @@ export class OpenAIService {
     const expandedMarkdown = expandData.choices[0].message.content;
     console.log('GPT返回的Markdown:', expandedMarkdown);
 
-    // return parseDetailedMarkdownPrompt(expandedMarkdown);
-    return expandedMarkdown;
+    return parseDetailedMarkdownPrompt(expandedMarkdown);
   }
 
   async generateImage(prompt: string): Promise<string> {
