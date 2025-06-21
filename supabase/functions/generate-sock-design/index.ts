@@ -65,16 +65,16 @@ serve(async (req) => {
     const openAIService = new OpenAIService(openAIApiKey);
 
     // 第一步：扩展提示词
-    const parsedPrompt = await openAIService.expandPrompt(userInput);
-    console.log('解析后的提示词:', parsedPrompt);
+    const expandedPrompt = await openAIService.expandPrompt(userInput);
+    console.log('扩展后的提示词:', expandedPrompt);
 
-    // 第二步：生成图像
-    const imageUrl = await openAIService.generateImage(parsedPrompt.prompt_en);
+    // 第二步：直接使用扩展后的提示词生成图像
+    const imageUrl = await openAIService.generateImage(expandedPrompt);
 
     const response: GenerationResponse = { 
       imageUrl,
-      expandedPrompt: parsedPrompt.prompt_en,
-      designName: parsedPrompt.design_name,
+      expandedPrompt: expandedPrompt,
+      designName: '袜子设计',
       success: true 
     };
 

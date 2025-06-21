@@ -37,7 +37,7 @@ export async function generateDesigns(sessionContext: SessionContext): Promise<D
     const designData: DesignData = {
       url: data.imageUrl,
       prompt_en: data.expandedPrompt,
-      design_name: data.designName || '未命名设计'
+      design_name: data.designName || '袜子设计'
     };
     
     // 如果有会话ID，记录设计过程到数据库
@@ -49,7 +49,7 @@ export async function generateDesigns(sessionContext: SessionContext): Promise<D
           additional_notes: `基于完整会话上下文生成`
         });
         
-        // 2. 记录扩展提示词（从后端返回的prompt）
+        // 2. 记录扩展提示词（从后端返回的expandedPrompt）
         if (designData.prompt_en) {
           const expandedPrompt = await sessionService.addExpandedPrompt(
             sessionContext.sessionId,
@@ -63,7 +63,7 @@ export async function generateDesigns(sessionContext: SessionContext): Promise<D
             sessionContext.sessionId,
             expandedPrompt.id,
             designData.url,
-            designData.design_name || '未命名设计',
+            designData.design_name || '袜子设计',
             designData.url ? 'success' : 'failed'
           );
         }

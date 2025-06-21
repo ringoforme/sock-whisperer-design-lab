@@ -1,7 +1,6 @@
 
 // OpenAI API service for sock design generation
 import { PROFESSIONAL_SYSTEM_PROMPT } from './prompts.ts';
-import { parseDetailedMarkdownPrompt, type ParsedPrompt } from './markdown-parser.ts';
 
 export class OpenAIService {
   private apiKey: string;
@@ -10,7 +9,7 @@ export class OpenAIService {
     this.apiKey = apiKey;
   }
 
-  async expandPrompt(userInput: string): Promise<ParsedPrompt> {
+  async expandPrompt(userInput: string): Promise<string> {
     console.log('调用GPT-4o扩展提示词...');
     
     const expandResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -37,10 +36,10 @@ export class OpenAIService {
       throw new Error(expandData.error.message);
     }
 
-    const expandedMarkdown = expandData.choices[0].message.content;
-    console.log('GPT返回的Markdown:', expandedMarkdown);
+    const expandedPrompt = expandData.choices[0].message.content;
+    console.log('GPT返回的扩展提示词:', expandedPrompt);
 
-    return parseDetailedMarkdownPrompt(expandedMarkdown);
+    return expandedPrompt;
   }
 
   async generateImage(prompt: string): Promise<string> {
