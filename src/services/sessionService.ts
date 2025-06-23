@@ -68,6 +68,39 @@ export class SessionService {
     if (error) throw error;
   }
 
+  // 删除会话
+  async deleteSession(sessionId: string): Promise<void> {
+    const { error } = await supabase
+      .from('design_sessions')
+      .delete()
+      .eq('id', sessionId);
+
+    if (error) throw error;
+  }
+
+  // 检查会话是否有用户消息
+  async hasUserMessages(sessionId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('conversation_messages')
+      .select('id')
+      .eq('session_id', sessionId)
+      .eq('role', 'user')
+      .limit(1);
+
+    if (error) throw error;
+    return (data?.length || 0) > 0;
+  }
+
+  // 删除空会话（没有用户消息的会话）
+  async deleteEmptySession(sessionId: string): Promise<boolean> {
+    const hasMessages = await this.hasUserMessages(sessionId);
+    if (!hasMessages) {
+      await this.deleteSession(sessionId);
+      return true;
+    }
+    return false;
+  }
+
   // 添加对话消息
   async addMessage(sessionId: string, role: 'user' | 'assistant', content: string, metadata?: any): Promise<ConversationMessage> {
     const { data, error } = await supabase
