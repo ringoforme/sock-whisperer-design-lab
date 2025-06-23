@@ -12,7 +12,7 @@ export type Database = {
       conversation_messages: {
         Row: {
           content: string
-          created_at: string
+          created_at: string | null
           id: string
           metadata: Json | null
           role: string
@@ -20,7 +20,7 @@ export type Database = {
         }
         Insert: {
           content: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           metadata?: Json | null
           role: string
@@ -28,7 +28,7 @@ export type Database = {
         }
         Update: {
           content?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           metadata?: Json | null
           role?: string
@@ -48,41 +48,41 @@ export type Database = {
         Row: {
           additional_notes: string | null
           colors: Json | null
-          completion_status: string
-          created_at: string
+          completion_status: string | null
+          created_at: string | null
           id: string
           occasion: string | null
           pattern: string | null
           session_id: string
           sock_type: string | null
           style: string | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           additional_notes?: string | null
           colors?: Json | null
-          completion_status?: string
-          created_at?: string
+          completion_status?: string | null
+          created_at?: string | null
           id?: string
           occasion?: string | null
           pattern?: string | null
           session_id: string
           sock_type?: string | null
           style?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           additional_notes?: string | null
           colors?: Json | null
-          completion_status?: string
-          created_at?: string
+          completion_status?: string | null
+          created_at?: string | null
           id?: string
           occasion?: string | null
           pattern?: string | null
           session_id?: string
           sock_type?: string | null
           style?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -96,27 +96,30 @@ export type Database = {
       }
       design_sessions: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           initial_idea: string
-          status: string
-          updated_at: string
+          session_title: string | null
+          status: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           initial_idea: string
-          status?: string
-          updated_at?: string
+          session_title?: string | null
+          status?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           initial_idea?: string
-          status?: string
-          updated_at?: string
+          session_title?: string | null
+          status?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -124,29 +127,29 @@ export type Database = {
       expanded_prompts: {
         Row: {
           brief_id: string
-          created_at: string
+          created_at: string | null
           expanded_prompt: string
           id: string
           original_brief: string
-          prompt_version: number
+          prompt_version: number | null
           session_id: string
         }
         Insert: {
           brief_id: string
-          created_at?: string
+          created_at?: string | null
           expanded_prompt: string
           id?: string
           original_brief: string
-          prompt_version?: number
+          prompt_version?: number | null
           session_id: string
         }
         Update: {
           brief_id?: string
-          created_at?: string
+          created_at?: string | null
           expanded_prompt?: string
           id?: string
           original_brief?: string
-          prompt_version?: number
+          prompt_version?: number | null
           session_id?: string
         }
         Relationships: [
@@ -168,34 +171,40 @@ export type Database = {
       }
       generated_images: {
         Row: {
-          created_at: string
+          created_at: string | null
           design_name: string
+          display_order: number | null
           error_message: string | null
-          generation_status: string
+          generation_status: string | null
           id: string
           image_url: string
           prompt_id: string
           session_id: string
+          thumbnail_url: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           design_name: string
+          display_order?: number | null
           error_message?: string | null
-          generation_status?: string
+          generation_status?: string | null
           id?: string
           image_url: string
           prompt_id: string
           session_id: string
+          thumbnail_url?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           design_name?: string
+          display_order?: number | null
           error_message?: string | null
-          generation_status?: string
+          generation_status?: string | null
           id?: string
           image_url?: string
           prompt_id?: string
           session_id?: string
+          thumbnail_url?: string | null
         }
         Relationships: [
           {

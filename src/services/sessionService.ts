@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -14,9 +15,6 @@ export type ConversationMessageInsert = Database['public']['Tables']['conversati
 export type DesignBriefInsert = Database['public']['Tables']['design_briefs']['Insert'];
 export type ExpandedPromptInsert = Database['public']['Tables']['expanded_prompts']['Insert'];
 export type GeneratedImageInsert = Database['public']['Tables']['generated_images']['Insert'];
-
-// 测试用户ID - 用于没有登录用户时的测试
-const TEST_USER_ID = '00000000-0000-0000-0000-000000000000';
 
 export class SessionService {
   // 创建新的设计会话
