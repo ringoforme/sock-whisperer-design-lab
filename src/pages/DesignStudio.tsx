@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -119,7 +118,7 @@ const DesignStudio = () => {
 
       setCurrentSessionId(sessionId);
 
-      // 恢复消息历史
+      // Restore message history
       const sessionMessages: Message[] = [{
         id: 1,
         text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
@@ -136,25 +135,21 @@ const DesignStudio = () => {
 
       setMessages(sessionMessages);
 
-      // 恢复对话管理器状态
+      // Restore conversation manager state
       conversationManager.reset();
       sessionHistory.messages.forEach(msg => {
-        // Type assertion to ensure the role is properly typed
         const role = msg.role as 'user' | 'assistant';
         conversationManager.addToHistory(role, msg.content);
       });
 
-      // 恢复设计状态（如果有生成的图片）
-      if (sessionHistory.images.length > 0) {
-        const latestImage = sessionHistory.images[sessionHistory.images.length - 1];
-        if (latestImage.generation_status === 'success') {
-          setDesign({
-            url: latestImage.image_url,
-            prompt_en: '', // 这里可以从扩展提示词中获取
-            design_name: latestImage.design_name,
-            isEditing: false
-          });
-        }
+      // Restore design state with latest image
+      if (sessionHistory.latestImage) {
+        setDesign({
+          url: sessionHistory.latestImage.image_url,
+          prompt_en: '', 
+          design_name: sessionHistory.latestImage.design_name,
+          isEditing: false
+        });
       } else {
         setDesign(null);
       }
@@ -470,7 +465,7 @@ const DesignStudio = () => {
 
                 {design && (
                   <div className="flex justify-center">
-                    <Card className={`w-full max-w-md overflow-hidden transition-all ${
+                    <Card className={`w-full max-w-2xl overflow-hidden transition-all ${
                       design.isEditing ? "ring-2 ring-sock-purple" : ""
                     } ${design.error ? "border-red-300" : ""}`}>
                       <CardContent className="p-0">

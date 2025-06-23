@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -115,6 +114,18 @@ export class SessionService {
       .single();
 
     if (error) throw error;
+
+    // Generate intelligent title for first user message
+    if (role === 'user') {
+      const messages = await this.getSessionMessages(sessionId);
+      const userMessages = messages.filter(msg => msg.role === 'user');
+      
+      if (userMessages.length === 1) { // This is the first user message
+        const intelligentTitle = await this.generateSessionTitle(sessionId, content);
+        await this.updateSessionTitle(sessionId, intelligentTitle);
+      }
+    }
+
     return data;
   }
 
@@ -202,6 +213,63 @@ export class SessionService {
     return data;
   }
 
+  // Generate intelligent session title based on conversation content
+  async generateSessionTitle(sessionId: string, userMessage: string): Promise<string> {
+    try {
+      // First check if we already have a custom title
+      const session = await this.getSession(sessionId);
+      if (session && session.session_title !== '新设计会话' && session.session_title !== userMessage.substring(0, 15)) {
+        return session.session_title;
+      }
+
+      // Generate a concise theme overview based on the user's input
+      let title = userMessage;
+      
+      // Extract key design elements and create a concise title
+      if (title.includes('袜子') || title.includes('设计')) {
+        // Remove common phrases and focus on core design elements
+        title = title
+          .replace(/请|帮我|设计|一双|一款|袜子/g, '')
+          .replace(/，.*$/, '') // Remove everything after first comma
+          .trim();
+        
+        // If still too long, take first meaningful part
+        if (title.length > 20) {
+          title = title.substring(0, 20) + '...';
+        }
+        
+        // Add "袜子设计" suffix if not present
+        if (!title.includes('袜子') && !title.includes('设计')) {
+          title = title + '袜子设计';
+        }
+      } else {
+        // Fallback: take first 15 characters
+        title = title.substring(0, 15);
+        if (title.length === 15) {
+          title += '...';
+        }
+      }
+
+      return title || '袜子设计';
+    } catch (error) {
+      console.error('生成会话标题失败:', error);
+      return userMessage.substring(0, 15) + (userMessage.length > 15 ? '...' : '');
+    }
+  }
+
+  // Update session title
+  async updateSessionTitle(sessionId: string, title: string): Promise<void> {
+    const { error } = await supabase
+      .from('design_sessions')
+      .update({ 
+        session_title: title,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', sessionId);
+
+    if (error) throw error;
+  }
+
   // 获取会话的完整历史记录
   async getSessionHistory(sessionId: string) {
     const [session, messages, briefs, prompts, images] = await Promise.all([
@@ -212,12 +280,18 @@ export class SessionService {
       this.getGeneratedImages(sessionId)
     ]);
 
+    // Find the latest successful image
+    const latestImage = images
+      .filter(img => img.generation_status === 'success')
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+
     return {
       session,
       messages,
       briefs,
       prompts,
-      images
+      images,
+      latestImage
     };
   }
 
