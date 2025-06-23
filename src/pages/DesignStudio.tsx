@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -423,7 +424,7 @@ const DesignStudio = () => {
       
       <main className="container mx-auto py-6 px-4 md:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
-          <div className="min-h-[80vh] flex flex-col border rounded-lg overflow-hidden">
+          <div className="h-[80vh] flex flex-col border rounded-lg overflow-hidden">
             <ChatWindow 
               messages={messages} 
               onSendMessage={handleSendMessage} 
@@ -436,7 +437,7 @@ const DesignStudio = () => {
               hasPendingEditInstruction={!!pendingEditInstruction.trim()} 
             />
           </div>
-          <div className="min-h-[80vh] overflow-y-auto">
+          <div className="h-[80vh] overflow-y-auto">
             {isEditingMode && design ? (
               <EditingView 
                 design={design} 
@@ -475,7 +476,7 @@ const DesignStudio = () => {
                       design.isEditing ? "ring-2 ring-sock-purple" : ""
                     } ${design.error ? "border-red-300" : ""}`}>
                       <CardContent className="p-0">
-                        <div className="aspect-square relative bg-gray-100 w-full">
+                        <div className="aspect-square relative bg-gray-100">
                           <img 
                             src={design.url} 
                             alt={design.design_name} 
