@@ -9,7 +9,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import DesignStudio from "./pages/DesignStudio";
-import DesignLab from "./pages/DesignLab";
 import CustomizedDesign from "./pages/CustomizedDesign";
 import Drafts from "./pages/Drafts";
 import Profile from "./pages/Profile";
@@ -36,14 +35,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <DesignStudio />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/design-lab" 
-              element={
-                <ProtectedRoute>
-                  <DesignLab />
                 </ProtectedRoute>
               } 
             />

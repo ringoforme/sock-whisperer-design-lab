@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -9,6 +10,7 @@ import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import ImageModal from "@/components/ImageModal";
 import AppHeader from "@/components/AppHeader";
+import SessionHistorySidebar from "@/components/SessionHistorySidebar";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 import { downloadService } from "@/services/downloadService";
 import { generateDesigns, editImage } from "@/services/design.service";
@@ -22,14 +24,16 @@ interface Message {
   text: string;
   isUser: boolean;
 }
+
 type DesignState = DesignData & {
   isEditing?: boolean;
   error?: string;
 };
+
 const DesignStudio = () => {
   const [messages, setMessages] = useState<Message[]>([{
     id: 1,
-    text: "欢迎来到Sox Lab设计工作室！请先告诉我您想要什么样的袜子设计，我们可以先聊聊您的想法。",
+    text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
     isUser: false
   }]);
   const [design, setDesign] = useState<DesignState | null>(null);
@@ -40,15 +44,12 @@ const DesignStudio = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [conversationManager] = useState(() => new ConversationManager());
   const [pendingEditInstruction, setPendingEditInstruction] = useState<string>('');
-
-  // 新增图片预览状态
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    addDesign
-  } = useDesignStorage();
+  const { addDesign } = useDesignStorage();
+
   useEffect(() => {
     // 初始化会话
     initializeSession();
@@ -58,6 +59,7 @@ const DesignStudio = () => {
       handleSendMessage(initialPrompt);
     }
   }, [location]);
+
   const initializeSession = async () => {
     try {
       console.log('开始初始化会话...');
@@ -68,10 +70,100 @@ const DesignStudio = () => {
       console.log('会话已初始化:', session.id);
 
       // 添加系统消息到数据库
-      await sessionService.addMessage(session.id, 'assistant', '欢迎来到Sox Lab设计工作室！请先告诉我您想要什么样的袜子设计，我们可以先聊聊您的想法。');
+      await sessionService.addMessage(session.id, 'assistant', '欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？');
     } catch (error) {
       console.error('初始化会话失败:', error);
       toast.error('会话初始化失败，但可以继续使用');
+    }
+  };
+
+  // 创建新会话
+  const createNewSession = async (initialIdea?: string) => {
+    try {
+      if (!initialIdea) {
+        // 重置到初始状态
+        setMessages([{
+          id: 1,
+          text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
+          isUser: false
+        }]);
+        setDesign(null);
+        setIsEditingMode(false);
+        setCurrentSessionId(null);
+        conversationManager.reset();
+        // 重新初始化会话
+        await initializeSession();
+        return;
+      }
+
+      const session = await sessionService.createSession(initialIdea);
+      setCurrentSessionId(session.id);
+      console.log('新会话创建成功:', session.id);
+      return session;
+    } catch (error) {
+      console.error('创建会话失败:', error);
+      toast.error('创建会话失败');
+      throw error;
+    }
+  };
+
+  // 加载已存在的会话
+  const loadSession = async (sessionId: string) => {
+    try {
+      const sessionHistory = await sessionService.getSessionHistory(sessionId);
+      
+      if (!sessionHistory.session) {
+        toast.error('会话不存在');
+        return;
+      }
+
+      setCurrentSessionId(sessionId);
+
+      // 恢复消息历史
+      const sessionMessages: Message[] = [{
+        id: 1,
+        text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
+        isUser: false
+      }];
+
+      sessionHistory.messages.forEach((msg, index) => {
+        sessionMessages.push({
+          id: index + 2,
+          text: msg.content,
+          isUser: msg.role === 'user'
+        });
+      });
+
+      setMessages(sessionMessages);
+
+      // 恢复对话管理器状态
+      conversationManager.reset();
+      sessionHistory.messages.forEach(msg => {
+        // Type assertion to ensure the role is properly typed
+        const role = msg.role as 'user' | 'assistant';
+        conversationManager.addToHistory(role, msg.content);
+      });
+
+      // 恢复设计状态（如果有生成的图片）
+      if (sessionHistory.images.length > 0) {
+        const latestImage = sessionHistory.images[sessionHistory.images.length - 1];
+        if (latestImage.generation_status === 'success') {
+          setDesign({
+            url: latestImage.image_url,
+            prompt_en: '', // 这里可以从扩展提示词中获取
+            design_name: latestImage.design_name,
+            isEditing: false
+          });
+        }
+      } else {
+        setDesign(null);
+      }
+
+      setIsEditingMode(false);
+      toast.success('会话加载成功');
+    } catch (error) {
+      console.error('加载会话失败:', error);
+      toast.error('加载会话失败');
     }
   };
 
@@ -121,7 +213,7 @@ const DesignStudio = () => {
     }
   };
 
-  // 新增：触发图像编辑功能
+  // 触发图像编辑功能
   const triggerImageEdit = async () => {
     if (!design || !pendingEditInstruction.trim()) {
       toast.error("请先输入编辑指令");
@@ -175,6 +267,7 @@ const DesignStudio = () => {
         console.error('记录用户消息失败:', error);
       }
     }
+
     if (isEditingMode && design) {
       // 在编辑模式下，只保存编辑指令，不立即执行编辑
       setPendingEditInstruction(userMessage);
@@ -229,24 +322,26 @@ const DesignStudio = () => {
       }
     }
   };
+
   const handleEdit = () => {
     if (!design || design.design_name === "生成失败") {
       toast.info("无法编辑一个生成失败的设计。");
       return;
     }
     setIsEditingMode(true);
+    setPendingEditInstruction(''); // 清空编辑指令
     setDesign(prev => prev ? {
       ...prev,
       isEditing: true
     } : null);
     conversationManager.setEditingMode();
-    setPendingEditInstruction(''); // 清空之前的编辑指令
     setMessages(prev => [...prev, {
       id: Date.now(),
       text: "现在正在编辑模式，您可以告诉我想要做什么调整。",
       isUser: false
     }]);
   };
+
   const handleExitEdit = () => {
     setIsEditingMode(false);
     setPendingEditInstruction(''); // 清空编辑指令
@@ -260,6 +355,7 @@ const DesignStudio = () => {
       isUser: false
     }]);
   };
+
   const handleDownload = async () => {
     if (!design) return;
 
@@ -271,45 +367,38 @@ const DesignStudio = () => {
       toast.error("下载失败，请重试");
     }
   };
+
   const handleVectorize = () => {
     if (!design) return;
     // Vectorize logic here
     toast.success("矢量化处理已开始");
   };
 
-  // 新增：处理图片点击放大
+  // 处理图片点击放大
   const handleImageClick = () => {
     if (design && !design.error) {
       setIsImageModalOpen(true);
     }
   };
 
-  // 新增：处理新设计按钮点击
+  // 处理新设计按钮点击
   const handleNewDesign = () => {
-    // 重置所有状态
-    setMessages([{
-      id: 1,
-      text: "欢迎来到Sox Lab设计工作室！请先告诉我您想要什么样的袜子设计，我们可以先聊聊您的想法。",
-      isUser: false
-    }]);
-    setDesign(null);
-    setIsEditingMode(false);
-    setIsGenerating(false);
-    setIsChatLoading(false);
-    setError(null);
-    setPendingEditInstruction('');
-    setIsImageModalOpen(false);
-    
-    // 重新初始化会话
-    initializeSession();
-    
+    createNewSession();
     toast.success("已开始新的设计会话");
   };
 
-  return <div className="min-h-screen bg-background">
+  return (
+    <div className="min-h-screen bg-background">
       <header className="border-b bg-white dark:bg-gray-950">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
-          <AppHeader title="SoxLab工作室" />
+          <div className="flex items-center space-x-4">
+            <SessionHistorySidebar
+              currentSessionId={currentSessionId}
+              onSessionSelect={loadSession}
+              onNewSession={() => createNewSession()}
+            />
+            <AppHeader title="SoxLab工作室" />
+          </div>
           <nav className="flex items-center space-x-4">
             <Button
               onClick={handleNewDesign}
@@ -334,66 +423,134 @@ const DesignStudio = () => {
       <main className="container mx-auto py-6 px-4 md:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
           <div className="h-[80vh] flex flex-col border rounded-lg overflow-hidden">
-            <ChatWindow messages={messages} onSendMessage={handleSendMessage} onGenerateImage={triggerImageGeneration} onEditImage={triggerImageEdit} isEditingMode={isEditingMode} selectedDesignId={design ? 0 : null} isGenerating={isGenerating || isChatLoading} hasDesign={!!design} hasPendingEditInstruction={!!pendingEditInstruction.trim()} />
+            <ChatWindow 
+              messages={messages} 
+              onSendMessage={handleSendMessage} 
+              onGenerateImage={triggerImageGeneration} 
+              onEditImage={triggerImageEdit} 
+              isEditingMode={isEditingMode} 
+              selectedDesignId={design ? 0 : null} 
+              isGenerating={isGenerating || isChatLoading} 
+              hasDesign={!!design} 
+              hasPendingEditInstruction={!!pendingEditInstruction.trim()} 
+            />
           </div>
           <div className="h-[80vh] overflow-y-auto">
-            {isEditingMode && design ? <EditingView design={design} onExitEdit={handleExitEdit} onDownload={handleDownload} onVectorize={handleVectorize} onImageClick={handleImageClick} /> : <div>
+            {isEditingMode && design ? (
+              <EditingView 
+                design={design} 
+                onExitEdit={handleExitEdit} 
+                onDownload={handleDownload} 
+                onVectorize={handleVectorize} 
+                onImageClick={handleImageClick} 
+              />
+            ) : (
+              <div>
                 <div className="mb-4 flex justify-between items-center">
                   <h2 className="text-lg font-semibold">设计作品</h2>
-                  {currentSessionId && <div className="text-xs text-muted-foreground">
+                  {currentSessionId && (
+                    <div className="text-xs text-muted-foreground">
                       会话ID: {currentSessionId.slice(-8)}
-                    </div>}
+                    </div>
+                  )}
                 </div>
 
-                {(isGenerating || isChatLoading) && <div className="text-center text-gray-500 py-10">
+                {(isGenerating || isChatLoading) && (
+                  <div className="text-center text-gray-500 py-10">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sock-purple mx-auto mb-4"></div>
                     {isGenerating ? "正在为您生成设计，请稍候..." : "正在思考回复，请稍候..."}
-                  </div>}
+                  </div>
+                )}
 
-                {error && <div className="text-center text-red-500 bg-red-100 p-4 rounded-lg mb-4">
+                {error && (
+                  <div className="text-center text-red-500 bg-red-100 p-4 rounded-lg mb-4">
                     {error}
-                  </div>}
+                  </div>
+                )}
 
-                {design && <div className="flex justify-center">
-                    <Card className={`w-full max-w-md overflow-hidden transition-all ${design.isEditing ? "ring-2 ring-sock-purple" : ""} ${design.error ? "border-red-300" : ""}`}>
+                {design && (
+                  <div className="flex justify-center">
+                    <Card className={`w-full max-w-md overflow-hidden transition-all ${
+                      design.isEditing ? "ring-2 ring-sock-purple" : ""
+                    } ${design.error ? "border-red-300" : ""}`}>
                       <CardContent className="p-0">
                         <div className="aspect-square relative bg-gray-100">
-                          <img src={design.url} alt={design.design_name} className={`w-full h-full object-cover transition-transform ${!design.error ? "cursor-pointer hover:scale-105" : ""}`} onClick={handleImageClick} />
-                          {design.error && <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex flex-col items-center justify-center text-white p-2">
+                          <img 
+                            src={design.url} 
+                            alt={design.design_name} 
+                            className={`w-full h-full object-cover transition-transform ${
+                              !design.error ? "cursor-pointer hover:scale-105" : ""
+                            }`} 
+                            onClick={handleImageClick} 
+                          />
+                          {design.error && (
+                            <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex flex-col items-center justify-center text-white p-2">
                               <AlertCircle className="h-8 w-8 mb-2" />
                               <span className="text-sm font-bold text-center">
                                 生成失败
                               </span>
-                            </div>}
-                          {!design.error && <div className="absolute bottom-2 right-2 flex space-x-2">
-                              <Button variant="secondary" size="icon" onClick={handleDownload} className="bg-white/90 hover:bg-white">
+                            </div>
+                          )}
+                          {!design.error && (
+                            <div className="absolute bottom-2 right-2 flex space-x-2">
+                              <Button 
+                                variant="secondary" 
+                                size="icon" 
+                                onClick={handleDownload}
+                                className="bg-white/90 hover:bg-white"
+                              >
                                 <Download className="h-4 w-4" />
                               </Button>
-                              <Button variant="secondary" size="icon" onClick={handleEdit} className={design.isEditing ? "bg-sock-purple text-white" : "bg-white/90 hover:bg-white"}>
+                              <Button 
+                                variant="secondary" 
+                                size="icon" 
+                                onClick={handleEdit}
+                                className={design.isEditing ? 
+                                  "bg-sock-purple text-white" : 
+                                  "bg-white/90 hover:bg-white"
+                                }
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                            </div>}
+                            </div>
+                          )}
                         </div>
                         <div className="p-3">
-                          <span className={`text-sm font-medium ${design.error ? "text-red-500" : ""}`}>
+                          <span className={`text-sm font-medium ${
+                            design.error ? "text-red-500" : ""
+                          }`}>
                             {design.design_name}
                           </span>
                         </div>
                       </CardContent>
                     </Card>
-                  </div>}
+                  </div>
+                )}
 
-                {!design && !isGenerating && !isChatLoading && <div className="text-center text-gray-500 py-10">
+                {!design && !isGenerating && !isChatLoading && (
+                  <div className="text-center text-gray-500 py-10">
                     <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p>先和我聊聊您的设计想法，然后点击"生成图片"来创建设计</p>
-                  </div>}
-              </div>}
+                    <p className="mb-2">和我聊聊您的设计想法</p>
+                    <p className="text-sm">我会引导您完善需求，然后生成专属设计</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </main>
 
       {/* 图片预览模态框 */}
-      {design && <ImageModal isOpen={isImageModalOpen} onClose={() => setIsImageModalOpen(false)} imageUrl={design.url} imageTitle={design.design_name} />}
-    </div>;
+      {design && (
+        <ImageModal 
+          isOpen={isImageModalOpen} 
+          onClose={() => setIsImageModalOpen(false)} 
+          imageUrl={design.url} 
+          imageTitle={design.design_name} 
+        />
+      )}
+    </div>
+  );
 };
 
 export default DesignStudio;
