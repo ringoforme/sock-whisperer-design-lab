@@ -8,52 +8,35 @@ import { Download, Edit, AlertCircle, MessageCircle } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import AppHeader from "@/components/AppHeader";
-import SessionHistorySidebar from "@/components/SessionHistorySidebar";
-import ChatThumbnail from "@/components/ChatThumbnail";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 import { ConversationManager } from "@/services/conversationManager";
-import { sessionService } from "@/services/sessionService";
-import { generateDesigns } from "@/services/imageGeneration.service";
+import { supabase } from "@/integrations/supabase/client";
 import type { DesignData } from "@/types/design";
-import type { DesignSession, GeneratedImage } from "@/services/sessionService";
 
 interface Message {
   id: number;
   text: string;
   isUser: boolean;
-  thumbnail?: {
-    imageUrl: string;
-    designName: string;
-    imageId: string;
-  };
 }
-
 type DesignState = DesignData & {
   isEditing?: boolean;
   error?: string;
-  imageId?: string;
 };
-
 const DesignLab = () => {
   const [messages, setMessages] = useState<Message[]>([{
     id: 1,
     text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
     isUser: false
   }]);
-  
   const [design, setDesign] = useState<DesignState | null>(null);
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conversationManager] = useState(() => new ConversationManager());
-  const [currentSession, setCurrentSession] = useState<DesignSession | null>(null);
-  const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
   const location = useLocation();
-  const { addDesign } = useDesignStorage();
-
+  const {
+    addDesign
+  } = useDesignStorage();
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const initialPrompt = params.get("prompt");
@@ -62,229 +45,60 @@ const DesignLab = () => {
     }
   }, [location]);
 
-  // 创建新会话
-  const createNewSession = async (initialIdea?: string) => {
-    try {
-      const idea = initialIdea || "开始新的袜子设计";
-      const newSession = await sessionService.createSession(idea);
-      setCurrentSession(newSession);
-      
-      // 重置状态
-      setMessages([{
+  // 同步ConversationManager的历史记录与UI消息
+  const syncConversationHistory = () => {
+    const history = conversationManager.getConversationHistory();
+    console.log('同步对话历史，长度:', history.length, '当前UI消息:', messages.length);
+
+    // 如果历史记录和UI消息不同步，以ConversationManager为准
+    if (history.length > 0) {
+      const syncedMessages: Message[] = [
+      // 保留欢迎消息
+      {
         id: 1,
         text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
         isUser: false
-      }]);
-      setDesign(null);
-      setGeneratedImages([]);
-      setSelectedImageId(null);
-      setIsEditingMode(false);
-      
-      // 重置对话管理器
-      conversationManager.reset();
-      
-      console.log('新会话创建成功:', newSession);
-      return newSession;
-    } catch (error) {
-      console.error('创建新会话失败:', error);
-      toast.error('创建新会话失败');
-      throw error;
-    }
-  };
+      }];
 
-  // 加载会话历史
-  const loadSession = async (sessionId: string) => {
-    try {
-      const history = await sessionService.getSessionHistory(sessionId);
-      
-      if (!history.session) {
-        toast.error('会话不存在');
-        return;
-      }
-
-      setCurrentSession(history.session);
-      setGeneratedImages(history.images);
-      
-      // 重建消息历史
-      const welcomeMessage = {
-        id: 1,
-        text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
-        isUser: false
-      };
-      
-      const reconstructedMessages: Message[] = [welcomeMessage];
-      let messageId = 2;
-      
-      // 重建对话历史
-      history.messages.forEach((msg) => {
-        reconstructedMessages.push({
-          id: messageId++,
+      // 添加历史对话
+      history.forEach((msg, index) => {
+        syncedMessages.push({
+          id: index + 2,
           text: msg.content,
           isUser: msg.role === 'user'
         });
       });
-      
-      // 在消息中添加图片缩略图
-      history.images.forEach((img) => {
-        reconstructedMessages.push({
-          id: messageId++,
-          text: `我已经为您生成了设计"${img.design_name}"。`,
-          isUser: false,
-          thumbnail: {
-            imageUrl: img.thumbnail_url || img.image_url,
-            designName: img.design_name,
-            imageId: img.id
-          }
-        });
-      });
-      
-      setMessages(reconstructedMessages);
-      
-      // 如果有图片，显示最新的一张
-      if (history.images.length > 0) {
-        const latestImage = history.images[0];
-        setDesign({
-          url: latestImage.image_url,
-          prompt_en: '', // 这里可以从 expanded_prompts 获取
-          design_name: latestImage.design_name,
-          imageId: latestImage.id
-        });
-        setSelectedImageId(latestImage.id);
-      }
-      
-      console.log('会话加载成功:', history);
-    } catch (error) {
-      console.error('加载会话失败:', error);
-      toast.error('加载会话失败');
-    }
-  };
-
-  // 处理缩略图点击
-  const handleThumbnailClick = (imageId: string) => {
-    const image = generatedImages.find(img => img.id === imageId);
-    if (image) {
-      setDesign({
-        url: image.image_url,
-        prompt_en: '', // 可以从相关的 expanded_prompts 获取
-        design_name: image.design_name,
-        imageId: image.id
-      });
-      setSelectedImageId(imageId);
+      setMessages(syncedMessages);
     }
   };
 
   // 使用对话管理器生成智能回复
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating) return;
-
-    // 如果没有当前会话，创建一个新会话
-    if (!currentSession) {
-      await createNewSession(userMessage);
-    }
-
     const userMsg = {
       id: Date.now(),
       text: userMessage,
       isUser: true
     };
     setMessages(prev => [...prev, userMsg]);
-
     try {
-      // 记录用户消息到数据库
-      if (currentSession) {
-        await sessionService.addMessage(currentSession.id, 'user', userMessage);
-      }
-
-      // 使用对话管理器生成智能回复
+      // 使用对话管理器生成智能回复，它会自动管理历史记录
       const aiResponse = await conversationManager.generateResponse(userMessage);
-      
-      const aiMsg = {
+      setMessages(prev => [...prev, {
         id: Date.now() + 1,
         text: aiResponse,
         isUser: false
-      };
-      setMessages(prev => [...prev, aiMsg]);
+      }]);
 
-      // 记录AI回复到数据库
-      if (currentSession) {
-        await sessionService.addMessage(currentSession.id, 'assistant', aiResponse);
-      }
+      // 同步对话历史
+      syncConversationHistory();
     } catch (error) {
       console.error('生成回复失败:', error);
-      const errorMsg = {
+      setMessages(prev => [...prev, {
         id: Date.now() + 1,
         text: "抱歉，我暂时无法回应。请稍后再试。",
         isUser: false
-      };
-      setMessages(prev => [...prev, errorMsg]);
-    }
-  };
-
-  // 生成图片功能
-  const triggerImageGeneration = async () => {
-    if (!currentSession) {
-      toast.error('请先创建会话');
-      return;
-    }
-
-    setIsGenerating(true);
-    setError(null);
-    
-    try {
-      // 准备会话上下文
-      const sessionContext = {
-        sessionId: currentSession.id,
-        messages: messages.map(m => ({
-          id: m.id,
-          text: m.text,
-          isUser: m.isUser
-        })),
-        conversationState: conversationManager.getConversationState(),
-        collectedInfo: conversationManager.getCollectedInfo(),
-        requirements: conversationManager.getRequirements()
-      };
-
-      const newDesign = await generateDesigns(sessionContext);
-      
-      // 获取显示顺序
-      const displayOrder = generatedImages.length;
-      
-      setDesign({
-        ...newDesign,
-        imageId: `temp-${Date.now()}` // 临时ID，实际ID会在数据库记录后更新
-      });
-
-      // 在聊天中添加缩略图消息
-      const thumbnailMsg = {
-        id: Date.now() + 2,
-        text: `我已经为您生成了设计"${newDesign.design_name}"。`,
-        isUser: false,
-        thumbnail: {
-          imageUrl: newDesign.url,
-          designName: newDesign.design_name,
-          imageId: `temp-${Date.now()}`
-        }
-      };
-      
-      setMessages(prev => [...prev, thumbnailMsg]);
-      
-      // 更新生成的图片列表（这会在 imageGeneration.service 中通过数据库更新）
-      const updatedImages = await sessionService.getGeneratedImages(currentSession.id);
-      setGeneratedImages(updatedImages);
-      
-      if (updatedImages.length > 0) {
-        const latestImage = updatedImages[0];
-        setSelectedImageId(latestImage.id);
-        setDesign(prev => prev ? { ...prev, imageId: latestImage.id } : null);
-      }
-
-      toast.success("设计生成成功！");
-    } catch (error) {
-      console.error('生成设计失败:', error);
-      setError("生成失败，请重试");
-      toast.error("生成失败，请重试");
-    } finally {
-      setIsGenerating(false);
+      }]);
     }
   };
 
@@ -415,7 +229,6 @@ const DesignLab = () => {
       setIsGenerating(false);
     }
   };
-
   const handleEdit = () => {
     if (!design || design.design_name === "生成失败") {
       toast.info("无法编辑一个生成失败的设计。");
@@ -432,7 +245,6 @@ const DesignLab = () => {
       isUser: false
     }]);
   };
-
   const handleExitEdit = () => {
     setIsEditingMode(false);
     setDesign(prev => prev ? {
@@ -445,164 +257,89 @@ const DesignLab = () => {
       isUser: false
     }]);
   };
-
   const handleDownload = () => {
     if (!design) return;
     toast.success("图片下载已开始");
   };
-
   const handleVectorize = () => {
     if (!design) return;
     toast.success("矢量化处理已开始");
   };
-
-  return (
-    <div className="min-h-screen bg-background flex">
-      {/* Session History Sidebar */}
-      <SessionHistorySidebar
-        isCollapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        currentSessionId={currentSession?.id}
-        onSessionSelect={loadSession}
-        onNewSession={() => createNewSession()}
-      />
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <header className="border-b bg-white dark:bg-gray-950">
-          <div className="container mx-auto py-4 px-4 flex justify-between items-center">
-            <AppHeader />
-            <nav className="flex items-center space-x-4">
-              <Link to="/drafts" className="text-gray-700 hover:text-sock-purple transition-colors">
-                草稿
-              </Link>
-              <Link to="/profile" className="ml-4">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="https://github.com/shadcn.png" alt="用户" />
-                  <AvatarFallback>用户</AvatarFallback>
-                </Avatar>
-              </Link>
-            </nav>
+  return <div className="min-h-screen bg-background">
+      <header className="border-b bg-white dark:bg-gray-950">
+        <div className="container mx-auto py-4 px-4 flex justify-between items-center">
+          <AppHeader />
+          <nav className="flex items-center space-x-4">
+            <Link to="/drafts" className="text-gray-700 hover:text-sock-purple transition-colors">
+              草稿
+            </Link>
+            <Link to="/profile" className="ml-4">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src="https://github.com/shadcn.png" alt="用户" />
+                <AvatarFallback>用户</AvatarFallback>
+              </Avatar>
+            </Link>
+          </nav>
+        </div>
+      </header>
+      <main className="container mx-auto py-6 px-4 md:px-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
+          <div className="h-[80vh] flex flex-col border rounded-lg overflow-hidden">
+            <ChatWindow messages={messages} onSendMessage={handleSendMessage} onGenerateImage={triggerImageGeneration} isEditingMode={isEditingMode} selectedDesignId={design ? 0 : null} isGenerating={isGenerating} hasDesign={!!design} />
           </div>
-        </header>
-
-        <main className="flex-1 container mx-auto py-6 px-4 md:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
-            <div className="h-[80vh] flex flex-col border rounded-lg overflow-hidden">
-              <ChatWindow 
-                messages={messages.map(msg => ({
-                  ...msg,
-                  thumbnail: msg.thumbnail ? (
-                    <ChatThumbnail
-                      imageUrl={msg.thumbnail.imageUrl}
-                      designName={msg.thumbnail.designName}
-                      onThumbnailClick={() => handleThumbnailClick(msg.thumbnail!.imageId)}
-                      isSelected={selectedImageId === msg.thumbnail.imageId}
-                    />
-                  ) : undefined
-                }))} 
-                onSendMessage={handleSendMessage} 
-                onGenerateImage={triggerImageGeneration} 
-                isEditingMode={isEditingMode} 
-                selectedDesignId={design ? 0 : null} 
-                isGenerating={isGenerating} 
-                hasDesign={!!design} 
-              />
-            </div>
-            
-            <div className="h-[80vh] overflow-y-auto">
-              {isEditingMode && design ? (
-                <EditingView 
-                  design={design} 
-                  onExitEdit={handleExitEdit} 
-                  onDownload={handleDownload} 
-                  onVectorize={handleVectorize} 
-                />
-              ) : (
-                <div>
-                  <div className="mb-4 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">设计作品</h2>
-                  </div>
-
-                  {isGenerating && (
-                    <div className="text-center text-gray-500 py-10">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sock-purple mx-auto mb-4"></div>
-                      正在为您生成设计，请稍候...
-                    </div>
-                  )}
-
-                  {error && (
-                    <div className="text-center text-red-500 bg-red-100 p-4 rounded-lg mb-4">
-                      {error}
-                    </div>
-                  )}
-
-                  {design && (
-                    <div className="flex justify-center">
-                      <Card className={`w-full max-w-md overflow-hidden transition-all ${
-                        design.isEditing ? "ring-2 ring-sock-purple" : ""
-                      } ${design.error ? "border-red-300" : ""}`}>
-                        <CardContent className="p-0">
-                          <div className="aspect-square relative bg-gray-100">
-                            <img 
-                              src={design.url} 
-                              alt={design.design_name} 
-                              className="w-full h-full object-cover" 
-                            />
-                            {design.error && (
-                              <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex flex-col items-center justify-center text-white p-2">
-                                <AlertCircle className="h-8 w-8 mb-2" />
-                                <span className="text-sm font-bold text-center">
-                                  生成失败
-                                </span>
-                              </div>
-                            )}
-                            {!design.error && (
-                              <div className="absolute bottom-2 right-2 flex space-x-2">
-                                <Button 
-                                  variant="secondary" 
-                                  size="icon" 
-                                  onClick={handleDownload} 
-                                  className="bg-white/90 hover:bg-white"
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="secondary" 
-                                  size="icon" 
-                                  onClick={handleEdit} 
-                                  className={design.isEditing ? "bg-sock-purple text-white" : "bg-white/90 hover:bg-white"}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                          <div className="p-3">
-                            <span className={`text-sm font-medium ${design.error ? "text-red-500" : ""}`}>
-                              {design.design_name}
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-
-                  {!design && !isGenerating && (
-                    <div className="text-center text-gray-500 py-10">
-                      <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                      <p className="mb-2">和我聊聊您的设计想法</p>
-                      <p className="text-sm">我会引导您完善需求，然后生成专属设计</p>
-                    </div>
-                  )}
+          <div className="h-[80vh] overflow-y-auto">
+            {isEditingMode && design ? <EditingView design={design} onExitEdit={handleExitEdit} onDownload={handleDownload} onVectorize={handleVectorize} /> : <div>
+                <div className="mb-4 flex justify-between items-center">
+                  <h2 className="text-lg font-semibold">设计作品</h2>
                 </div>
-              )}
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
-  );
-};
 
+                {isGenerating && <div className="text-center text-gray-500 py-10">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sock-purple mx-auto mb-4"></div>
+                    正在为您生成设计，请稍候...
+                  </div>}
+
+                {error && <div className="text-center text-red-500 bg-red-100 p-4 rounded-lg mb-4">
+                    {error}
+                  </div>}
+
+                {design && <div className="flex justify-center">
+                    <Card className={`w-full max-w-md overflow-hidden transition-all ${design.isEditing ? "ring-2 ring-sock-purple" : ""} ${design.error ? "border-red-300" : ""}`}>
+                      <CardContent className="p-0">
+                        <div className="aspect-square relative bg-gray-100">
+                          <img src={design.url} alt={design.design_name} className="w-full h-full object-cover" />
+                          {design.error && <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex flex-col items-center justify-center text-white p-2">
+                              <AlertCircle className="h-8 w-8 mb-2" />
+                              <span className="text-sm font-bold text-center">
+                                生成失败
+                              </span>
+                            </div>}
+                          {!design.error && <div className="absolute bottom-2 right-2 flex space-x-2">
+                              <Button variant="secondary" size="icon" onClick={handleDownload} className="bg-white/90 hover:bg-white">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              <Button variant="secondary" size="icon" onClick={handleEdit} className={design.isEditing ? "bg-sock-purple text-white" : "bg-white/90 hover:bg-white"}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>}
+                        </div>
+                        <div className="p-3">
+                          <span className={`text-sm font-medium ${design.error ? "text-red-500" : ""}`}>
+                            {design.design_name}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>}
+
+                {!design && !isGenerating && <div className="text-center text-gray-500 py-10">
+                    <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p className="mb-2">和我聊聊您的设计想法</p>
+                    <p className="text-sm">我会引导您完善需求，然后生成专属设计</p>
+                  </div>}
+              </div>}
+          </div>
+        </div>
+      </main>
+    </div>;
+};
 export default DesignLab;
