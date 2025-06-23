@@ -104,10 +104,14 @@ export const useSessionManagement = () => {
       
       // 重建对话管理器状态
       const newConversationManager = new ConversationManager();
+      newConversationManager.setSessionId(sessionId);
+      
       // 恢复对话历史
       for (const msg of sessionDetail.messages) {
         if (msg.role === 'user') {
           await newConversationManager.addUserMessage(msg.content);
+        } else {
+          newConversationManager.addToHistory('assistant', msg.content);
         }
       }
       setConversationManager(newConversationManager);
