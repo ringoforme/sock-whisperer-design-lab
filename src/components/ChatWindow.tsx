@@ -6,11 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { Send, Image, Paperclip, Sparkles, Info, Edit } from 'lucide-react';
 import { ConversationManager } from '@/services/conversationManager';
-import ChatMessage from '@/components/ChatMessage';
-import type { SessionMessage } from '@/hooks/useSessionManagement';
+
+interface Message {
+  id: number;
+  text: string;
+  isUser: boolean;
+}
 
 interface ChatWindowProps {
-  messages: SessionMessage[];
+  messages: Message[];
   onSendMessage: (message: string) => void;
   onGenerateImage: () => void;
   onEditImage?: () => void;
@@ -67,18 +71,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const handleAttachFile = () => {
     toast({
       title: "上传图片功能即将推出"
-    });
-  };
-
-  const handleDownload = (workId: string) => {
-    toast({
-      title: "下载功能即将推出"
-    });
-  };
-
-  const handleToggleFavorite = (workId: string) => {
-    toast({
-      title: "收藏功能即将推出"
     });
   };
 
@@ -204,12 +196,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       
       <div className="messages-container flex-1 overflow-y-auto p-4">
         {messages.map((message) => (
-          <ChatMessage
+          <div
             key={message.id}
-            message={message}
-            onDownload={handleDownload}
-            onToggleFavorite={handleToggleFavorite}
-          />
+            className={`message mb-4 flex ${
+              message.isUser 
+                ? 'justify-end' 
+                : 'justify-start'
+            }`}
+          >
+            <div className={`inline-block max-w-full px-4 py-2 rounded-lg ${
+              message.isUser 
+                ? 'bg-sock-purple text-white' 
+                : 'bg-gray-100 text-gray-900'
+            }`}>
+              <div className={`whitespace-pre-wrap text-sm ${
+                message.isUser ? 'text-left' : 'text-left'
+              }`}>
+                {message.text}
+              </div>
+            </div>
+          </div>
         ))}
         <div ref={messagesEndRef} />
       </div>

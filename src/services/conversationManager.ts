@@ -11,7 +11,6 @@ interface ConversationMessage {
 export class ConversationManager {
   private state: ConversationState;
   private conversationHistory: ConversationMessage[] = [];
-  private sessionId: string | null = null;
 
   constructor() {
     this.state = {
@@ -40,22 +39,6 @@ export class ConversationManager {
     this.conversationHistory.push(message);
     console.log('添加到对话历史:', message);
     console.log('当前历史长度:', this.conversationHistory.length);
-  }
-
-  // 新增：添加用户消息方法
-  public async addUserMessage(message: string): Promise<void> {
-    this.addToHistory('user', message);
-  }
-
-  // 新增：设置会话ID方法
-  public setSessionId(sessionId: string): void {
-    this.sessionId = sessionId;
-    console.log('设置会话ID:', sessionId);
-  }
-
-  // 新增：获取会话ID方法
-  public getSessionId(): string | null {
-    return this.sessionId;
   }
 
   public updatePhase(phase: ConversationPhase): void {

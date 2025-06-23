@@ -36,19 +36,27 @@ export async function regenerateImage(prompt: string, sessionId?: string): Promi
     // 如果有会话ID，记录重新生成过程
     if (sessionId && designData) {
       try {
-        // 获取当前会话的最新需求
-        const sessionDetail = await sessionService.getSessionComplete(sessionId);
-        const latestRequirement = sessionDetail.requirements[sessionDetail.requirements.length - 1];
+        // 获取当前会话的最新简报
+        const sessionHistory = await sessionService.getSessionHistory(sessionId);
+        const latestBrief = sessionHistory.briefs[sessionHistory.briefs.length - 1];
         
-        if (latestRequirement) {
+        if (latestBrief) {
+          // 记录新的扩展提示词
+          const expandedPrompt = await sessionService.addExpandedPrompt(
+            sessionId,
+            latestBrief.id,
+            '用户修改指令', // 原始简报
+            prompt // 修改后的提示词
+          );
+          
           // 记录重新生成的图片
-          await sessionService.createDesignWork(sessionId, {
-            name: designData.design_name || '修改后设计',
-            prompt_used: prompt,
-            image_url: designData.url,
-            requirements_id: latestRequirement.id,
-            status: designData.url ? 'generated' : 'failed'
-          });
+          await sessionService.addGeneratedImage(
+            sessionId,
+            expandedPrompt.id,
+            designData.url,
+            designData.design_name || '修改后设计',
+            designData.url ? 'success' : 'failed'
+          );
         }
         
         console.log('重新生成过程已记录到数据库');
@@ -64,18 +72,25 @@ export async function regenerateImage(prompt: string, sessionId?: string): Promi
     // 记录失败状态
     if (sessionId) {
       try {
-        const sessionDetail = await sessionService.getSessionComplete(sessionId);
-        const latestRequirement = sessionDetail.requirements[sessionDetail.requirements.length - 1];
+        const sessionHistory = await sessionService.getSessionHistory(sessionId);
+        const latestBrief = sessionHistory.briefs[sessionHistory.briefs.length - 1];
         
-        if (latestRequirement) {
-          await sessionService.createDesignWork(sessionId, {
-            name: '重新生成失败',
-            prompt_used: `重新生成失败：${error instanceof Error ? error.message : '未知错误'}`,
-            image_url: 'https://placehold.co/1024x1024/f87171/ffffff?text=Regeneration+Failed',
-            requirements_id: latestRequirement.id,
-            status: 'failed',
-            error_message: error instanceof Error ? error.message : '未知错误'
-          });
+        if (latestBrief) {
+          const expandedPrompt = await sessionService.addExpandedPrompt(
+            sessionId,
+            latestBrief.id,
+            '用户修改指令',
+            `重新生成失败：${error instanceof Error ? error.message : '未知错误'}`
+          );
+          
+          await sessionService.addGeneratedImage(
+            sessionId,
+            expandedPrompt.id,
+            'https://placehold.co/1024x1024/f87171/ffffff?text=Regeneration+Failed',
+            '重新生成失败',
+            'failed',
+            error instanceof Error ? error.message : '未知错误'
+          );
         }
       } catch (dbError) {
         console.error('记录重新生成失败状态失败:', dbError);

@@ -12,7 +12,7 @@ export type Database = {
       conversation_messages: {
         Row: {
           content: string
-          created_at: string | null
+          created_at: string
           id: string
           metadata: Json | null
           role: string
@@ -20,7 +20,7 @@ export type Database = {
         }
         Insert: {
           content: string
-          created_at?: string | null
+          created_at?: string
           id?: string
           metadata?: Json | null
           role: string
@@ -28,7 +28,7 @@ export type Database = {
         }
         Update: {
           content?: string
-          created_at?: string | null
+          created_at?: string
           id?: string
           metadata?: Json | null
           role?: string
@@ -44,64 +44,49 @@ export type Database = {
           },
         ]
       }
-      design_requirements: {
+      design_briefs: {
         Row: {
           additional_notes: string | null
-          budget_range: string | null
-          colors: string[] | null
-          created_at: string | null
+          colors: Json | null
+          completion_status: string
+          created_at: string
           id: string
-          is_finalized: boolean | null
-          material_preferences: string[] | null
           occasion: string | null
-          patterns: string[] | null
+          pattern: string | null
           session_id: string
-          size_range: string | null
           sock_type: string | null
-          special_features: string[] | null
           style: string | null
-          target_audience: string | null
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
           additional_notes?: string | null
-          budget_range?: string | null
-          colors?: string[] | null
-          created_at?: string | null
+          colors?: Json | null
+          completion_status?: string
+          created_at?: string
           id?: string
-          is_finalized?: boolean | null
-          material_preferences?: string[] | null
           occasion?: string | null
-          patterns?: string[] | null
+          pattern?: string | null
           session_id: string
-          size_range?: string | null
           sock_type?: string | null
-          special_features?: string[] | null
           style?: string | null
-          target_audience?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
           additional_notes?: string | null
-          budget_range?: string | null
-          colors?: string[] | null
-          created_at?: string | null
+          colors?: Json | null
+          completion_status?: string
+          created_at?: string
           id?: string
-          is_finalized?: boolean | null
-          material_preferences?: string[] | null
           occasion?: string | null
-          patterns?: string[] | null
+          pattern?: string | null
           session_id?: string
-          size_range?: string | null
           sock_type?: string | null
-          special_features?: string[] | null
           style?: string | null
-          target_audience?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "design_requirements_session_id_fkey"
+            foreignKeyName: "design_briefs_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "design_sessions"
@@ -111,175 +96,117 @@ export type Database = {
       }
       design_sessions: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
-          initial_prompt: string
-          metadata: Json | null
+          initial_idea: string
           status: string
-          title: string
-          updated_at: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
-          initial_prompt: string
-          metadata?: Json | null
+          initial_idea: string
           status?: string
-          title?: string
-          updated_at?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
-          initial_prompt?: string
-          metadata?: Json | null
+          initial_idea?: string
           status?: string
-          title?: string
-          updated_at?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
       }
-      design_tags: {
+      expanded_prompts: {
         Row: {
-          category: string | null
-          color: string | null
-          created_at: string | null
+          brief_id: string
+          created_at: string
+          expanded_prompt: string
           id: string
-          name: string
+          original_brief: string
+          prompt_version: number
+          session_id: string
         }
         Insert: {
-          category?: string | null
-          color?: string | null
-          created_at?: string | null
+          brief_id: string
+          created_at?: string
+          expanded_prompt: string
           id?: string
-          name: string
+          original_brief: string
+          prompt_version?: number
+          session_id: string
         }
         Update: {
-          category?: string | null
-          color?: string | null
-          created_at?: string | null
+          brief_id?: string
+          created_at?: string
+          expanded_prompt?: string
           id?: string
-          name?: string
-        }
-        Relationships: []
-      }
-      design_work_tags: {
-        Row: {
-          design_work_id: string
-          tag_id: string
-        }
-        Insert: {
-          design_work_id: string
-          tag_id: string
-        }
-        Update: {
-          design_work_id?: string
-          tag_id?: string
+          original_brief?: string
+          prompt_version?: number
+          session_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "design_work_tags_design_work_id_fkey"
-            columns: ["design_work_id"]
+            foreignKeyName: "expanded_prompts_brief_id_fkey"
+            columns: ["brief_id"]
             isOneToOne: false
-            referencedRelation: "design_works"
+            referencedRelation: "design_briefs"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "design_work_tags_tag_id_fkey"
-            columns: ["tag_id"]
+            foreignKeyName: "expanded_prompts_session_id_fkey"
+            columns: ["session_id"]
             isOneToOne: false
-            referencedRelation: "design_tags"
+            referencedRelation: "design_sessions"
             referencedColumns: ["id"]
           },
         ]
       }
-      design_works: {
+      generated_images: {
         Row: {
-          created_at: string | null
-          description: string | null
-          download_count: number | null
-          edit_history: Json | null
+          created_at: string
+          design_name: string
           error_message: string | null
-          generation_model: string | null
-          generation_params: Json | null
-          generation_provider: string | null
+          generation_status: string
           id: string
           image_url: string
-          is_favorite: boolean | null
-          name: string
-          parent_work_id: string | null
-          prompt_used: string
-          requirements_id: string | null
+          prompt_id: string
           session_id: string
-          status: string
-          thumbnail_url: string | null
-          updated_at: string | null
-          version: number | null
         }
         Insert: {
-          created_at?: string | null
-          description?: string | null
-          download_count?: number | null
-          edit_history?: Json | null
+          created_at?: string
+          design_name: string
           error_message?: string | null
-          generation_model?: string | null
-          generation_params?: Json | null
-          generation_provider?: string | null
+          generation_status?: string
           id?: string
           image_url: string
-          is_favorite?: boolean | null
-          name: string
-          parent_work_id?: string | null
-          prompt_used: string
-          requirements_id?: string | null
+          prompt_id: string
           session_id: string
-          status?: string
-          thumbnail_url?: string | null
-          updated_at?: string | null
-          version?: number | null
         }
         Update: {
-          created_at?: string | null
-          description?: string | null
-          download_count?: number | null
-          edit_history?: Json | null
+          created_at?: string
+          design_name?: string
           error_message?: string | null
-          generation_model?: string | null
-          generation_params?: Json | null
-          generation_provider?: string | null
+          generation_status?: string
           id?: string
           image_url?: string
-          is_favorite?: boolean | null
-          name?: string
-          parent_work_id?: string | null
-          prompt_used?: string
-          requirements_id?: string | null
+          prompt_id?: string
           session_id?: string
-          status?: string
-          thumbnail_url?: string | null
-          updated_at?: string | null
-          version?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "design_works_parent_work_id_fkey"
-            columns: ["parent_work_id"]
+            foreignKeyName: "generated_images_prompt_id_fkey"
+            columns: ["prompt_id"]
             isOneToOne: false
-            referencedRelation: "design_works"
+            referencedRelation: "expanded_prompts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "design_works_requirements_id_fkey"
-            columns: ["requirements_id"]
-            isOneToOne: false
-            referencedRelation: "design_requirements"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "design_works_session_id_fkey"
+            foreignKeyName: "generated_images_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "design_sessions"
@@ -289,62 +216,30 @@ export type Database = {
       }
       profiles: {
         Row: {
-          avatar_url: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
           id: string
-          preferences: Json | null
+          is_admin: boolean | null
           updated_at: string | null
         }
         Insert: {
-          avatar_url?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id: string
-          preferences?: Json | null
+          is_admin?: boolean | null
           updated_at?: string | null
         }
         Update: {
-          avatar_url?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
-          preferences?: Json | null
+          is_admin?: boolean | null
           updated_at?: string | null
         }
         Relationships: []
-      }
-      user_favorites: {
-        Row: {
-          created_at: string | null
-          id: string
-          user_id: string
-          work_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          user_id: string
-          work_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          user_id?: string
-          work_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_favorites_work_id_fkey"
-            columns: ["work_id"]
-            isOneToOne: false
-            referencedRelation: "design_works"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {

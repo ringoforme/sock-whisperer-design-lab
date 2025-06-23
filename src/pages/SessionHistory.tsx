@@ -33,7 +33,7 @@ const SessionHistory = () => {
 
   const loadSessionDetail = async (sessionId: string) => {
     try {
-      const detail = await sessionService.getSessionComplete(sessionId);
+      const detail = await sessionService.getSessionHistory(sessionId);
       setSessionDetail(detail);
       setSelectedSession(sessionId);
     } catch (error) {
@@ -48,7 +48,7 @@ const SessionHistory = () => {
         return 'bg-green-100 text-green-800';
       case 'active':
         return 'bg-blue-100 text-blue-800';
-      case 'archived':
+      case 'abandoned':
         return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -119,7 +119,7 @@ const SessionHistory = () => {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-medium text-sm truncate flex-1">
-                          {session.title}
+                          {session.initial_idea}
                         </h3>
                         <Badge className={`ml-2 text-xs ${getStatusColor(session.status)}`}>
                           {session.status === 'completed' ? '已完成' : 
@@ -127,7 +127,7 @@ const SessionHistory = () => {
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {formatDate(session.created_at!)}
+                        {formatDate(session.created_at)}
                       </p>
                     </div>
                   ))
@@ -156,8 +156,8 @@ const SessionHistory = () => {
                     <CardContent>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-muted-foreground">初始提示</p>
-                          <p className="font-medium">{sessionDetail.session.initial_prompt}</p>
+                          <p className="text-sm text-muted-foreground">初始想法</p>
+                          <p className="font-medium">{sessionDetail.session.initial_idea}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">状态</p>
@@ -209,48 +209,48 @@ const SessionHistory = () => {
                   </Card>
                 )}
 
-                {/* 设计需求 */}
-                {sessionDetail?.requirements && sessionDetail.requirements.length > 0 && (
+                {/* 设计简报 */}
+                {sessionDetail?.briefs && sessionDetail.briefs.length > 0 && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center">
                         <FileText className="h-5 w-5 mr-2" />
-                        设计需求
+                        设计简报
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {sessionDetail.requirements.map((req: any) => (
-                        <div key={req.id} className="border rounded-lg p-4">
+                      {sessionDetail.briefs.map((brief: any) => (
+                        <div key={brief.id} className="border rounded-lg p-4">
                           <div className="grid grid-cols-2 gap-4 text-sm">
-                            {req.sock_type && (
+                            {brief.sock_type && (
                               <div>
                                 <span className="text-muted-foreground">袜子类型:</span>
-                                <span className="ml-2 font-medium">{req.sock_type}</span>
+                                <span className="ml-2 font-medium">{brief.sock_type}</span>
                               </div>
                             )}
-                            {req.patterns && req.patterns.length > 0 && (
+                            {brief.pattern && (
                               <div>
                                 <span className="text-muted-foreground">图案:</span>
-                                <span className="ml-2 font-medium">{req.patterns.join(', ')}</span>
+                                <span className="ml-2 font-medium">{brief.pattern}</span>
                               </div>
                             )}
-                            {req.occasion && (
+                            {brief.occasion && (
                               <div>
                                 <span className="text-muted-foreground">场合:</span>
-                                <span className="ml-2 font-medium">{req.occasion}</span>
+                                <span className="ml-2 font-medium">{brief.occasion}</span>
                               </div>
                             )}
-                            {req.style && (
+                            {brief.style && (
                               <div>
                                 <span className="text-muted-foreground">风格:</span>
-                                <span className="ml-2 font-medium">{req.style}</span>
+                                <span className="ml-2 font-medium">{brief.style}</span>
                               </div>
                             )}
                           </div>
-                          {req.additional_notes && (
+                          {brief.additional_notes && (
                             <div className="mt-4">
                               <p className="text-sm text-muted-foreground">备注:</p>
-                              <p className="text-sm mt-1">{req.additional_notes}</p>
+                              <p className="text-sm mt-1">{brief.additional_notes}</p>
                             </div>
                           )}
                         </div>
@@ -259,43 +259,43 @@ const SessionHistory = () => {
                   </Card>
                 )}
 
-                {/* 生成的作品 */}
-                {sessionDetail?.works && sessionDetail.works.length > 0 && (
+                {/* 生成的图片 */}
+                {sessionDetail?.images && sessionDetail.images.length > 0 && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center">
                         <Image className="h-5 w-5 mr-2" />
-                        生成的设计作品 ({sessionDetail.works.length} 个)
+                        生成的设计图片 ({sessionDetail.images.length} 张)
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {sessionDetail.works.map((work: any) => (
-                          <div key={work.id} className="border rounded-lg p-4">
+                        {sessionDetail.images.map((image: any) => (
+                          <div key={image.id} className="border rounded-lg p-4">
                             <div className="aspect-square mb-4">
                               <img
-                                src={work.image_url}
-                                alt={work.name}
+                                src={image.image_url}
+                                alt={image.design_name}
                                 className="w-full h-full object-cover rounded"
                               />
                             </div>
                             <div className="space-y-2">
                               <div className="flex justify-between items-center">
-                                <h4 className="font-medium">{work.name}</h4>
+                                <h4 className="font-medium">{image.design_name}</h4>
                                 <Badge className={
-                                  work.status === 'generated' ? 'bg-green-100 text-green-800' :
-                                  work.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                  image.generation_status === 'success' ? 'bg-green-100 text-green-800' :
+                                  image.generation_status === 'failed' ? 'bg-red-100 text-red-800' :
                                   'bg-yellow-100 text-yellow-800'
                                 }>
-                                  {work.status === 'generated' ? '成功' :
-                                   work.status === 'failed' ? '失败' : '处理中'}
+                                  {image.generation_status === 'success' ? '成功' :
+                                   image.generation_status === 'failed' ? '失败' : '处理中'}
                                 </Badge>
                               </div>
                               <p className="text-xs text-muted-foreground">
-                                {formatDate(work.created_at)}
+                                {formatDate(image.created_at)}
                               </p>
-                              {work.error_message && (
-                                <p className="text-xs text-red-600">{work.error_message}</p>
+                              {image.error_message && (
+                                <p className="text-xs text-red-600">{image.error_message}</p>
                               )}
                             </div>
                           </div>
