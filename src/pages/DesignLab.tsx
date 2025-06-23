@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -52,18 +51,50 @@ const DesignLab = () => {
   const location = useLocation();
   const { addDesign } = useDesignStorage();
 
+  // 页面加载时自动创建或加载会话
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const initialPrompt = params.get("prompt");
-    if (initialPrompt) {
-      handleSendMessage(initialPrompt);
-    }
+    const initializeSession = async () => {
+      try {
+        console.log('初始化会话...');
+        
+        const params = new URLSearchParams(location.search);
+        const initialPrompt = params.get("prompt");
+        
+        if (initialPrompt) {
+          // 如果有初始提示，创建新会话
+          console.log('发现初始提示，创建新会话:', initialPrompt);
+          await createNewSession(initialPrompt);
+          handleSendMessage(initialPrompt);
+        } else {
+          // 否则尝试获取最近的会话
+          const userSessions = await sessionService.getUserSessions();
+          console.log('获取到用户会话:', userSessions.length);
+          
+          if (userSessions.length > 0) {
+            const latestSession = userSessions[0];
+            console.log('加载最新会话:', latestSession.id);
+            await loadSession(latestSession.id);
+          } else {
+            // 如果没有任何会话，创建一个新的
+            console.log('没有找到会话，创建新会话');
+            await createNewSession("开始新的袜子设计");
+          }
+        }
+      } catch (error) {
+        console.error('初始化会话失败:', error);
+        toast.error('初始化失败，请刷新页面重试');
+      }
+    };
+
+    initializeSession();
   }, [location]);
 
   // 创建新会话
   const createNewSession = async (initialIdea?: string) => {
     try {
       const idea = initialIdea || "开始新的袜子设计";
+      console.log('创建新会话，初始想法:', idea);
+      
       const newSession = await sessionService.createSession(idea);
       setCurrentSession(newSession);
       
@@ -79,6 +110,7 @@ const DesignLab = () => {
       setIsEditingMode(false);
       
       console.log('新会话创建成功:', newSession);
+      toast.success('新会话已创建');
       return newSession;
     } catch (error) {
       console.error('创建新会话失败:', error);
@@ -90,6 +122,7 @@ const DesignLab = () => {
   // 加载会话历史
   const loadSession = async (sessionId: string) => {
     try {
+      console.log('加载会话:', sessionId);
       const history = await sessionService.getSessionHistory(sessionId);
       
       if (!history.session) {
@@ -143,14 +176,15 @@ const DesignLab = () => {
         const latestImage = history.images[0];
         setDesign({
           url: latestImage.image_url,
-          prompt_en: '', // 这里可以从 expanded_prompts 获取
+          prompt_en: '', 
           design_name: latestImage.design_name,
           imageId: latestImage.id
         });
         setSelectedImageId(latestImage.id);
       }
       
-      console.log('会话加载成功:', history);
+      console.log('会话加载成功，消息数量:', reconstructedMessages.length);
+      toast.success('会话加载成功');
     } catch (error) {
       console.error('加载会话失败:', error);
       toast.error('加载会话失败');
@@ -163,11 +197,12 @@ const DesignLab = () => {
     if (image) {
       setDesign({
         url: image.image_url,
-        prompt_en: '', // 可以从相关的 expanded_prompts 获取
+        prompt_en: '', 
         design_name: image.design_name,
         imageId: image.id
       });
       setSelectedImageId(imageId);
+      console.log('选择图片:', image.design_name);
     }
   };
 
@@ -175,9 +210,13 @@ const DesignLab = () => {
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating) return;
 
-    // 如果没有当前会话，创建一个新会话
-    if (!currentSession) {
-      await createNewSession(userMessage);
+    console.log('发送消息:', userMessage);
+
+    // 确保有当前会话
+    let session = currentSession;
+    if (!session) {
+      console.log('没有当前会话，创建新会话');
+      session = await createNewSession(userMessage);
     }
 
     const userMsg = {
@@ -189,8 +228,8 @@ const DesignLab = () => {
 
     try {
       // 记录用户消息到数据库
-      if (currentSession) {
-        await sessionService.addMessage(currentSession.id, 'user', userMessage);
+      if (session) {
+        await sessionService.addMessage(session.id, 'user', userMessage);
       }
 
       // 使用对话管理器生成智能回复
@@ -204,9 +243,11 @@ const DesignLab = () => {
       setMessages(prev => [...prev, aiMsg]);
 
       // 记录AI回复到数据库
-      if (currentSession) {
-        await sessionService.addMessage(currentSession.id, 'assistant', aiResponse);
+      if (session) {
+        await sessionService.addMessage(session.id, 'assistant', aiResponse);
       }
+
+      console.log('消息发送成功');
     } catch (error) {
       console.error('生成回复失败:', error);
       const errorMsg = {
@@ -221,17 +262,19 @@ const DesignLab = () => {
   // 生成图片功能
   const triggerImageGeneration = async () => {
     if (!currentSession) {
-      toast.error('请先创建会话');
-      return;
+      console.log('没有当前会话，创建新会话进行图片生成');
+      await createNewSession("生成袜子设计");
     }
 
     setIsGenerating(true);
     setError(null);
     
     try {
+      console.log('开始生成图片...');
+      
       // 准备会话上下文
       const sessionContext = {
-        sessionId: currentSession.id,
+        sessionId: currentSession!.id,
         messages: messages.map(m => ({
           id: m.id,
           text: m.text,
@@ -246,7 +289,7 @@ const DesignLab = () => {
       
       setDesign({
         ...newDesign,
-        imageId: `temp-${Date.now()}` // 临时ID，实际ID会在数据库记录后更新
+        imageId: `temp-${Date.now()}`
       });
 
       // 在聊天中添加缩略图消息
@@ -258,7 +301,11 @@ const DesignLab = () => {
           <ChatThumbnail
             imageUrl={newDesign.url}
             designName={newDesign.design_name}
-            onThumbnailClick={() => handleThumbnailClick(`temp-${Date.now()}`)}
+            onThumbnailClick={() => {
+              // 临时处理，等待数据库更新后的真实ID
+              const tempId = `temp-${Date.now()}`;
+              setSelectedImageId(tempId);
+            }}
             isSelected={false}
           />
         )
@@ -266,17 +313,25 @@ const DesignLab = () => {
       
       setMessages(prev => [...prev, thumbnailMsg]);
       
-      // 更新生成的图片列表（通过重新获取会话历史）
-      const updatedHistory = await sessionService.getSessionHistory(currentSession.id);
-      setGeneratedImages(updatedHistory.images);
-      
-      if (updatedHistory.images.length > 0) {
-        const latestImage = updatedHistory.images[0];
-        setSelectedImageId(latestImage.id);
-        setDesign(prev => prev ? { ...prev, imageId: latestImage.id } : null);
-      }
+      // 等待一下让数据库更新，然后重新获取会话历史
+      setTimeout(async () => {
+        try {
+          const updatedHistory = await sessionService.getSessionHistory(currentSession!.id);
+          setGeneratedImages(updatedHistory.images);
+          
+          if (updatedHistory.images.length > 0) {
+            const latestImage = updatedHistory.images[0];
+            setSelectedImageId(latestImage.id);
+            setDesign(prev => prev ? { ...prev, imageId: latestImage.id } : null);
+            console.log('图片生成完成，ID:', latestImage.id);
+          }
+        } catch (error) {
+          console.error('更新图片列表失败:', error);
+        }
+      }, 2000);
 
       toast.success("设计生成成功！");
+      console.log('图片生成成功:', newDesign.design_name);
     } catch (error) {
       console.error('生成设计失败:', error);
       setError("生成失败，请重试");

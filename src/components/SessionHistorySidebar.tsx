@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronLeft, ChevronRight, Plus, MessageCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, MessageCircle, RefreshCw } from 'lucide-react';
 import { sessionService } from '@/services/sessionService';
 import { toast } from 'sonner';
 import type { DesignSession } from '@/services/sessionService';
@@ -24,27 +24,51 @@ const SessionHistorySidebar: React.FC<SessionHistorySidebarProps> = ({
 }) => {
   const [sessions, setSessions] = useState<DesignSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadSessions();
   }, []);
 
+  // 监听当前会话变化，自动刷新列表
+  useEffect(() => {
+    if (currentSessionId) {
+      console.log('当前会话变化，刷新会话列表');
+      loadSessions();
+    }
+  }, [currentSessionId]);
+
   const loadSessions = async () => {
     try {
+      console.log('加载会话列表...');
       const userSessions = await sessionService.getUserSessions();
+      console.log('获取到会话数量:', userSessions.length);
       setSessions(userSessions);
     } catch (error) {
       console.error('加载会话历史失败:', error);
       toast.error('加载会话历史失败');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadSessions();
+    toast.success('会话列表已刷新');
   };
 
   const handleSessionClick = (sessionId: string) => {
     if (sessionId !== currentSessionId) {
+      console.log('切换到会话:', sessionId);
       onSessionSelect(sessionId);
     }
+  };
+
+  const handleNewSession = () => {
+    console.log('创建新会话');
+    onNewSession();
   };
 
   const formatSessionTitle = (session: DesignSession) => {
@@ -73,6 +97,15 @@ const SessionHistorySidebar: React.FC<SessionHistorySidebarProps> = ({
           <div className="flex items-center space-x-2">
             <MessageCircle className="h-5 w-5 text-sock-purple" />
             <h2 className="font-semibold text-gray-900">会话历史</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="h-6 w-6 ml-2"
+            >
+              <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         )}
         <Button
@@ -94,7 +127,7 @@ const SessionHistorySidebar: React.FC<SessionHistorySidebarProps> = ({
           {/* New Session Button */}
           <div className="p-4 border-b">
             <Button
-              onClick={onNewSession}
+              onClick={handleNewSession}
               className="w-full bg-sock-purple hover:bg-sock-purple/90 text-white"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -107,6 +140,7 @@ const SessionHistorySidebar: React.FC<SessionHistorySidebarProps> = ({
             <div className="p-2">
               {loading ? (
                 <div className="text-center text-gray-500 py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-sock-purple mx-auto mb-2"></div>
                   加载中...
                 </div>
               ) : sessions.length === 0 ? (
