@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -16,30 +15,26 @@ export type DesignBriefInsert = Database['public']['Tables']['design_briefs']['I
 export type ExpandedPromptInsert = Database['public']['Tables']['expanded_prompts']['Insert'];
 export type GeneratedImageInsert = Database['public']['Tables']['generated_images']['Insert'];
 
+// 测试用户ID - 用于没有登录用户时的测试
+const TEST_USER_ID = '00000000-0000-0000-0000-000000000000';
+
 export class SessionService {
   // 创建新的设计会话
   async createSession(initialIdea: string): Promise<DesignSession> {
     const { data: { user } } = await supabase.auth.getUser();
     
+    // 确保用户已登录
     if (!user) {
       throw new Error('用户未登录，无法创建会话');
     }
 
     console.log('创建会话，用户ID:', user.id);
 
-    // 生成会话标题
-    const { data: titleData } = await supabase.rpc('generate_session_title', {
-      user_prompt: initialIdea
-    });
-
-    const sessionTitle = titleData || '袜子设计';
-
     const { data, error } = await supabase
       .from('design_sessions')
       .insert({
         user_id: user.id,
         initial_idea: initialIdea,
-        session_title: sessionTitle,
         status: 'active'
       })
       .select()
@@ -70,16 +65,6 @@ export class SessionService {
     const { error } = await supabase
       .from('design_sessions')
       .update({ status })
-      .eq('id', sessionId);
-
-    if (error) throw error;
-  }
-
-  // 更新会话标题
-  async updateSessionTitle(sessionId: string, title: string): Promise<void> {
-    const { error } = await supabase
-      .from('design_sessions')
-      .update({ session_title: title })
       .eq('id', sessionId);
 
     if (error) throw error;
@@ -168,16 +153,7 @@ export class SessionService {
   }
 
   // 记录生成的图片
-  async addGeneratedImage(
-    sessionId: string, 
-    promptId: string, 
-    imageUrl: string, 
-    designName: string, 
-    status: 'success' | 'failed' | 'pending' = 'success', 
-    errorMessage?: string,
-    thumbnailUrl?: string,
-    displayOrder?: number
-  ): Promise<GeneratedImage> {
+  async addGeneratedImage(sessionId: string, promptId: string, imageUrl: string, designName: string, status: 'success' | 'failed' | 'pending' = 'success', errorMessage?: string): Promise<GeneratedImage> {
     const { data, error } = await supabase
       .from('generated_images')
       .insert({
@@ -186,9 +162,7 @@ export class SessionService {
         image_url: imageUrl,
         design_name: designName,
         generation_status: status,
-        error_message: errorMessage,
-        thumbnail_url: thumbnailUrl || imageUrl,
-        display_order: displayOrder || 0
+        error_message: errorMessage
       })
       .select()
       .single();
@@ -238,13 +212,12 @@ export class SessionService {
     return data || [];
   }
 
-  // Make this method public so it can be accessed from DesignLab
-  async getGeneratedImages(sessionId: string): Promise<GeneratedImage[]> {
+  private async getGeneratedImages(sessionId: string): Promise<GeneratedImage[]> {
     const { data, error } = await supabase
       .from('generated_images')
       .select('*')
       .eq('session_id', sessionId)
-      .order('display_order', { ascending: false });
+      .order('created_at', { ascending: true });
 
     if (error) throw error;
     return data || [];

@@ -11,7 +11,6 @@ interface Message {
   id: number;
   text: string;
   isUser: boolean;
-  thumbnail?: React.ReactNode;
 }
 
 interface ChatWindowProps {
@@ -205,28 +204,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 : 'justify-start'
             }`}
           >
-            <div className={`inline-block max-w-full ${
+            <div className={`inline-block max-w-full px-4 py-2 rounded-lg ${
               message.isUser 
-                ? '' 
-                : ''
+                ? 'bg-sock-purple text-white' 
+                : 'bg-gray-100 text-gray-900'
             }`}>
-              <div className={`px-4 py-2 rounded-lg ${
-                message.isUser 
-                  ? 'bg-sock-purple text-white' 
-                  : 'bg-gray-100 text-gray-900'
+              <div className={`whitespace-pre-wrap text-sm ${
+                message.isUser ? 'text-left' : 'text-left'
               }`}>
-                <div className={`whitespace-pre-wrap text-sm ${
-                  message.isUser ? 'text-left' : 'text-left'
-                }`}>
-                  {message.text}
-                </div>
+                {message.text}
               </div>
-              {/* 渲染缩略图 */}
-              {message.thumbnail && (
-                <div className="mt-2">
-                  {message.thumbnail}
-                </div>
-              )}
             </div>
           </div>
         ))}

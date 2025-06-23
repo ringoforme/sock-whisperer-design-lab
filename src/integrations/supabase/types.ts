@@ -99,7 +99,6 @@ export type Database = {
           created_at: string
           id: string
           initial_idea: string
-          session_title: string | null
           status: string
           updated_at: string
           user_id: string
@@ -108,7 +107,6 @@ export type Database = {
           created_at?: string
           id?: string
           initial_idea: string
-          session_title?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -117,7 +115,6 @@ export type Database = {
           created_at?: string
           id?: string
           initial_idea?: string
-          session_title?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -173,38 +170,32 @@ export type Database = {
         Row: {
           created_at: string
           design_name: string
-          display_order: number | null
           error_message: string | null
           generation_status: string
           id: string
           image_url: string
           prompt_id: string
           session_id: string
-          thumbnail_url: string | null
         }
         Insert: {
           created_at?: string
           design_name: string
-          display_order?: number | null
           error_message?: string | null
           generation_status?: string
           id?: string
           image_url: string
           prompt_id: string
           session_id: string
-          thumbnail_url?: string | null
         }
         Update: {
           created_at?: string
           design_name?: string
-          display_order?: number | null
           error_message?: string | null
           generation_status?: string
           id?: string
           image_url?: string
           prompt_id?: string
           session_id?: string
-          thumbnail_url?: string | null
         }
         Relationships: [
           {
@@ -255,10 +246,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      generate_session_title: {
-        Args: { user_prompt: string }
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
