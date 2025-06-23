@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,11 +14,9 @@ interface Message {
 }
 
 interface ChatWindowProps {
-  sessionId?: string;
-  onDesignBriefUpdate?: (brief: any) => void;
-  messages?: Message[];
-  onSendMessage?: (message: string) => void;
-  onGenerateImage?: () => void;
+  messages: Message[];
+  onSendMessage: (message: string) => void;
+  onGenerateImage: () => void;
   onEditImage?: () => void;
   isEditingMode?: boolean;
   selectedDesignId?: number | null;
@@ -27,9 +26,7 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ 
-  sessionId,
-  onDesignBriefUpdate,
-  messages = [], 
+  messages, 
   onSendMessage,
   onGenerateImage,
   onEditImage,
@@ -40,19 +37,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   hasPendingEditInstruction = false
 }) => {
   const [inputValue, setInputValue] = useState('');
-  const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [conversationManager] = useState(() => new ConversationManager());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Use local messages if no external messages provided
-  const displayMessages = messages.length > 0 ? messages : localMessages;
-
   useEffect(() => {
     scrollToBottom();
     inputRef.current?.focus();
-  }, [displayMessages]);
+  }, [messages]);
 
   useEffect(() => {
     if (isEditingMode) {
@@ -68,29 +61,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     e.preventDefault();
     if (!inputValue.trim()) return;
 
-    const newMessage: Message = {
-      id: Date.now(),
-      text: inputValue,
-      isUser: true
-    };
-
-    // If external onSendMessage is provided, use it
-    if (onSendMessage) {
-      onSendMessage(inputValue);
-    } else {
-      // Otherwise manage messages locally
-      setLocalMessages(prev => [...prev, newMessage]);
-      
-      // Simulate AI response for local mode
-      setTimeout(() => {
-        const aiResponse: Message = {
-          id: Date.now() + 1,
-          text: "我理解了您的需求，让我们继续完善您的袜子设计。",
-          isUser: false
-        };
-        setLocalMessages(prev => [...prev, aiResponse]);
-      }, 1000);
-    }
+    // Pass message to parent component
+    onSendMessage(inputValue);
     
     // Clear input
     setInputValue('');
@@ -177,7 +149,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const handleActionButtonClick = () => {
     if (isEditingMode && onEditImage) {
       onEditImage();
-    } else if (onGenerateImage) {
+    } else {
       onGenerateImage();
     }
   };
@@ -186,7 +158,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     if (isEditingMode) {
       return hasPendingEditInstruction && !isGenerating;
     }
-    return !isGenerating && onGenerateImage;
+    return !isGenerating;
   };
 
   return (
@@ -223,7 +195,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       </div>
       
       <div className="messages-container flex-1 overflow-y-auto p-4">
-        {displayMessages.map((message) => (
+        {messages.map((message) => (
           <div
             key={message.id}
             className={`message mb-4 flex ${
@@ -273,27 +245,25 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           </div>
           
           <div className="flex gap-2">
-            {onGenerateImage && (
-              <Button
-                type="button"
-                onClick={handleActionButtonClick}
-                disabled={!isActionButtonEnabled()}
-                className={`px-4 ${
-                  isReadyToGenerate() && !isEditingMode
-                    ? 'bg-green-600 hover:bg-green-700 text-white animate-pulse'
-                    : isEditingMode && hasPendingEditInstruction
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
-              >
-                {isEditingMode ? (
-                  <Edit className="h-4 w-4 mr-2" />
-                ) : (
-                  <Sparkles className="h-4 w-4 mr-2" />
-                )}
-                {getGenerateButtonText()}
-              </Button>
-            )}
+            <Button
+              type="button"
+              onClick={handleActionButtonClick}
+              disabled={!isActionButtonEnabled()}
+              className={`px-4 ${
+                isReadyToGenerate() && !isEditingMode
+                  ? 'bg-green-600 hover:bg-green-700 text-white animate-pulse'
+                  : isEditingMode && hasPendingEditInstruction
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            >
+              {isEditingMode ? (
+                <Edit className="h-4 w-4 mr-2" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              {getGenerateButtonText()}
+            </Button>
             
             <Button 
               type="submit" 

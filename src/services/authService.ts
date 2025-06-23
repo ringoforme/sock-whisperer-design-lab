@@ -13,71 +13,30 @@ export interface UserProfile {
 
 class AuthService {
   async signUp(email: string, password: string, fullName?: string) {
-    console.log('尝试注册用户:', email);
-    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           full_name: fullName || email
-        },
-        emailRedirectTo: `${window.location.origin}/`
+        }
       }
     });
-    
-    if (error) {
-      console.error('注册失败:', error);
-      return { data, error };
-    }
-
-    // 如果注册成功，尝试创建或更新用户资料
-    if (data.user) {
-      console.log('注册成功，创建用户资料:', data.user.id);
-      try {
-        await this.ensureUserProfile(data.user);
-      } catch (profileError) {
-        console.error('创建用户资料失败:', profileError);
-        // 不影响注册流程，只记录错误
-      }
-    }
     
     return { data, error };
   }
 
   async signIn(email: string, password: string) {
-    console.log('尝试登录用户:', email);
-    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
     
-    if (error) {
-      console.error('登录失败:', error);
-      return { data, error };
-    }
-
-    // 如果登录成功，确保用户资料存在
-    if (data.user) {
-      console.log('登录成功，检查用户资料:', data.user.id);
-      try {
-        await this.ensureUserProfile(data.user);
-      } catch (profileError) {
-        console.error('检查用户资料失败:', profileError);
-        // 不影响登录流程，只记录错误
-      }
-    }
-    
     return { data, error };
   }
 
   async signOut() {
-    console.log('用户登出');
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('登出失败:', error);
-    }
     return { error };
   }
 
@@ -91,95 +50,36 @@ class AuthService {
     return session;
   }
 
-  // 确保用户资料存在
-  private async ensureUserProfile(user: User): Promise<void> {
-    try {
-      console.log('检查用户资料是否存在:', user.id);
-      
-      // 先检查是否已存在
-      const { data: existingProfile, error: selectError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (selectError) {
-        console.error('检查用户资料时出错:', selectError);
-        throw selectError;
-      }
-
-      if (!existingProfile) {
-        console.log('用户资料不存在，创建新资料');
-        
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name || user.email || '',
-            is_admin: false
-          });
-
-        if (insertError) {
-          console.error('创建用户资料失败:', insertError);
-          throw insertError;
-        }
-
-        console.log('用户资料创建成功');
-      } else {
-        console.log('用户资料已存在');
-      }
-    } catch (error) {
-      console.error('确保用户资料存在时出错:', error);
-      throw error;
-    }
-  }
-
   async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
-      console.log('获取用户资料:', userId);
+      // 暂时直接返回基于用户数据的模拟资料，避免RLS递归问题
+      const { data: { user } } = await supabase.auth.getUser();
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('获取用户资料失败:', error);
-        throw error;
+      if (!user || user.id !== userId) {
+        return null;
       }
 
-      console.log('用户资料获取成功:', data);
-      return data;
+      // 创建一个基于用户元数据的资料对象
+      const profile: UserProfile = {
+        id: user.id,
+        email: user.email || '',
+        full_name: user.user_metadata?.full_name || user.email || '',
+        is_admin: false, // 默认为非管理员
+        created_at: user.created_at,
+        updated_at: user.updated_at || user.created_at
+      };
+
+      return profile;
     } catch (error) {
-      console.error('获取用户资料时出错:', error);
+      console.error('获取用户资料失败:', error);
       return null;
     }
   }
 
   async updateProfile(userId: string, updates: Partial<UserProfile>) {
-    try {
-      console.log('更新用户资料:', userId, updates);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', userId)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('更新用户资料失败:', error);
-        throw error;
-      }
-
-      console.log('用户资料更新成功:', data);
-      return { data, error: null };
-    } catch (error) {
-      console.error('更新用户资料时出错:', error);
-      return { data: null, error };
-    }
+    // 暂时禁用更新功能，避免RLS问题
+    console.log('Profile update temporarily disabled due to RLS issues');
+    return { data: null, error: new Error('Profile update temporarily disabled') };
   }
 }
 
