@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,23 +5,21 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { Send, Image, Paperclip, Sparkles, Info, Edit } from 'lucide-react';
 import { ConversationManager } from '@/services/conversationManager';
-
-interface Message {
-  id: number;
-  text: string;
-  isUser: boolean;
-}
+import ThumbnailMessage from './ThumbnailMessage';
+import type { Message } from '@/types/message';
 
 interface ChatWindowProps {
   messages: Message[];
   onSendMessage: (message: string) => void;
   onGenerateImage: () => void;
   onEditImage?: () => void;
+  onThumbnailClick?: (imageUrl: string, designName?: string) => void;
   isEditingMode?: boolean;
   selectedDesignId?: number | null;
   isGenerating?: boolean;
   hasDesign?: boolean;
   hasPendingEditInstruction?: boolean;
+  currentImageUrl?: string;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ 
@@ -30,11 +27,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onSendMessage,
   onGenerateImage,
   onEditImage,
+  onThumbnailClick,
   isEditingMode = false, 
   selectedDesignId,
   isGenerating = false,
   hasDesign = false,
-  hasPendingEditInstruction = false
+  hasPendingEditInstruction = false,
+  currentImageUrl
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [conversationManager] = useState(() => new ConversationManager());
@@ -72,6 +71,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     toast({
       title: "上传图片功能即将推出"
     });
+  };
+
+  const handleThumbnailClickInternal = (imageUrl: string, designName?: string) => {
+    if (onThumbnailClick) {
+      onThumbnailClick(imageUrl, designName);
+    }
   };
 
   const getPlaceholderText = () => {
@@ -214,6 +219,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               }`}>
                 {message.text}
               </div>
+              {/* 添加缩略图显示 */}
+              {message.imageUrl && !message.isUser && (
+                <ThumbnailMessage
+                  imageUrl={message.imageUrl}
+                  designName={message.designName}
+                  isSelected={currentImageUrl === message.imageUrl}
+                  onThumbnailClick={() => handleThumbnailClickInternal(message.imageUrl!, message.designName)}
+                />
+              )}
             </div>
           </div>
         ))}
