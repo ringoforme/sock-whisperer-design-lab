@@ -110,7 +110,9 @@ const DesignLab = () => {
       // 恢复对话管理器状态
       conversationManager.reset();
       sessionHistory.messages.forEach(msg => {
-        conversationManager.addToHistory(msg.role, msg.content);
+        // Type assertion to ensure the role is properly typed
+        const role = msg.role as 'user' | 'assistant';
+        conversationManager.addToHistory(role, msg.content);
       });
 
       // 恢复设计状态（如果有生成的图片）
