@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -111,7 +110,7 @@ const DesignLab = () => {
       // 恢复对话管理器状态
       conversationManager.reset();
       sessionHistory.messages.forEach(msg => {
-        conversationManager.addMessage(msg.role, msg.content);
+        conversationManager.addToHistory(msg.role, msg.content);
       });
 
       // 恢复设计状态（如果有生成的图片）

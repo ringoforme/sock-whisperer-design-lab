@@ -1,4 +1,3 @@
-
 import { ConversationState, ConversationPhase, DesignRequirements } from '@/types/conversation';
 import { llmService } from '@/services/llmService';
 
@@ -30,6 +29,17 @@ export class ConversationManager {
     return [...this.conversationHistory];
   }
 
+  public reset(): void {
+    this.state = {
+      phase: 'welcome',
+      requirements: {},
+      collectedInfo: [],
+      isComplete: false
+    };
+    this.conversationHistory = [];
+    console.log('ConversationManager has been reset');
+  }
+
   public addToHistory(role: 'user' | 'assistant', content: string): void {
     const message = {
       role,
@@ -39,6 +49,10 @@ export class ConversationManager {
     this.conversationHistory.push(message);
     console.log('添加到对话历史:', message);
     console.log('当前历史长度:', this.conversationHistory.length);
+  }
+
+  public addMessage(role: 'user' | 'assistant', content: string): void {
+    this.addToHistory(role, content);
   }
 
   public updatePhase(phase: ConversationPhase): void {
