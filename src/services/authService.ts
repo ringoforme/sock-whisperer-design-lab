@@ -63,8 +63,6 @@ class AuthService {
         // 提供更友好的错误消息
         if (error.message.includes('Invalid login credentials')) {
           return { data, error: { ...error, message: '邮箱或密码错误，请检查后重试' } };
-        } else if (error.message.includes('Email not confirmed')) {
-          return { data, error: { ...error, message: '请先确认邮箱后再登录' } };
         }
       }
       

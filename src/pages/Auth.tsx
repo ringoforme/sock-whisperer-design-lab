@@ -43,7 +43,7 @@ const Auth = () => {
           
           toast.error(error.message || '注册失败，请重试');
         } else {
-          toast.success('注册成功！请查看邮箱确认链接');
+          toast.success('注册成功！正在自动登录...');
           setRetryCount(0); // 重置重试计数
         }
       } else {
