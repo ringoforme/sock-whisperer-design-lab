@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -18,12 +17,7 @@ import { sessionService } from "@/services/sessionService";
 import { llmService } from "@/services/llmService";
 import { ConversationManager } from "@/services/conversationManager";
 import type { DesignData } from "@/types/design";
-
-interface Message {
-  id: number;
-  text: string;
-  isUser: boolean;
-}
+import type { Message } from "@/types/message";
 
 type DesignState = DesignData & {
   isEditing?: boolean;
@@ -45,6 +39,7 @@ const DesignStudio = () => {
   const [conversationManager] = useState(() => new ConversationManager());
   const [pendingEditInstruction, setPendingEditInstruction] = useState<string>('');
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -90,6 +85,7 @@ const DesignStudio = () => {
         setDesign(null);
         setIsEditingMode(false);
         setCurrentSessionId(null);
+        setCurrentImageUrl('');
         conversationManager.reset();
         // 重新初始化会话
         await initializeSession();
@@ -121,19 +117,36 @@ const DesignStudio = () => {
       console.log('会话历史数据:', sessionHistory);
       setCurrentSessionId(sessionId);
 
-      // Restore message history
+      // Restore message history with image thumbnails
       const sessionMessages: Message[] = [{
         id: 1,
         text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
         isUser: false
       }];
 
+      // Add messages with potential image thumbnails
       sessionHistory.messages.forEach((msg, index) => {
-        sessionMessages.push({
+        const message: Message = {
           id: index + 2,
           text: msg.content,
           isUser: msg.role === 'user'
-        });
+        };
+
+        // If this is an assistant message and there are images, add the latest one as thumbnail
+        if (msg.role === 'assistant' && sessionHistory.images && sessionHistory.images.length > 0) {
+          // Find the most recent image that would correspond to this message
+          const relatedImage = sessionHistory.images.find(img => 
+            img.created_at && msg.created_at && 
+            new Date(img.created_at) >= new Date(msg.created_at)
+          );
+          
+          if (relatedImage) {
+            message.imageUrl = relatedImage.image_url;
+            message.designName = relatedImage.design_name;
+          }
+        }
+
+        sessionMessages.push(message);
       });
 
       setMessages(sessionMessages);
@@ -149,16 +162,19 @@ const DesignStudio = () => {
       // Restore design state with latest image
       if (sessionHistory.latestImage) {
         console.log('恢复最新图片:', sessionHistory.latestImage);
-        setDesign({
+        const designData = {
           url: sessionHistory.latestImage.image_url,
           prompt_en: '', 
           design_name: sessionHistory.latestImage.design_name,
           isEditing: false
-        });
+        };
+        setDesign(designData);
+        setCurrentImageUrl(sessionHistory.latestImage.image_url);
         console.log('设计状态已设置为最新图片');
       } else {
         console.log('没有找到最新图片，设置design为null');
         setDesign(null);
+        setCurrentImageUrl('');
       }
 
       setIsEditingMode(false);
@@ -167,6 +183,18 @@ const DesignStudio = () => {
       console.error('加载会话失败:', error);
       toast.error('加载会话失败');
     }
+  };
+
+  // 处理缩略图点击
+  const handleThumbnailClick = (imageUrl: string, designName?: string) => {
+    console.log('缩略图被点击:', imageUrl, designName);
+    setCurrentImageUrl(imageUrl);
+    setDesign({
+      url: imageUrl,
+      prompt_en: '',
+      design_name: designName || '设计',
+      isEditing: false
+    });
   };
 
   // 生成图片功能 - 现在传递完整的会话上下文
@@ -189,12 +217,18 @@ const DesignStudio = () => {
         ...newDesign,
         isEditing: false
       });
+      setCurrentImageUrl(newDesign.url);
+      
       const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
-      setMessages(prev => [...prev, {
+      const messageWithThumbnail: Message = {
         id: Date.now(),
         text: successMessage,
-        isUser: false
-      }]);
+        isUser: false,
+        imageUrl: newDesign.url,
+        designName: newDesign.design_name
+      };
+      
+      setMessages(prev => [...prev, messageWithThumbnail]);
 
       // 记录助手消息到数据库
       if (currentSessionId) {
@@ -229,13 +263,19 @@ const DesignStudio = () => {
         ...editedDesign,
         isEditing: true
       });
+      setCurrentImageUrl(editedDesign.url);
+      
       toast.success(`设计已更新！`);
       const responseMessage = "我已根据您的指令编辑了设计。";
-      setMessages(prev => [...prev, {
+      const messageWithThumbnail: Message = {
         id: Date.now(),
         text: responseMessage,
-        isUser: false
-      }]);
+        isUser: false,
+        imageUrl: editedDesign.url,
+        designName: editedDesign.design_name
+      };
+      
+      setMessages(prev => [...prev, messageWithThumbnail]);
 
       // 记录助手回复到数据库
       if (currentSessionId) {
@@ -254,7 +294,7 @@ const DesignStudio = () => {
   // 修改后的消息处理函数
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating || isChatLoading) return;
-    const userMsg = {
+    const userMsg: Message = {
       id: Date.now(),
       text: userMessage,
       isUser: true
@@ -430,11 +470,13 @@ const DesignStudio = () => {
               onSendMessage={handleSendMessage} 
               onGenerateImage={triggerImageGeneration} 
               onEditImage={triggerImageEdit} 
+              onThumbnailClick={handleThumbnailClick}
               isEditingMode={isEditingMode} 
               selectedDesignId={design ? 0 : null} 
               isGenerating={isGenerating || isChatLoading} 
               hasDesign={!!design} 
               hasPendingEditInstruction={!!pendingEditInstruction.trim()} 
+              currentImageUrl={currentImageUrl}
             />
           </div>
           <div className="h-[80vh] overflow-y-auto">
