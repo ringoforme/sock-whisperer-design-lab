@@ -23,11 +23,7 @@ interface Message {
   id: number;
   text: string;
   isUser: boolean;
-  thumbnail?: {
-    imageUrl: string;
-    designName: string;
-    imageId: string;
-  };
+  thumbnail?: React.ReactNode;
 }
 
 type DesignState = DesignData & {
@@ -129,11 +125,14 @@ const DesignLab = () => {
           id: messageId++,
           text: `我已经为您生成了设计"${img.design_name}"。`,
           isUser: false,
-          thumbnail: {
-            imageUrl: img.thumbnail_url || img.image_url,
-            designName: img.design_name,
-            imageId: img.id
-          }
+          thumbnail: (
+            <ChatThumbnail
+              imageUrl={img.thumbnail_url || img.image_url}
+              designName={img.design_name}
+              onThumbnailClick={() => handleThumbnailClick(img.id)}
+              isSelected={selectedImageId === img.id}
+            />
+          )
         });
       });
       
@@ -255,11 +254,14 @@ const DesignLab = () => {
         id: Date.now() + 2,
         text: `我已经为您生成了设计"${newDesign.design_name}"。`,
         isUser: false,
-        thumbnail: {
-          imageUrl: newDesign.url,
-          designName: newDesign.design_name,
-          imageId: `temp-${Date.now()}`
-        }
+        thumbnail: (
+          <ChatThumbnail
+            imageUrl={newDesign.url}
+            designName={newDesign.design_name}
+            onThumbnailClick={() => handleThumbnailClick(`temp-${Date.now()}`)}
+            isSelected={false}
+          />
+        )
       };
       
       setMessages(prev => [...prev, thumbnailMsg]);
@@ -325,7 +327,7 @@ const DesignLab = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex w-full">
       {/* Session History Sidebar */}
       <SessionHistorySidebar
         isCollapsed={sidebarCollapsed}
@@ -358,17 +360,7 @@ const DesignLab = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
             <div className="h-[80vh] flex flex-col border rounded-lg overflow-hidden">
               <ChatWindow 
-                messages={messages.map(msg => ({
-                  ...msg,
-                  thumbnail: msg.thumbnail ? (
-                    <ChatThumbnail
-                      imageUrl={msg.thumbnail.imageUrl}
-                      designName={msg.thumbnail.designName}
-                      onThumbnailClick={() => handleThumbnailClick(msg.thumbnail!.imageId)}
-                      isSelected={selectedImageId === msg.thumbnail.imageId}
-                    />
-                  ) : undefined
-                }))} 
+                messages={messages} 
                 onSendMessage={handleSendMessage} 
                 onGenerateImage={triggerImageGeneration} 
                 isEditingMode={isEditingMode} 
