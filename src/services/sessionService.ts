@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -48,24 +47,34 @@ export class SessionService {
 
   // 获取会话详情
   async getSession(sessionId: string): Promise<DesignSession | null> {
+    console.log('获取会话详情:', sessionId);
     const { data, error } = await supabase
       .from('design_sessions')
       .select('*')
       .eq('id', sessionId)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      console.error('获取会话失败:', error);
+      throw error;
+    }
+    console.log('会话详情:', data);
     return data;
   }
 
   // 更新会话状态
   async updateSessionStatus(sessionId: string, status: 'active' | 'completed' | 'abandoned'): Promise<void> {
+    console.log('更新会话状态:', sessionId, status);
     const { error } = await supabase
       .from('design_sessions')
       .update({ status })
       .eq('id', sessionId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('更新会话状态失败:', error);
+      throw error;
+    }
+    console.log('会话状态更新成功');
   }
 
   // 删除会话
@@ -103,6 +112,8 @@ export class SessionService {
 
   // 添加对话消息
   async addMessage(sessionId: string, role: 'user' | 'assistant', content: string, metadata?: any): Promise<ConversationMessage> {
+    console.log('添加消息到会话:', sessionId, role, content.substring(0, 50) + '...');
+    
     const { data, error } = await supabase
       .from('conversation_messages')
       .insert({
@@ -114,7 +125,12 @@ export class SessionService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('添加消息失败:', error);
+      throw error;
+    }
+
+    console.log('消息添加成功:', data.id);
 
     // Generate intelligent title for first user message
     if (role === 'user') {
@@ -132,18 +148,26 @@ export class SessionService {
 
   // 获取会话的所有消息
   async getSessionMessages(sessionId: string): Promise<ConversationMessage[]> {
+    console.log('获取会话消息:', sessionId);
     const { data, error } = await supabase
       .from('conversation_messages')
       .select('*')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('获取会话消息失败:', error);
+      throw error;
+    }
+    console.log('获取到', data?.length || 0, '条消息');
     return data || [];
   }
 
   // 创建或更新设计简报
   async upsertDesignBrief(sessionId: string, brief: Partial<Omit<DesignBrief, 'id' | 'session_id' | 'created_at' | 'updated_at'>>): Promise<DesignBrief> {
+    console.log('创建或更新设计简报，会话ID:', sessionId);
+    console.log('简报内容:', brief);
+    
     // 先查找是否已存在
     const { data: existing } = await supabase
       .from('design_briefs')
@@ -153,6 +177,7 @@ export class SessionService {
 
     if (existing) {
       // 更新现有简报
+      console.log('更新现有设计简报:', existing.id);
       const { data, error } = await supabase
         .from('design_briefs')
         .update(brief)
@@ -160,10 +185,15 @@ export class SessionService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('更新设计简报失败:', error);
+        throw error;
+      }
+      console.log('设计简报更新成功:', data);
       return data;
     } else {
       // 创建新简报
+      console.log('创建新设计简报');
       const { data, error } = await supabase
         .from('design_briefs')
         .insert({
@@ -173,13 +203,21 @@ export class SessionService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('创建设计简报失败:', error);
+        throw error;
+      }
+      console.log('设计简报创建成功:', data);
       return data;
     }
   }
 
   // 记录扩展提示词
   async addExpandedPrompt(sessionId: string, briefId: string, originalBrief: string, expandedPrompt: string): Promise<ExpandedPrompt> {
+    console.log('记录扩展提示词，会话ID:', sessionId, '简报ID:', briefId);
+    console.log('原始简报:', originalBrief.substring(0, 100) + '...');
+    console.log('扩展提示词:', expandedPrompt.substring(0, 100) + '...');
+    
     const { data, error } = await supabase
       .from('expanded_prompts')
       .insert({
@@ -191,12 +229,21 @@ export class SessionService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('记录扩展提示词失败:', error);
+      throw error;
+    }
+    console.log('扩展提示词记录成功:', data.id);
     return data;
   }
 
   // 记录生成的图片
   async addGeneratedImage(sessionId: string, promptId: string, imageUrl: string, designName: string, status: 'success' | 'failed' | 'pending' = 'success', errorMessage?: string): Promise<GeneratedImage> {
+    console.log('记录生成图片，会话ID:', sessionId, '提示词ID:', promptId);
+    console.log('图片URL:', imageUrl);
+    console.log('设计名称:', designName);
+    console.log('状态:', status);
+    
     const { data, error } = await supabase
       .from('generated_images')
       .insert({
@@ -210,7 +257,11 @@ export class SessionService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('记录生成图片失败:', error);
+      throw error;
+    }
+    console.log('生成图片记录成功:', data.id);
     return data;
   }
 
