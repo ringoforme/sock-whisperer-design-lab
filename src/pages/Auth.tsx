@@ -13,6 +13,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   const { user, signIn, signUp, loading } = useAuth();
 
@@ -29,28 +30,45 @@ const Auth = () => {
       if (isSignUp) {
         const { error } = await signUp(email, password, fullName);
         if (error) {
-          if (error.message.includes('User already registered')) {
-            toast.error('该邮箱已注册，请直接登录');
-          } else {
-            toast.error(`注册失败: ${error.message}`);
+          console.error('注册错误详情:', error);
+          
+          // 如果是网络错误且重试次数少于3次，允许重试
+          if (error.message.includes('网络') && retryCount < 3) {
+            setRetryCount(prev => prev + 1);
+            toast.error(`注册失败，正在重试... (${retryCount + 1}/3)`);
+            // 延迟重试
+            setTimeout(() => handleSubmit(e), 2000);
+            return;
           }
+          
+          toast.error(error.message || '注册失败，请重试');
         } else {
           toast.success('注册成功！请查看邮箱确认链接');
+          setRetryCount(0); // 重置重试计数
         }
       } else {
         const { error } = await signIn(email, password);
         if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            toast.error('邮箱或密码错误');
-          } else {
-            toast.error(`登录失败: ${error.message}`);
+          console.error('登录错误详情:', error);
+          
+          // 如果是网络错误且重试次数少于3次，允许重试
+          if (error.message.includes('网络') && retryCount < 3) {
+            setRetryCount(prev => prev + 1);
+            toast.error(`登录失败，正在重试... (${retryCount + 1}/3)`);
+            // 延迟重试
+            setTimeout(() => handleSubmit(e), 2000);
+            return;
           }
+          
+          toast.error(error.message || '登录失败，请重试');
         } else {
           toast.success('登录成功！');
+          setRetryCount(0); // 重置重试计数
         }
       }
     } catch (error) {
-      toast.error('操作失败，请重试');
+      console.error('认证过程中发生未捕获错误:', error);
+      toast.error('操作失败，请检查网络连接后重试');
     } finally {
       setIsLoading(false);
     }
@@ -59,7 +77,10 @@ const Auth = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 via-purple-50 to-red-50 flex items-center justify-center">
-        <div>加载中...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sock-purple mx-auto mb-2"></div>
+          <div>加载中...</div>
+        </div>
       </div>
     );
   }
@@ -78,6 +99,11 @@ const Auth = () => {
           <CardDescription>
             {isSignUp ? '创建您的账户开始设计' : '请输入您的账户信息以登录'}
           </CardDescription>
+          {retryCount > 0 && (
+            <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
+              正在重试 ({retryCount}/3)...
+            </div>
+          )}
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -91,6 +117,7 @@ const Auth = () => {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required={isSignUp}
+                  disabled={isLoading}
                 />
               </div>
             )}
@@ -103,6 +130,7 @@ const Auth = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -114,7 +142,11 @@ const Auth = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
               />
+              {isSignUp && (
+                <p className="text-xs text-gray-500">密码至少需要6个字符</p>
+              )}
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
@@ -123,14 +155,25 @@ const Auth = () => {
               className="w-full bg-sock-purple hover:bg-sock-dark-purple text-white"
               disabled={isLoading}
             >
-              {isLoading ? '处理中...' : (isSignUp ? '注册' : '登录')}
+              {isLoading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {isSignUp ? '注册中...' : '登录中...'}
+                </div>
+              ) : (
+                isSignUp ? '注册' : '登录'
+              )}
             </Button>
             <div className="text-center text-sm">
               {isSignUp ? '已有账户？' : '还没有账户？'}{" "}
               <button 
                 type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setRetryCount(0); // 切换模式时重置重试计数
+                }}
                 className="text-sock-purple hover:underline"
+                disabled={isLoading}
               >
                 {isSignUp ? '登录' : '注册'}
               </button>

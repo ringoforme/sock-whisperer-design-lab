@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from '@supabase/supabase-js';
 
@@ -13,26 +12,73 @@ export interface UserProfile {
 
 class AuthService {
   async signUp(email: string, password: string, fullName?: string) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName || email
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: fullName || email
+          }
+        }
+      });
+      
+      if (error) {
+        console.error('注册错误:', error);
+        
+        // 提供更友好的错误消息
+        if (error.message.includes('User already registered')) {
+          return { data, error: { ...error, message: '该邮箱已注册，请直接登录' } };
+        } else if (error.message.includes('Password')) {
+          return { data, error: { ...error, message: '密码格式不符合要求，请使用至少6个字符' } };
+        } else if (error.message.includes('Email')) {
+          return { data, error: { ...error, message: '邮箱格式不正确' } };
         }
       }
-    });
-    
-    return { data, error };
+      
+      return { data, error };
+    } catch (err) {
+      console.error('注册过程中发生未知错误:', err);
+      return { 
+        data: null, 
+        error: { 
+          message: '注册失败，请稍后重试', 
+          details: err 
+        } 
+      };
+    }
   }
 
   async signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    return { data, error };
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        console.error('登录错误:', error);
+        
+        // 提供更友好的错误消息
+        if (error.message.includes('Invalid login credentials')) {
+          return { data, error: { ...error, message: '邮箱或密码错误，请检查后重试' } };
+        } else if (error.message.includes('Email not confirmed')) {
+          return { data, error: { ...error, message: '请先确认邮箱后再登录' } };
+        }
+      }
+      
+      return { data, error };
+    } catch (err) {
+      console.error('登录过程中发生未知错误:', err);
+      return { 
+        data: null, 
+        error: { 
+          message: '登录失败，请稍后重试', 
+          details: err 
+        } 
+      };
+    }
   }
 
   async signOut() {
