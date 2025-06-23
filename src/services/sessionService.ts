@@ -145,7 +145,24 @@ export class SessionService {
   }
 
   // 创建设计作品
-  async createDesignWork(sessionId: string, workData: Partial<Omit<DesignWork, 'id' | 'session_id' | 'created_at' | 'updated_at'>>): Promise<DesignWork> {
+  async createDesignWork(sessionId: string, workData: {
+    name: string;
+    prompt_used: string;
+    image_url: string;
+    requirements_id?: string;
+    description?: string;
+    thumbnail_url?: string;
+    generation_provider?: string;
+    generation_model?: string;
+    generation_params?: any;
+    status?: string;
+    is_favorite?: boolean;
+    download_count?: number;
+    edit_history?: any;
+    parent_work_id?: string;
+    version?: number;
+    error_message?: string;
+  }): Promise<DesignWork> {
     const { data, error } = await supabase
       .from('design_works')
       .insert({

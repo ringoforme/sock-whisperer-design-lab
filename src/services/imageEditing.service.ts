@@ -40,27 +40,19 @@ export async function editImage(originalImageUrl: string, editInstruction: strin
     // 如果有会话ID，记录编辑过程到数据库
     if (sessionId && designData) {
       try {
-        // 获取当前会话的最新简报
-        const sessionHistory = await sessionService.getSessionHistory(sessionId);
-        const latestBrief = sessionHistory.briefs[sessionHistory.briefs.length - 1];
+        // 获取当前会话的最新需求
+        const sessionDetail = await sessionService.getSessionComplete(sessionId);
+        const latestRequirement = sessionDetail.requirements[sessionDetail.requirements.length - 1];
         
-        if (latestBrief) {
-          // 记录新的扩展提示词
-          const expandedPrompt = await sessionService.addExpandedPrompt(
-            sessionId,
-            latestBrief.id,
-            '图片编辑指令', // 原始简报
-            editInstruction // 编辑指令
-          );
-          
+        if (latestRequirement) {
           // 记录编辑后的图片
-          await sessionService.addGeneratedImage(
-            sessionId,
-            expandedPrompt.id,
-            designData.url,
-            designData.design_name || '编辑后设计',
-            designData.url ? 'success' : 'failed'
-          );
+          await sessionService.createDesignWork(sessionId, {
+            name: designData.design_name || '编辑后设计',
+            prompt_used: editInstruction,
+            image_url: designData.url,
+            requirements_id: latestRequirement.id,
+            status: designData.url ? 'generated' : 'failed'
+          });
         }
         
         console.log('图片编辑过程已记录到数据库');
@@ -76,25 +68,18 @@ export async function editImage(originalImageUrl: string, editInstruction: strin
     // 记录失败状态
     if (sessionId) {
       try {
-        const sessionHistory = await sessionService.getSessionHistory(sessionId);
-        const latestBrief = sessionHistory.briefs[sessionHistory.briefs.length - 1];
+        const sessionDetail = await sessionService.getSessionComplete(sessionId);
+        const latestRequirement = sessionDetail.requirements[sessionDetail.requirements.length - 1];
         
-        if (latestBrief) {
-          const expandedPrompt = await sessionService.addExpandedPrompt(
-            sessionId,
-            latestBrief.id,
-            '图片编辑指令',
-            `编辑失败：${error instanceof Error ? error.message : '未知错误'}`
-          );
-          
-          await sessionService.addGeneratedImage(
-            sessionId,
-            expandedPrompt.id,
-            'https://placehold.co/1024x1024/f87171/ffffff?text=Edit+Failed',
-            '编辑失败',
-            'failed',
-            error instanceof Error ? error.message : '未知错误'
-          );
+        if (latestRequirement) {
+          await sessionService.createDesignWork(sessionId, {
+            name: '编辑失败',
+            prompt_used: `编辑失败：${error instanceof Error ? error.message : '未知错误'}`,
+            image_url: 'https://placehold.co/1024x1024/f87171/ffffff?text=Edit+Failed',
+            requirements_id: latestRequirement.id,
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : '未知错误'
+          });
         }
       } catch (dbError) {
         console.error('记录编辑失败状态到数据库失败:', dbError);

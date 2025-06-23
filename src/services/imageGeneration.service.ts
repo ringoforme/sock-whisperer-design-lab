@@ -43,29 +43,20 @@ export async function generateDesigns(sessionContext: SessionContext): Promise<D
     // 如果有会话ID，记录设计过程到数据库
     if (sessionContext.sessionId && designData) {
       try {
-        // 1. 创建或更新设计简报
-        const brief = await sessionService.upsertDesignBrief(sessionContext.sessionId, {
-          completion_status: 'completed',
+        // 1. 创建或更新设计需求
+        const requirement = await sessionService.upsertDesignRequirement(sessionContext.sessionId, {
           additional_notes: `基于完整会话上下文生成`
         });
         
-        // 2. 记录扩展提示词（从后端返回的expandedPrompt）
+        // 2. 记录生成的作品
         if (designData.prompt_en) {
-          const expandedPrompt = await sessionService.addExpandedPrompt(
-            sessionContext.sessionId,
-            brief.id,
-            JSON.stringify(sessionContext.collectedInfo), // 原始简报
-            designData.prompt_en // 扩展后的提示词
-          );
-          
-          // 3. 记录生成的图片
-          await sessionService.addGeneratedImage(
-            sessionContext.sessionId,
-            expandedPrompt.id,
-            designData.url,
-            designData.design_name || '袜子设计',
-            designData.url ? 'success' : 'failed'
-          );
+          await sessionService.createDesignWork(sessionContext.sessionId, {
+            name: designData.design_name || '袜子设计',
+            prompt_used: designData.prompt_en,
+            image_url: designData.url,
+            requirements_id: requirement.id,
+            status: designData.url ? 'generated' : 'failed'
+          });
         }
         
         console.log('设计过程已记录到数据库');
@@ -82,27 +73,19 @@ export async function generateDesigns(sessionContext: SessionContext): Promise<D
     // 如果有会话ID，记录失败状态
     if (sessionContext.sessionId) {
       try {
-        const brief = await sessionService.upsertDesignBrief(sessionContext.sessionId, {
-          completion_status: 'completed',
+        const requirement = await sessionService.upsertDesignRequirement(sessionContext.sessionId, {
           additional_notes: `生成失败：${error instanceof Error ? error.message : '未知错误'}`
         });
         
-        // 记录失败的扩展提示词和图片
-        const expandedPrompt = await sessionService.addExpandedPrompt(
-          sessionContext.sessionId,
-          brief.id,
-          JSON.stringify(sessionContext.collectedInfo),
-          `生成失败：${error instanceof Error ? error.message : '未知错误'}`
-        );
-        
-        await sessionService.addGeneratedImage(
-          sessionContext.sessionId,
-          expandedPrompt.id,
-          'https://placehold.co/1024x1024/f87171/ffffff?text=Generation+Failed',
-          '生成失败',
-          'failed',
-          error instanceof Error ? error.message : '未知错误'
-        );
+        // 记录失败的作品
+        await sessionService.createDesignWork(sessionContext.sessionId, {
+          name: '生成失败',
+          prompt_used: JSON.stringify(sessionContext.collectedInfo),
+          image_url: 'https://placehold.co/1024x1024/f87171/ffffff?text=Generation+Failed',
+          requirements_id: requirement.id,
+          status: 'failed',
+          error_message: error instanceof Error ? error.message : '未知错误'
+        });
       } catch (dbError) {
         console.error('记录失败状态到数据库失败:', dbError);
       }
