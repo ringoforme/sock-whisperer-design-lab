@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -216,49 +217,99 @@ export class SessionService {
   // Generate intelligent session title based on conversation content
   async generateSessionTitle(sessionId: string, userMessage: string): Promise<string> {
     try {
+      console.log('生成会话标题，用户消息:', userMessage);
+      
       // First check if we already have a custom title
       const session = await this.getSession(sessionId);
       if (session && session.session_title !== '新设计会话' && session.session_title !== userMessage.substring(0, 15)) {
         return session.session_title;
       }
 
-      // Generate a concise theme overview based on the user's input
-      let title = userMessage;
+      // Improved title generation logic
+      let title = this.extractDesignTheme(userMessage);
+      console.log('提取的主题标题:', title);
       
-      // Extract key design elements and create a concise title
-      if (title.includes('袜子') || title.includes('设计')) {
-        // Remove common phrases and focus on core design elements
-        title = title
-          .replace(/请|帮我|设计|一双|一款|袜子/g, '')
-          .replace(/，.*$/, '') // Remove everything after first comma
-          .trim();
-        
-        // If still too long, take first meaningful part
-        if (title.length > 20) {
-          title = title.substring(0, 20) + '...';
-        }
-        
-        // Add "袜子设计" suffix if not present
-        if (!title.includes('袜子') && !title.includes('设计')) {
-          title = title + '袜子设计';
-        }
-      } else {
-        // Fallback: take first 15 characters
-        title = title.substring(0, 15);
-        if (title.length === 15) {
-          title += '...';
-        }
-      }
-
-      return title || '袜子设计';
+      return title;
     } catch (error) {
       console.error('生成会话标题失败:', error);
       return userMessage.substring(0, 15) + (userMessage.length > 15 ? '...' : '');
     }
   }
 
+  // Extract design theme from user message
+  private extractDesignTheme(userMessage: string): string {
+    const message = userMessage.toLowerCase();
+    
+    // Define design patterns and themes
+    const themes = {
+      // Sock types
+      '长筒袜': '长筒袜设计',
+      '短袜': '短袜设计', 
+      '中筒袜': '中筒袜设计',
+      '船袜': '船袜设计',
+      '运动袜': '运动袜设计',
+      
+      // Styles and patterns
+      '复古': '复古风袜子',
+      '可爱': '可爱袜子设计',
+      '商务': '商务袜子',
+      '休闲': '休闲袜子',
+      '卡通': '卡通袜子设计',
+      '花纹': '花纹袜子设计',
+      '条纹': '条纹袜子设计',
+      '波点': '波点袜子设计',
+      '几何': '几何图案袜子',
+      '动物': '动物图案袜子',
+      '植物': '植物图案袜子',
+      '星空': '星空主题袜子',
+      '彩虹': '彩虹袜子设计',
+      '渐变': '渐变色袜子',
+      
+      // Colors
+      '红色': '红色袜子设计',
+      '蓝色': '蓝色袜子设计',
+      '绿色': '绿色袜子设计',
+      '黄色': '黄色袜子设计',
+      '紫色': '紫色袜子设计',
+      '粉色': '粉色袜子设计',
+      '黑色': '黑色袜子设计',
+      '白色': '白色袜子设计',
+      
+      // Occasions
+      '上班': '商务袜子设计',
+      '运动': '运动袜子设计',
+      '日常': '日常袜子设计',
+      '约会': '约会袜子设计',
+      '聚会': '聚会袜子设计'
+    };
+    
+    // Look for matches in the message
+    for (const [keyword, theme] of Object.entries(themes)) {
+      if (message.includes(keyword)) {
+        return theme;
+      }
+    }
+    
+    // If no specific theme found, try to extract key descriptive words
+    const words = userMessage.split(/[，。！？、\s]+/).filter(word => 
+      word.length > 0 && 
+      !['请', '帮我', '设计', '一双', '一款', '想要', '袜子'].includes(word)
+    );
+    
+    if (words.length > 0) {
+      const mainWord = words[0];
+      if (mainWord.length > 1) {
+        return mainWord + '袜子设计';
+      }
+    }
+    
+    // Fallback to generic title
+    return '袜子设计';
+  }
+
   // Update session title
   async updateSessionTitle(sessionId: string, title: string): Promise<void> {
+    console.log('更新会话标题:', sessionId, title);
     const { error } = await supabase
       .from('design_sessions')
       .update({ 
@@ -267,11 +318,17 @@ export class SessionService {
       })
       .eq('id', sessionId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('更新会话标题失败:', error);
+      throw error;
+    }
+    console.log('会话标题更新成功:', title);
   }
 
   // 获取会话的完整历史记录
   async getSessionHistory(sessionId: string) {
+    console.log('获取会话历史记录:', sessionId);
+    
     const [session, messages, briefs, prompts, images] = await Promise.all([
       this.getSession(sessionId),
       this.getSessionMessages(sessionId),
@@ -280,10 +337,21 @@ export class SessionService {
       this.getGeneratedImages(sessionId)
     ]);
 
+    console.log('会话历史记录获取完成:');
+    console.log('- 会话信息:', session);
+    console.log('- 消息数量:', messages.length);
+    console.log('- 设计简报数量:', briefs.length);
+    console.log('- 扩展提示词数量:', prompts.length);
+    console.log('- 生成图片数量:', images.length);
+
     // Find the latest successful image
-    const latestImage = images
-      .filter(img => img.generation_status === 'success')
+    const successfulImages = images.filter(img => img.generation_status === 'success');
+    console.log('成功生成的图片数量:', successfulImages.length);
+    
+    const latestImage = successfulImages
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+    
+    console.log('最新图片:', latestImage);
 
     return {
       session,

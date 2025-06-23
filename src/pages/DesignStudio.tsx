@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -109,6 +110,7 @@ const DesignStudio = () => {
   // 加载已存在的会话
   const loadSession = async (sessionId: string) => {
     try {
+      console.log('开始加载会话:', sessionId);
       const sessionHistory = await sessionService.getSessionHistory(sessionId);
       
       if (!sessionHistory.session) {
@@ -116,6 +118,7 @@ const DesignStudio = () => {
         return;
       }
 
+      console.log('会话历史数据:', sessionHistory);
       setCurrentSessionId(sessionId);
 
       // Restore message history
@@ -134,6 +137,7 @@ const DesignStudio = () => {
       });
 
       setMessages(sessionMessages);
+      console.log('恢复的消息数量:', sessionMessages.length);
 
       // Restore conversation manager state
       conversationManager.reset();
@@ -144,13 +148,16 @@ const DesignStudio = () => {
 
       // Restore design state with latest image
       if (sessionHistory.latestImage) {
+        console.log('恢复最新图片:', sessionHistory.latestImage);
         setDesign({
           url: sessionHistory.latestImage.image_url,
           prompt_en: '', 
           design_name: sessionHistory.latestImage.design_name,
           isEditing: false
         });
+        console.log('设计状态已设置为最新图片');
       } else {
+        console.log('没有找到最新图片，设置design为null');
         setDesign(null);
       }
 
