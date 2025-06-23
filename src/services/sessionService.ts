@@ -238,7 +238,8 @@ export class SessionService {
     return data || [];
   }
 
-  private async getGeneratedImages(sessionId: string): Promise<GeneratedImage[]> {
+  // Make this method public so it can be accessed from DesignLab
+  async getGeneratedImages(sessionId: string): Promise<GeneratedImage[]> {
     const { data, error } = await supabase
       .from('generated_images')
       .select('*')

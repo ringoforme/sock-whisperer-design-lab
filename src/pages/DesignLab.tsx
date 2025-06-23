@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import { useDesignStorage } from "@/hooks/useDesignStorage";
 import { ConversationManager } from "@/services/conversationManager";
 import { sessionService } from "@/services/sessionService";
 import { generateDesigns } from "@/services/imageGeneration.service";
+import { supabase } from "@/integrations/supabase/client";
 import type { DesignData } from "@/types/design";
 import type { DesignSession, GeneratedImage } from "@/services/sessionService";
 
@@ -79,9 +81,6 @@ const DesignLab = () => {
       setGeneratedImages([]);
       setSelectedImageId(null);
       setIsEditingMode(false);
-      
-      // 重置对话管理器
-      conversationManager.reset();
       
       console.log('新会话创建成功:', newSession);
       return newSession;
@@ -239,15 +238,12 @@ const DesignLab = () => {
           text: m.text,
           isUser: m.isUser
         })),
-        conversationState: conversationManager.getConversationState(),
+        conversationState: conversationManager.getConversationHistory(),
         collectedInfo: conversationManager.getCollectedInfo(),
         requirements: conversationManager.getRequirements()
       };
 
       const newDesign = await generateDesigns(sessionContext);
-      
-      // 获取显示顺序
-      const displayOrder = generatedImages.length;
       
       setDesign({
         ...newDesign,
@@ -268,12 +264,12 @@ const DesignLab = () => {
       
       setMessages(prev => [...prev, thumbnailMsg]);
       
-      // 更新生成的图片列表（这会在 imageGeneration.service 中通过数据库更新）
-      const updatedImages = await sessionService.getGeneratedImages(currentSession.id);
-      setGeneratedImages(updatedImages);
+      // 更新生成的图片列表（通过重新获取会话历史）
+      const updatedHistory = await sessionService.getSessionHistory(currentSession.id);
+      setGeneratedImages(updatedHistory.images);
       
-      if (updatedImages.length > 0) {
-        const latestImage = updatedImages[0];
+      if (updatedHistory.images.length > 0) {
+        const latestImage = updatedHistory.images[0];
         setSelectedImageId(latestImage.id);
         setDesign(prev => prev ? { ...prev, imageId: latestImage.id } : null);
       }
@@ -281,134 +277,6 @@ const DesignLab = () => {
       toast.success("设计生成成功！");
     } catch (error) {
       console.error('生成设计失败:', error);
-      setError("生成失败，请重试");
-      toast.error("生成失败，请重试");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  // 生成真实的AI图片
-  const generateRealDesign = async (): Promise<DesignState> => {
-    const requirements = conversationManager.getRequirements();
-    try {
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('generate-sock-design', {
-        body: {
-          requirements
-        }
-      });
-      if (error) {
-        throw new Error(error.message);
-      }
-      if (!data.success) {
-        throw new Error(data.error || '图像生成失败');
-      }
-      const designName = generateDesignName(requirements);
-      return {
-        url: data.imageUrl,
-        prompt_en: data.expandedPrompt,
-        design_name: designName,
-        isEditing: false
-      };
-    } catch (error) {
-      console.error('AI图像生成失败:', error);
-      // 降级到Mock图片
-      return generateMockDesign();
-    }
-  };
-
-  // 生成Mock图片的函数，基于收集到的需求
-  const generateMockDesign = (): DesignState => {
-    const requirements = conversationManager.getRequirements();
-    const mockImages = ["https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=400&fit=crop", "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=400&fit=crop", "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=400&fit=crop", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"];
-
-    // 根据需求选择不同的mock图片
-    let imageIndex = 0;
-    if (requirements.pattern === 'geometric') imageIndex = 1;else if (requirements.pattern === 'animal') imageIndex = 2;else if (requirements.sockType === 'knee-high') imageIndex = 3;
-    const designName = generateDesignName(requirements);
-    return {
-      url: mockImages[imageIndex],
-      prompt_en: JSON.stringify(requirements),
-      design_name: designName,
-      isEditing: false
-    };
-  };
-
-  // 根据需求生成设计名称
-  const generateDesignName = (requirements: any): string => {
-    const {
-      sockType,
-      colors,
-      pattern,
-      style
-    } = requirements;
-    let name = "";
-    if (style) {
-      const styleNames = {
-        'minimalist': '简约',
-        'bold': '大胆',
-        'cute': '可爱',
-        'elegant': '优雅',
-        'trendy': '潮流'
-      };
-      name += styleNames[style as keyof typeof styleNames] || '';
-    }
-    if (pattern) {
-      const patternNames = {
-        'geometric': '几何',
-        'animal': '动物',
-        'floral': '花卉',
-        'abstract': '抽象',
-        'text': '文字',
-        'holiday': '节日',
-        'sports': '运动'
-      };
-      name += patternNames[pattern as keyof typeof patternNames] || '';
-    }
-    if (colors && colors.length > 0) {
-      name += colors[0];
-    }
-    name += '袜子设计';
-    return name || '创意袜子设计';
-  };
-
-  // 生成/修改图片功能
-  const triggerImageGeneration = async () => {
-    setIsGenerating(true);
-    setError(null);
-    try {
-      if (isEditingMode && design) {
-        // 编辑模式：生成修改后的版本
-        const modifiedDesign = await generateRealDesign();
-        const finalDesign: DesignState = {
-          ...modifiedDesign,
-          design_name: `修改版-${design.design_name}`,
-          isEditing: true
-        };
-        setDesign(finalDesign);
-        setMessages(prev => [...prev, {
-          id: Date.now(),
-          text: "完美！我已经根据您的修改建议更新了设计。您可以继续调整或者下载这个新版本。",
-          isUser: false
-        }]);
-        toast.success("设计修改成功！");
-      } else {
-        // 生成模式：创建新设计
-        const newDesign = await generateRealDesign();
-        setDesign(newDesign);
-        const collectedInfo = conversationManager.getCollectedInfo();
-        const summary = collectedInfo.length > 0 ? `根据您的需求（${collectedInfo.join('、')}），我为您生成了这个设计。` : '我已经为您生成了一个创意设计。';
-        setMessages(prev => [...prev, {
-          id: Date.now(),
-          text: `${summary}您可以下载它或者点击编辑来进一步调整。如果不满意，也可以继续和我聊天来完善需求后重新生成。`,
-          isUser: false
-        }]);
-        toast.success("设计生成成功！");
-      }
-    } catch (error) {
       setError("生成失败，请重试");
       toast.error("生成失败，请重试");
     } finally {
