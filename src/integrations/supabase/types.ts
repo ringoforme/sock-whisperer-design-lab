@@ -178,9 +178,13 @@ export type Database = {
           generation_status: string | null
           id: string
           image_url: string
+          is_downloaded: boolean | null
+          is_edited: boolean | null
+          is_vectorized: boolean | null
           prompt_id: string
           session_id: string
           thumbnail_url: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -190,9 +194,13 @@ export type Database = {
           generation_status?: string | null
           id?: string
           image_url: string
+          is_downloaded?: boolean | null
+          is_edited?: boolean | null
+          is_vectorized?: boolean | null
           prompt_id: string
           session_id: string
           thumbnail_url?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
@@ -202,9 +210,13 @@ export type Database = {
           generation_status?: string | null
           id?: string
           image_url?: string
+          is_downloaded?: boolean | null
+          is_edited?: boolean | null
+          is_vectorized?: boolean | null
           prompt_id?: string
           session_id?: string
           thumbnail_url?: string | null
+          user_id?: string
         }
         Relationships: [
           {

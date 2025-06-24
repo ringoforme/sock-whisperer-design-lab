@@ -237,12 +237,18 @@ export class SessionService {
     return data;
   }
 
-  // 记录生成的图片
+  // 记录生成的图片 - 更新以包含user_id
   async addGeneratedImage(sessionId: string, promptId: string, imageUrl: string, designName: string, status: 'success' | 'failed' | 'pending' = 'success', errorMessage?: string): Promise<GeneratedImage> {
     console.log('记录生成图片，会话ID:', sessionId, '提示词ID:', promptId);
     console.log('图片URL:', imageUrl);
     console.log('设计名称:', designName);
     console.log('状态:', status);
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('用户未登录，无法记录生成图片');
+    }
     
     const { data, error } = await supabase
       .from('generated_images')
@@ -252,7 +258,8 @@ export class SessionService {
         image_url: imageUrl,
         design_name: designName,
         generation_status: status,
-        error_message: errorMessage
+        error_message: errorMessage,
+        user_id: user.id
       })
       .select()
       .single();
@@ -263,6 +270,118 @@ export class SessionService {
     }
     console.log('生成图片记录成功:', data.id);
     return data;
+  }
+
+  // 更新图片的编辑状态
+  async updateImageEditedStatus(imageId: string, isEdited: boolean = true): Promise<void> {
+    console.log('更新图片编辑状态:', imageId, isEdited);
+    const { error } = await supabase
+      .from('generated_images')
+      .update({ is_edited: isEdited })
+      .eq('id', imageId);
+
+    if (error) {
+      console.error('更新图片编辑状态失败:', error);
+      throw error;
+    }
+    console.log('图片编辑状态更新成功');
+  }
+
+  // 更新图片的矢量化状态
+  async updateImageVectorizedStatus(imageId: string, isVectorized: boolean = true): Promise<void> {
+    console.log('更新图片矢量化状态:', imageId, isVectorized);
+    const { error } = await supabase
+      .from('generated_images')
+      .update({ is_vectorized: isVectorized })
+      .eq('id', imageId);
+
+    if (error) {
+      console.error('更新图片矢量化状态失败:', error);
+      throw error;
+    }
+    console.log('图片矢量化状态更新成功');
+  }
+
+  // 更新图片的下载状态
+  async updateImageDownloadedStatus(imageId: string, isDownloaded: boolean = true): Promise<void> {
+    console.log('更新图片下载状态:', imageId, isDownloaded);
+    const { error } = await supabase
+      .from('generated_images')
+      .update({ is_downloaded: isDownloaded })
+      .eq('id', imageId);
+
+    if (error) {
+      console.error('更新图片下载状态失败:', error);
+      throw error;
+    }
+    console.log('图片下载状态更新成功');
+  }
+
+  // 获取用户的所有设计图片（草稿库）
+  async getUserDesigns(): Promise<GeneratedImage[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('用户未登录');
+
+    const { data, error } = await supabase
+      .from('generated_images')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('generation_status', 'success')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  // 获取用户的编辑库设计
+  async getUserEditedDesigns(): Promise<GeneratedImage[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('用户未登录');
+
+    const { data, error } = await supabase
+      .from('generated_images')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_edited', true)
+      .eq('generation_status', 'success')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  // 获取用户的矢量库设计
+  async getUserVectorizedDesigns(): Promise<GeneratedImage[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('用户未登录');
+
+    const { data, error } = await supabase
+      .from('generated_images')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_vectorized', true)
+      .eq('generation_status', 'success')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  // 获取用户的下载库设计
+  async getUserDownloadedDesigns(): Promise<GeneratedImage[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('用户未登录');
+
+    const { data, error } = await supabase
+      .from('generated_images')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_downloaded', true)
+      .eq('generation_status', 'success')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   }
 
   // Generate intelligent session title based on conversation content

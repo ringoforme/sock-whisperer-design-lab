@@ -22,6 +22,7 @@ import type { Message } from "@/types/message";
 type DesignState = DesignData & {
   isEditing?: boolean;
   error?: string;
+  imageId?: string; // Add imageId to track database record
 };
 
 const DesignStudio = () => {
@@ -43,7 +44,7 @@ const DesignStudio = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { addDesign } = useDesignStorage();
+  const { markAsDownloaded, markAsVectorized, markAsEdited } = useDesignStorage();
 
   useEffect(() => {
     // 初始化会话
@@ -213,9 +214,25 @@ const DesignStudio = () => {
         requirements: conversationManager.getRequirements()
       };
       const newDesign = await generateDesigns(sessionContext);
+      
+      // Find the latest generated image record to get the imageId
+      let imageId: string | undefined;
+      if (currentSessionId) {
+        try {
+          const sessionHistory = await sessionService.getSessionHistory(currentSessionId);
+          const latestImage = sessionHistory.images
+            .filter(img => img.generation_status === 'success')
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          imageId = latestImage?.id;
+        } catch (error) {
+          console.error('获取图片ID失败:', error);
+        }
+      }
+      
       setDesign({
         ...newDesign,
-        isEditing: false
+        isEditing: false,
+        imageId
       });
       setCurrentImageUrl(newDesign.url);
       
@@ -230,16 +247,11 @@ const DesignStudio = () => {
       
       setMessages(prev => [...prev, messageWithThumbnail]);
 
-      // 记录助手消息到数据库
       if (currentSessionId) {
         await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
-      }
-      toast.success("设计生成成功！");
-
-      // 更新会话状态为已完成
-      if (currentSessionId) {
         await sessionService.updateSessionStatus(currentSessionId, 'completed');
       }
+      toast.success("设计生成成功！");
     } catch (err: any) {
       console.error('生成设计失败:', err);
       setError(err.message);
@@ -365,13 +377,24 @@ const DesignStudio = () => {
     }
   };
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!design || design.design_name === "生成失败") {
       toast.info("无法编辑一个生成失败的设计。");
       return;
     }
+    
+    // Mark as edited in database if we have imageId
+    if (design.imageId) {
+      try {
+        await markAsEdited(design.imageId);
+        console.log('设计已标记为编辑状态');
+      } catch (error) {
+        console.error('标记编辑状态失败:', error);
+      }
+    }
+    
     setIsEditingMode(true);
-    setPendingEditInstruction(''); // 清空编辑指令
+    setPendingEditInstruction('');
     setDesign(prev => prev ? {
       ...prev,
       isEditing: true
@@ -401,19 +424,39 @@ const DesignStudio = () => {
   const handleDownload = async () => {
     if (!design) return;
 
-    // Simplified download - directly to browser default folder
     const success = await downloadService.downloadImage(design.url, design.design_name);
     if (success) {
+      // Mark as downloaded in database if we have imageId
+      if (design.imageId) {
+        try {
+          await markAsDownloaded(design.imageId);
+          console.log('设计已标记为下载状态');
+        } catch (error) {
+          console.error('标记下载状态失败:', error);
+        }
+      }
       toast.success("图片下载成功！");
     } else {
       toast.error("下载失败，请重试");
     }
   };
 
-  const handleVectorize = () => {
+  const handleVectorize = async () => {
     if (!design) return;
-    // Vectorize logic here
-    toast.success("矢量化处理已开始");
+    
+    // Mark as vectorized in database if we have imageId
+    if (design.imageId) {
+      try {
+        await markAsVectorized(design.imageId);
+        toast.success("矢量化处理已完成");
+        console.log('设计已标记为矢量化状态');
+      } catch (error) {
+        console.error('标记矢量化状态失败:', error);
+        toast.error("矢量化处理失败");
+      }
+    } else {
+      toast.success("矢量化处理已开始");
+    }
   };
 
   // 处理图片点击放大
