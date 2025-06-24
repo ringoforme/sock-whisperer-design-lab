@@ -130,10 +130,21 @@ const DesignStudio = () => {
       console.log('会话历史数据:', sessionHistory);
       setCurrentSessionId(sessionId);
 
-      // Restore message history with image thumbnails - avoid duplicate welcome message
+      // Restore message history - avoid duplicate welcome message
       const sessionMessages: Message[] = [];
 
-      // Add messages with potential image thumbnails
+      // Create a map of image_id to message_id for precise matching
+      const imageToMessageMap = new Map();
+      sessionHistory.images.forEach(img => {
+        if (img.message_id) {
+          imageToMessageMap.set(img.message_id, {
+            imageUrl: img.image_url,
+            designName: img.design_name
+          });
+        }
+      });
+
+      // Add messages with proper image thumbnails only for generating messages
       sessionHistory.messages.forEach((msg, index) => {
         const message: Message = {
           id: index + 1,
@@ -141,18 +152,11 @@ const DesignStudio = () => {
           isUser: msg.role === 'user'
         };
 
-        // If this is an assistant message and there are images, add the latest one as thumbnail
-        if (msg.role === 'assistant' && sessionHistory.images && sessionHistory.images.length > 0) {
-          // Find the most recent image that would correspond to this message
-          const relatedImage = sessionHistory.images.find(img => 
-            img.created_at && msg.created_at && 
-            new Date(img.created_at) >= new Date(msg.created_at)
-          );
-          
-          if (relatedImage) {
-            message.imageUrl = relatedImage.image_url;
-            message.designName = relatedImage.design_name;
-          }
+        // Only add thumbnail if this message generated an image (has message_id match)
+        if (msg.role === 'assistant' && imageToMessageMap.has(msg.id)) {
+          const imageData = imageToMessageMap.get(msg.id);
+          message.imageUrl = imageData.imageUrl;
+          message.designName = imageData.designName;
         }
 
         sessionMessages.push(message);
@@ -261,15 +265,31 @@ const DesignStudio = () => {
       const newDesign = await generateDesigns(sessionContext);
       
       let imageId: string | undefined;
+      let messageId: string | undefined;
+      
+      // Create assistant message first to get the message ID
+      const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
       if (currentSessionId) {
+        const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
+        messageId = addedMessage.id;
+        
+        // Now get the image record and associate it with the message
         try {
           const sessionHistory = await sessionService.getSessionHistory(currentSessionId);
           const latestImage = sessionHistory.images
             .filter(img => img.generation_status === 'success')
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-          imageId = latestImage?.id;
+          
+          if (latestImage) {
+            imageId = latestImage.id;
+            // Update the image with the message_id
+            await supabase
+              .from('generated_images')
+              .update({ message_id: messageId })
+              .eq('id', imageId);
+          }
         } catch (error) {
-          console.error('获取图片ID失败:', error);
+          console.error('关联图片和消息失败:', error);
         }
       }
       
@@ -280,7 +300,6 @@ const DesignStudio = () => {
       });
       setCurrentImageUrl(newDesign.url);
       
-      const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
       const messageWithThumbnail: Message = {
         id: Date.now(),
         text: successMessage,
@@ -292,7 +311,6 @@ const DesignStudio = () => {
       setMessages(prev => [...prev, messageWithThumbnail]);
 
       if (currentSessionId) {
-        await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
         await sessionService.updateSessionStatus(currentSessionId, 'completed');
       }
       toast.success("设计生成成功！");
@@ -323,6 +341,32 @@ const DesignStudio = () => {
       
       toast.success(`设计已更新！`);
       const responseMessage = "我已根据您的指令编辑了设计。";
+      
+      let messageId: string | undefined;
+      
+      // 记录助手回复到数据库并获取消息ID
+      if (currentSessionId) {
+        const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
+        messageId = addedMessage.id;
+        
+        // Update the latest image with the message_id
+        try {
+          const sessionHistory = await sessionService.getSessionHistory(currentSessionId);
+          const latestImage = sessionHistory.images
+            .filter(img => img.generation_status === 'success')
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          
+          if (latestImage) {
+            await supabase
+              .from('generated_images')
+              .update({ message_id: messageId })
+              .eq('id', latestImage.id);
+          }
+        } catch (error) {
+          console.error('关联编辑图片和消息失败:', error);
+        }
+      }
+      
       const messageWithThumbnail: Message = {
         id: Date.now(),
         text: responseMessage,
@@ -333,11 +377,6 @@ const DesignStudio = () => {
       
       setMessages(prev => [...prev, messageWithThumbnail]);
 
-      // 记录助手回复到数据库
-      if (currentSessionId) {
-        await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
-      }
-
       // 清空待处理的编辑指令
       setPendingEditInstruction('');
     } catch (err: any) {
@@ -347,9 +386,10 @@ const DesignStudio = () => {
     }
   };
 
-  // 修改后的消息处理函数
+  // 修改后的消息处理函数 - 防止重复保存
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating || isChatLoading) return;
+    
     const userMsg: Message = {
       id: Date.now(),
       text: userMessage,
@@ -357,9 +397,12 @@ const DesignStudio = () => {
     };
     setMessages(prev => [...prev, userMsg]);
 
+    // Save user message to database once
+    let userMessageId: string | undefined;
     if (currentSessionId) {
       try {
-        await sessionService.addMessage(currentSessionId, 'user', userMessage);
+        const addedMessage = await sessionService.addMessage(currentSessionId, 'user', userMessage);
+        userMessageId = addedMessage.id;
       } catch (error) {
         console.error('记录用户消息失败:', error);
       }
@@ -374,8 +417,13 @@ const DesignStudio = () => {
         isUser: false
       }]);
 
+      // Save assistant response to database once
       if (currentSessionId) {
-        await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
+        try {
+          await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
+        } catch (error) {
+          console.error('记录助手消息失败:', error);
+        }
       }
     } else {
       setIsChatLoading(true);
@@ -385,12 +433,14 @@ const DesignStudio = () => {
         conversationManager.addToHistory('user', userMessage);
         const gptResponse = await conversationManager.generateResponse(userMessage);
         console.log('收到 GPT 回复:', gptResponse);
+        
         setMessages(prev => [...prev, {
           id: Date.now() + 1,
           text: gptResponse,
           isUser: false
         }]);
 
+        // Save assistant response to database once
         if (currentSessionId) {
           try {
             await sessionService.addMessage(currentSessionId, 'assistant', gptResponse);
@@ -407,6 +457,15 @@ const DesignStudio = () => {
           text: fallbackResponse,
           isUser: false
         }]);
+        
+        // Save fallback response to database once
+        if (currentSessionId) {
+          try {
+            await sessionService.addMessage(currentSessionId, 'assistant', fallbackResponse);
+          } catch (error) {
+            console.error('记录助手消息失败:', error);
+          }
+        }
         toast.error("AI 聊天服务暂时不可用");
       } finally {
         setIsChatLoading(false);
