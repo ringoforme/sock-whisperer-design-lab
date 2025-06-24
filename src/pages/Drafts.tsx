@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Edit, ArrowLeft, File, Plus } from 'lucide-react';
+import { Download, Edit, ArrowLeft, File, Plus, AlertCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DesignLibrary from '@/components/DesignLibrary';
 import AppHeader from '@/components/AppHeader';
@@ -15,15 +15,20 @@ import { toast } from 'sonner';
 import type { Design } from '@/types/design';
 
 const Drafts = () => {
-  const { library, loading, markAsDownloaded, markAsVectorized, markAsEdited } = useDesignStorage();
+  const { library, loading, error, markAsDownloaded, markAsVectorized, markAsEdited, refreshLibrary } = useDesignStorage();
   const navigate = useNavigate();
 
   const handleDownload = async (design: Design) => {
-    const success = await downloadService.downloadImage(design.imageUrl, design.title);
-    if (success) {
-      await markAsDownloaded(design.id);
-      toast.success("图片下载成功！");
-    } else {
+    try {
+      const success = await downloadService.downloadImage(design.imageUrl, design.title);
+      if (success) {
+        await markAsDownloaded(design.id);
+        toast.success("图片下载成功！");
+      } else {
+        toast.error("下载失败，请重试");
+      }
+    } catch (error) {
+      console.error('下载处理失败:', error);
       toast.error("下载失败，请重试");
     }
   };
@@ -88,10 +93,16 @@ const Drafts = () => {
     }
   };
 
-  if (loading) {
+  // Show authentication prompt if there's an auth-related error
+  if (error && error.includes('未登录')) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sock-purple"></div>
+        <div className="text-center space-y-4">
+          <AlertCircle className="h-12 w-12 mx-auto text-red-500" />
+          <h1 className="text-xl font-semibold">需要登录</h1>
+          <p className="text-gray-600">请先登录以查看您的设计库</p>
+          <Button onClick={() => navigate('/auth')}>前往登录</Button>
+        </div>
       </div>
     );
   }
@@ -125,11 +136,20 @@ const Drafts = () => {
       <main className="container mx-auto py-6 px-4 md:px-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">我的设计库</h1>
-          <Link to="/design">
-            <Button className="bg-sock-purple hover:bg-sock-purple/90 text-white">
-              新建设计
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={refreshLibrary}
+              disabled={loading}
+            >
+              刷新数据
             </Button>
-          </Link>
+            <Link to="/design">
+              <Button className="bg-sock-purple hover:bg-sock-purple/90 text-white">
+                新建设计
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <Tabs defaultValue="drafts" className="space-y-6">
@@ -144,10 +164,13 @@ const Drafts = () => {
             <DesignLibrary
               designs={library.drafts}
               title="草稿库"
+              loading={loading}
+              error={error}
               onEdit={handleEdit}
               onDownload={handleDownload}
               onVectorize={handleVectorize}
               onImageClick={handleImageClick}
+              onRefresh={refreshLibrary}
             />
           </TabsContent>
 
@@ -155,10 +178,13 @@ const Drafts = () => {
             <DesignLibrary
               designs={library.edited}
               title="编辑库"
+              loading={loading}
+              error={error}
               onEdit={handleEdit}
               onDownload={handleDownload}
               onVectorize={handleVectorize}
               onImageClick={handleImageClick}
+              onRefresh={refreshLibrary}
             />
           </TabsContent>
 
@@ -166,10 +192,13 @@ const Drafts = () => {
             <DesignLibrary
               designs={library.vectorized}
               title="矢量库"
+              loading={loading}
+              error={error}
               onEdit={handleEdit}
               onDownload={handleDownload}
               onVectorize={handleVectorize}
               onImageClick={handleImageClick}
+              onRefresh={refreshLibrary}
             />
           </TabsContent>
 
@@ -177,10 +206,13 @@ const Drafts = () => {
             <DesignLibrary
               designs={library.downloaded}
               title="下载库"
+              loading={loading}
+              error={error}
               onEdit={handleEdit}
               onDownload={handleDownload}
               onVectorize={handleVectorize}
               onImageClick={handleImageClick}
+              onRefresh={refreshLibrary}
             />
           </TabsContent>
         </Tabs>

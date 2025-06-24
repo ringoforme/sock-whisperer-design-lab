@@ -2,29 +2,95 @@
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, File, Edit } from 'lucide-react';
+import { Download, File, Edit, RefreshCw, AlertCircle } from 'lucide-react';
 import { Design } from '@/types/design';
 
 interface DesignLibraryProps {
   designs: Design[];
   title: string;
+  loading?: boolean;
+  error?: string | null;
   onEdit?: (design: Design) => void;
   onDownload?: (design: Design) => void;
   onVectorize?: (design: Design) => void;
   onImageClick?: (design: Design) => void;
+  onRefresh?: () => void;
 }
 
 const DesignLibrary: React.FC<DesignLibraryProps> = ({
   designs,
   title,
+  loading = false,
+  error = null,
   onEdit,
   onDownload,
   onVectorize,
-  onImageClick
+  onImageClick,
+  onRefresh
 }) => {
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-sock-purple"></div>
+        </div>
+        <div className="text-center py-8 text-gray-500">
+          <div className="animate-pulse">加载中...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          {onRefresh && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              重试
+            </Button>
+          )}
+        </div>
+        <div className="text-center py-8">
+          <div className="flex flex-col items-center gap-3 text-red-500">
+            <AlertCircle className="h-8 w-8" />
+            <p className="text-sm">加载失败: {error}</p>
+            {onRefresh && (
+              <Button variant="outline" size="sm" onClick={onRefresh}>
+                重新加载
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">{title}</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        {onRefresh && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRefresh}
+            className="flex items-center gap-2 text-gray-500 hover:text-gray-700"
+          >
+            <RefreshCw className="h-4 w-4" />
+            刷新
+          </Button>
+        )}
+      </div>
+      
       {designs.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           暂无设计
@@ -43,6 +109,10 @@ const DesignLibrary: React.FC<DesignLibraryProps> = ({
                     alt={design.title}
                     className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => onImageClick?.(design)}
+                    onError={(e) => {
+                      console.error('图片加载失败:', design.imageUrl);
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                   />
                 </div>
                 <div className="p-4 pt-2">
