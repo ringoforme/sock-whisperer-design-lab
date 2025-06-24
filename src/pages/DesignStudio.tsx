@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Download, Edit, AlertCircle, MessageCircle, Plus } from "lucide-react";
+import { Download, Edit, AlertCircle, MessageCircle, Plus, File } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import ImageModal from "@/components/ImageModal";
@@ -19,11 +19,13 @@ import { ConversationManager } from "@/services/conversationManager";
 import { supabase } from "@/integrations/supabase/client";
 import type { DesignData } from "@/types/design";
 import type { Message } from "@/types/message";
+
 type DesignState = DesignData & {
   isEditing?: boolean;
   error?: string;
   imageId?: string; // Add imageId to track database record
 };
+
 const DesignStudio = () => {
   const [messages, setMessages] = useState<Message[]>([{
     id: 1,
@@ -47,6 +49,7 @@ const DesignStudio = () => {
     markAsVectorized,
     markAsEdited
   } = useDesignStorage();
+
   useEffect(() => {
     // Priority 1: Check URL parameters first
     const params = new URLSearchParams(location.search);
@@ -66,6 +69,7 @@ const DesignStudio = () => {
       initializeSession();
     }
   }, [location]);
+
   const initializeSession = async () => {
     try {
       console.log('开始初始化会话...');
@@ -440,6 +444,7 @@ const DesignStudio = () => {
       }
     }
   };
+
   const handleEdit = async () => {
     if (!design || design.design_name === "生成失败") {
       toast.info("无法编辑一个生成失败的设计。");
@@ -466,6 +471,7 @@ const DesignStudio = () => {
       isUser: false
     }]);
   };
+
   const handleExitEdit = () => {
     setIsEditingMode(false);
     setPendingEditInstruction('');
@@ -479,6 +485,7 @@ const DesignStudio = () => {
       isUser: false
     }]);
   };
+
   const handleDownload = async () => {
     if (!design) return;
     const success = await downloadService.downloadImage(design.url, design.design_name);
@@ -496,6 +503,7 @@ const DesignStudio = () => {
       toast.error("下载失败，请重试");
     }
   };
+
   const handleVectorize = async () => {
     if (!design) return;
     if (design.imageId) {
@@ -524,7 +532,9 @@ const DesignStudio = () => {
     createNewSession();
     toast.success("已开始新的设计会话");
   };
-  return <div className="min-h-screen bg-background">
+
+  return (
+    <div className="min-h-screen bg-background">
       <header className="border-b bg-white dark:bg-gray-950">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
@@ -551,67 +561,138 @@ const DesignStudio = () => {
       <main className="container mx-auto py-6 px-4 md:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
           <div className="h-[80vh] flex flex-col border rounded-lg overflow-hidden">
-            <ChatWindow messages={messages} onSendMessage={handleSendMessage} onGenerateImage={triggerImageGeneration} onEditImage={triggerImageEdit} onThumbnailClick={handleThumbnailClick} isEditingMode={isEditingMode} selectedDesignId={design ? 0 : null} isGenerating={isGenerating || isChatLoading} hasDesign={!!design} hasPendingEditInstruction={!!pendingEditInstruction.trim()} currentImageUrl={currentImageUrl} />
+            <ChatWindow 
+              messages={messages} 
+              onSendMessage={handleSendMessage} 
+              onGenerateImage={triggerImageGeneration} 
+              onEditImage={triggerImageEdit} 
+              onThumbnailClick={handleThumbnailClick} 
+              isEditingMode={isEditingMode} 
+              selectedDesignId={design ? 0 : null} 
+              isGenerating={isGenerating || isChatLoading} 
+              hasDesign={!!design} 
+              hasPendingEditInstruction={!!pendingEditInstruction.trim()} 
+              currentImageUrl={currentImageUrl} 
+            />
           </div>
+          
           <div className="h-[80vh] overflow-y-auto">
-            {isEditingMode && design ? <EditingView design={design} onExitEdit={handleExitEdit} onDownload={handleDownload} onVectorize={handleVectorize} onImageClick={handleImageClick} /> : <div>
+            {isEditingMode && design ? (
+              <EditingView 
+                design={design} 
+                onExitEdit={handleExitEdit} 
+                onDownload={handleDownload} 
+                onVectorize={handleVectorize} 
+                onImageClick={handleImageClick} 
+              />
+            ) : (
+              <div>
                 <div className="mb-4 flex justify-between items-center">
                   <h2 className="text-lg font-semibold">设计作品</h2>
-                  {currentSessionId && <div className="text-xs text-muted-foreground">
+                  {currentSessionId && (
+                    <div className="text-xs text-muted-foreground">
                       会话ID: {currentSessionId.slice(-8)}
-                    </div>}
+                    </div>
+                  )}
                 </div>
 
-                {(isGenerating || isChatLoading) && <div className="text-center text-gray-500 py-10">
+                {(isGenerating || isChatLoading) && (
+                  <div className="text-center text-gray-500 py-10">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sock-purple mx-auto mb-4"></div>
                     {isGenerating ? "正在为您生成设计，请稍候..." : "正在思考回复，请稍候..."}
-                  </div>}
+                  </div>
+                )}
 
-                {error && <div className="text-center text-red-500 bg-red-100 p-4 rounded-lg mb-4">
+                {error && (
+                  <div className="text-center text-red-500 bg-red-100 p-4 rounded-lg mb-4">
                     {error}
-                  </div>}
+                  </div>
+                )}
 
-                {design && <div className="flex justify-center">
-                    <Card className={`w-full max-w-2xl overflow-hidden transition-all ${design.isEditing ? "ring-2 ring-sock-purple" : ""} ${design.error ? "border-red-300" : ""}`}>
-                      <CardContent className="p-0">
-                        <div className="aspect-square relative bg-gray-100">
-                          <img src={design.url} alt={design.design_name} className={`w-full h-full object-cover transition-transform ${!design.error ? "cursor-pointer hover:scale-105" : ""}`} onClick={handleImageClick} />
-                          {design.error && <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex flex-col items-center justify-center text-white p-2">
+                {design && (
+                  <div className="flex justify-center">
+                    <Card className={`w-full max-w-2xl mx-auto overflow-hidden transition-all ${design.isEditing ? "ring-2 ring-sock-purple" : ""} ${design.error ? "border-red-300" : ""}`}>
+                      <CardContent className="p-6">
+                        {/* Buttons above the image */}
+                        {!design.error && (
+                          <div className="flex justify-center space-x-4 mb-6">
+                            <Button variant="outline" onClick={handleDownload}>
+                              <Download className="h-4 w-4 mr-2" />
+                              下载
+                            </Button>
+                            <Button variant="outline" onClick={handleVectorize}>
+                              <File className="h-4 w-4 mr-2" />
+                              矢量化
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {/* Image container */}
+                        <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden">
+                          <img 
+                            src={design.url} 
+                            alt={design.design_name} 
+                            className={`w-full h-full object-cover transition-transform ${!design.error ? "cursor-pointer hover:scale-105" : ""}`} 
+                            onClick={handleImageClick} 
+                          />
+                          {design.error && (
+                            <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex flex-col items-center justify-center text-white p-2">
                               <AlertCircle className="h-8 w-8 mb-2" />
                               <span className="text-sm font-bold text-center">
                                 生成失败
                               </span>
-                            </div>}
-                          {!design.error && <div className="absolute bottom-2 right-2 flex space-x-2">
-                              <Button variant="secondary" size="icon" onClick={handleDownload} className="bg-white/90 hover:bg-white">
-                                <Download className="h-4 w-4" />
-                              </Button>
-                              <Button variant="secondary" size="icon" onClick={handleEdit} className={design.isEditing ? "bg-sock-purple text-white" : "bg-white/90 hover:bg-white"}>
+                            </div>
+                          )}
+                          {/* Floating edit button in bottom right */}
+                          {!design.error && (
+                            <div className="absolute bottom-2 right-2">
+                              <Button 
+                                variant="secondary" 
+                                size="icon" 
+                                onClick={handleEdit} 
+                                className={design.isEditing ? "bg-sock-purple text-white" : "bg-white/90 hover:bg-white"}
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                            </div>}
+                            </div>
+                          )}
                         </div>
-                        <div className="p-3">
+                        
+                        {/* Design name */}
+                        <div className="mt-3 text-center">
                           <span className={`text-sm font-medium ${design.error ? "text-red-500" : ""}`}>
                             {design.design_name}
                           </span>
                         </div>
                       </CardContent>
                     </Card>
-                  </div>}
+                  </div>
+                )}
 
-                {!design && !isGenerating && !isChatLoading && <div className="text-center text-gray-500 py-10">
+                {!design && !isGenerating && !isChatLoading && (
+                  <div className="text-center text-gray-500 py-10">
                     <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <p className="mb-2">和我聊聊您的设计想法</p>
                     <p className="text-sm">我会引导您完善需求，然后生成专属设计</p>
-                  </div>}
-              </div>}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </main>
 
       {/* 图片预览模态框 */}
-      {design && <ImageModal isOpen={isImageModalOpen} onClose={() => setIsImageModalOpen(false)} imageUrl={design.url} imageTitle={design.design_name} />}
-    </div>;
+      {design && (
+        <ImageModal
+          isOpen={isImageModalOpen}
+          onClose={() => setIsImageModalOpen(false)}
+          imageUrl={design.url}
+          imageTitle={design.design_name}
+        />
+      )}
+    </div>
+  );
 };
+
 export default DesignStudio;
