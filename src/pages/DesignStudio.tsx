@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -49,12 +48,23 @@ const DesignStudio = () => {
   const { markAsDownloaded, markAsVectorized, markAsEdited } = useDesignStorage();
 
   useEffect(() => {
-    // 初始化会话
-    initializeSession();
+    // Priority 1: Check URL parameters first
     const params = new URLSearchParams(location.search);
+    const sessionId = params.get("sessionId");
+    const imageId = params.get("imageId");
     const initialPrompt = params.get("prompt");
-    if (initialPrompt) {
-      handleSendMessage(initialPrompt);
+
+    if (sessionId) {
+      console.log('从URL参数加载会话:', sessionId, '图片ID:', imageId);
+      loadSession(sessionId, imageId);
+    } else if (initialPrompt) {
+      // Handle direct prompt generation
+      initializeSession().then(() => {
+        handleSendMessage(initialPrompt);
+      });
+    } else {
+      // Only create new session if no parameters
+      initializeSession();
     }
   }, [location]);
 
@@ -106,10 +116,10 @@ const DesignStudio = () => {
     }
   };
 
-  // 加载已存在的会话
-  const loadSession = async (sessionId: string) => {
+  // Enhanced loadSession method to handle imageId for edit mode
+  const loadSession = async (sessionId: string, imageId?: string) => {
     try {
-      console.log('开始加载会话:', sessionId);
+      console.log('开始加载会话:', sessionId, '图片ID:', imageId);
       const sessionHistory = await sessionService.getSessionHistory(sessionId);
       
       if (!sessionHistory.session) {
@@ -120,17 +130,13 @@ const DesignStudio = () => {
       console.log('会话历史数据:', sessionHistory);
       setCurrentSessionId(sessionId);
 
-      // Restore message history with image thumbnails
-      const sessionMessages: Message[] = [{
-        id: 1,
-        text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
-        isUser: false
-      }];
+      // Restore message history with image thumbnails - avoid duplicate welcome message
+      const sessionMessages: Message[] = [];
 
       // Add messages with potential image thumbnails
       sessionHistory.messages.forEach((msg, index) => {
         const message: Message = {
-          id: index + 2,
+          id: index + 1,
           text: msg.content,
           isUser: msg.role === 'user'
         };
@@ -152,6 +158,15 @@ const DesignStudio = () => {
         sessionMessages.push(message);
       });
 
+      // Add welcome message if no messages exist
+      if (sessionMessages.length === 0) {
+        sessionMessages.push({
+          id: 1,
+          text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
+          isUser: false
+        });
+      }
+
       setMessages(sessionMessages);
       console.log('恢复的消息数量:', sessionMessages.length);
 
@@ -162,25 +177,54 @@ const DesignStudio = () => {
         conversationManager.addToHistory(role, msg.content);
       });
 
-      // Restore design state with latest image
-      if (sessionHistory.latestImage) {
-        console.log('恢复最新图片:', sessionHistory.latestImage);
+      // Handle specific image selection and edit mode
+      let targetImage = sessionHistory.latestImage;
+      
+      if (imageId) {
+        // Find the specific image by ID
+        const specificImage = sessionHistory.images.find(img => img.id === imageId);
+        if (specificImage) {
+          targetImage = specificImage;
+          console.log('找到指定图片:', specificImage);
+          
+          // Automatically enter edit mode
+          setIsEditingMode(true);
+          conversationManager.setEditingMode();
+          
+          // Add edit mode message
+          const editModeMessage: Message = {
+            id: Date.now(),
+            text: "现在正在编辑模式，您可以告诉我想要做什么调整。",
+            isUser: false
+          };
+          setMessages(prev => [...prev, editModeMessage]);
+          
+          // Record edit mode message in database
+          await sessionService.addMessage(sessionId, 'assistant', "现在正在编辑模式，您可以告诉我想要做什么调整。");
+          
+          toast.success('已进入编辑模式');
+        }
+      }
+
+      // Restore design state with target image
+      if (targetImage) {
+        console.log('恢复图片:', targetImage);
         const designData = {
-          url: sessionHistory.latestImage.image_url,
+          url: targetImage.image_url,
           prompt_en: '', 
-          design_name: sessionHistory.latestImage.design_name,
-          isEditing: false
+          design_name: targetImage.design_name,
+          isEditing: !!imageId, // Set editing state if imageId provided
+          imageId: targetImage.id
         };
         setDesign(designData);
-        setCurrentImageUrl(sessionHistory.latestImage.image_url);
-        console.log('设计状态已设置为最新图片');
+        setCurrentImageUrl(targetImage.image_url);
+        console.log('设计状态已设置:', designData);
       } else {
-        console.log('没有找到最新图片，设置design为null');
+        console.log('没有找到图片，设置design为null');
         setDesign(null);
         setCurrentImageUrl('');
       }
 
-      setIsEditingMode(false);
       toast.success('会话加载成功');
     } catch (error) {
       console.error('加载会话失败:', error);
@@ -207,7 +251,6 @@ const DesignStudio = () => {
     try {
       console.log('开始生成设计，会话ID:', currentSessionId);
 
-      // 收集完整的会话上下文
       const sessionContext = {
         sessionId: currentSessionId,
         messages: messages,
@@ -217,7 +260,6 @@ const DesignStudio = () => {
       };
       const newDesign = await generateDesigns(sessionContext);
       
-      // Find the latest generated image record to get the imageId
       let imageId: string | undefined;
       if (currentSessionId) {
         try {
@@ -315,7 +357,6 @@ const DesignStudio = () => {
     };
     setMessages(prev => [...prev, userMsg]);
 
-    // 记录用户消息到数据库
     if (currentSessionId) {
       try {
         await sessionService.addMessage(currentSessionId, 'user', userMessage);
@@ -325,7 +366,6 @@ const DesignStudio = () => {
     }
 
     if (isEditingMode && design) {
-      // 在编辑模式下，只保存编辑指令，不立即执行编辑
       setPendingEditInstruction(userMessage);
       const responseMessage = "我已收到您的编辑指令。请点击编辑图片按钮来应用修改。";
       setMessages(prev => [...prev, {
@@ -334,17 +374,14 @@ const DesignStudio = () => {
         isUser: false
       }]);
 
-      // 记录助手回复到数据库
       if (currentSessionId) {
         await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
       }
     } else {
-      // 使用真正的 GPT API 进行对话
       setIsChatLoading(true);
       try {
         console.log('发送消息到 ConversationManager:', userMessage);
 
-        // 将当前消息历史传递给 ConversationManager
         conversationManager.addToHistory('user', userMessage);
         const gptResponse = await conversationManager.generateResponse(userMessage);
         console.log('收到 GPT 回复:', gptResponse);
@@ -354,7 +391,6 @@ const DesignStudio = () => {
           isUser: false
         }]);
 
-        // 记录助手回复到数据库
         if (currentSessionId) {
           try {
             await sessionService.addMessage(currentSessionId, 'assistant', gptResponse);
@@ -365,7 +401,6 @@ const DesignStudio = () => {
       } catch (error) {
         console.error('GPT 聊天失败:', error);
 
-        // 降级到简单回复
         const fallbackResponse = "抱歉，AI 服务暂时不可用。请继续描述您的设计想法，稍后我会为您生成设计。";
         setMessages(prev => [...prev, {
           id: Date.now() + 1,
@@ -385,7 +420,6 @@ const DesignStudio = () => {
       return;
     }
     
-    // Mark as edited in database if we have imageId
     if (design.imageId) {
       try {
         await markAsEdited(design.imageId);
@@ -411,7 +445,7 @@ const DesignStudio = () => {
 
   const handleExitEdit = () => {
     setIsEditingMode(false);
-    setPendingEditInstruction(''); // 清空编辑指令
+    setPendingEditInstruction('');
     setDesign(prev => prev ? {
       ...prev,
       isEditing: false
@@ -428,7 +462,6 @@ const DesignStudio = () => {
 
     const success = await downloadService.downloadImage(design.url, design.design_name);
     if (success) {
-      // Mark as downloaded in database if we have imageId
       if (design.imageId) {
         try {
           await markAsDownloaded(design.imageId);
@@ -446,7 +479,6 @@ const DesignStudio = () => {
   const handleVectorize = async () => {
     if (!design) return;
     
-    // Mark as vectorized in database if we have imageId
     if (design.imageId) {
       try {
         await markAsVectorized(design.imageId);
