@@ -632,7 +632,7 @@ const DesignStudio = () => {
                           <img 
                             src={design.url} 
                             alt={design.design_name} 
-                            className={`w-full h-full object-cover transition-transform ${!design.error ? "cursor-pointer hover:scale-105" : ""}`} 
+                            className={`w-full h-full object-contain transition-transform ${!design.error ? "cursor-pointer hover:scale-105" : ""}`} 
                             onClick={handleImageClick} 
                           />
                           {design.error && (
