@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ import { generateDesigns, editImage } from "@/services/design.service";
 import { sessionService } from "@/services/sessionService";
 import { llmService } from "@/services/llmService";
 import { ConversationManager } from "@/services/conversationManager";
+import { supabase } from "@/integrations/supabase/client";
 import type { DesignData } from "@/types/design";
 import type { Message } from "@/types/message";
 

@@ -1,100 +1,95 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Loader2 } from 'lucide-react';
+import { Download, Edit, ArrowLeft, File } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DesignLibrary from '@/components/DesignLibrary';
-import AppHeader from '@/components/AppHeader';
 import { useDesignStorage } from '@/hooks/useDesignStorage';
-import { Design } from '@/types/design';
+import { downloadService } from '@/services/downloadService';
+import { sessionService } from '@/services/sessionService';
 import { toast } from 'sonner';
+import type { Design } from '@/types/design';
 
 const Drafts = () => {
+  const { library, loading, markAsDownloaded, markAsVectorized, markAsEdited } = useDesignStorage();
   const navigate = useNavigate();
-  const { library, loading, markAsEdited, markAsVectorized, markAsDownloaded } = useDesignStorage();
 
-  const handleEdit = async (design: Design) => {
-    console.log('编辑设计:', design.id);
-    try {
-      await markAsEdited(design.id);
-      toast.success(`设计已标记为编辑状态: ${design.title}`);
-      // 跳转到编辑页面
-      navigate(`/edit/${design.id}`);
-    } catch (error) {
-      console.error('标记编辑状态失败:', error);
-      toast.error('标记编辑状态失败');
-    }
-  };
-  
   const handleDownload = async (design: Design) => {
-    console.log('下载设计:', design.id);
-    try {
-      // 创建下载链接
-      const link = document.createElement('a');
-      link.href = design.imageUrl;
-      link.download = `${design.title}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // 标记为已下载
+    const success = await downloadService.downloadImage(design.imageUrl, design.title);
+    if (success) {
       await markAsDownloaded(design.id);
-      toast.success(`已下载设计: ${design.title}`);
-    } catch (error) {
-      console.error('下载失败:', error);
-      toast.error('下载失败，请重试');
+      toast.success("图片下载成功！");
+    } else {
+      toast.error("下载失败，请重试");
     }
   };
-  
+
   const handleVectorize = async (design: Design) => {
-    console.log('矢量化设计:', design.id);
     try {
-      // 标记为已矢量化
       await markAsVectorized(design.id);
-      toast.success(`已矢量化设计: ${design.title}`);
+      toast.success("矢量化处理已完成");
     } catch (error) {
-      console.error('矢量化失败:', error);
-      toast.error('矢量化失败，请重试');
+      toast.error("矢量化处理失败");
+    }
+  };
+
+  // Updated to navigate to session with edit mode
+  const handleEdit = async (design: Design) => {
+    try {
+      console.log('处理编辑请求，设计ID:', design.id);
+      
+      // Get session info for this image
+      const sessionInfo = await sessionService.getSessionByImageId(design.id);
+      
+      if (sessionInfo) {
+        console.log('找到会话信息:', sessionInfo);
+        
+        // Mark as edited
+        await markAsEdited(design.id);
+        
+        // Navigate to design studio with session and image parameters
+        navigate(`/design?sessionId=${sessionInfo.session_id}&imageId=${design.id}`);
+        toast.success("正在跳转到编辑模式...");
+      } else {
+        console.warn('未找到对应的会话信息');
+        toast.error("无法找到对应的设计会话");
+      }
+    } catch (error) {
+      console.error('处理编辑请求失败:', error);
+      toast.error("跳转到编辑模式失败");
+    }
+  };
+
+  // Handle image click to navigate to session
+  const handleImageClick = async (design: Design) => {
+    try {
+      console.log('处理图片点击，设计ID:', design.id);
+      
+      // Get session info for this image
+      const sessionInfo = await sessionService.getSessionByImageId(design.id);
+      
+      if (sessionInfo) {
+        console.log('找到会话信息:', sessionInfo);
+        
+        // Navigate to design studio with session parameter
+        navigate(`/design?sessionId=${sessionInfo.session_id}`);
+        toast.success("正在跳转到设计会话...");
+      } else {
+        console.warn('未找到对应的会话信息');
+        toast.error("无法找到对应的设计会话");
+      }
+    } catch (error) {
+      console.error('处理图片点击失败:', error);
+      toast.error("跳转到设计会话失败");
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-white dark:bg-gray-950">
-          <div className="container mx-auto py-4 px-4 flex justify-between items-center">
-            <AppHeader title="设计库" />
-            <nav className="flex items-center space-x-4">
-              <Button 
-                onClick={() => navigate('/design')}
-                className="bg-sock-purple hover:bg-sock-dark-purple text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Design
-              </Button>
-              <Link to="/design" className="text-gray-700 hover:text-sock-purple transition-colors">
-                设计工作室
-              </Link>
-              <Link to="/profile" className="ml-4">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="https://github.com/shadcn.png" alt="用户" />
-                  <AvatarFallback>用户</AvatarFallback>
-                </Avatar>
-              </Link>
-            </nav>
-          </div>
-        </header>
-
-        <main className="container mx-auto py-8 px-4">
-          <div className="flex items-center justify-center h-64">
-            <div className="flex items-center space-x-2">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <span>加载设计库中...</span>
-            </div>
-          </div>
-        </main>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sock-purple"></div>
       </div>
     );
   }
@@ -125,82 +120,68 @@ const Drafts = () => {
         </div>
       </header>
 
-      <main className="container mx-auto py-8 px-4">
-        <div className="flex flex-col space-y-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-2">我的设计库</h2>
-            <p className="text-gray-600">管理您的所有袜子设计作品</p>
-          </div>
-
-          <Tabs defaultValue="drafts" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="drafts">
-                草稿库 ({library.drafts.length})
-              </TabsTrigger>
-              <TabsTrigger value="edited">
-                编辑库 ({library.edited.length})
-              </TabsTrigger>
-              <TabsTrigger value="vectorized">
-                矢量库 ({library.vectorized.length})
-              </TabsTrigger>
-              <TabsTrigger value="downloaded">
-                下载库 ({library.downloaded.length})
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="drafts" className="mt-6">
-              <DesignLibrary
-                designs={library.drafts}
-                title="草稿库"
-                onEdit={handleEdit}
-                onDownload={handleDownload}
-                onVectorize={handleVectorize}
-              />
-              <p className="text-sm text-gray-500 mt-4 text-center">
-                保存所有您在设计工作室中成功生成的设计稿
-              </p>
-            </TabsContent>
-            
-            <TabsContent value="edited" className="mt-6">
-              <DesignLibrary
-                designs={library.edited}
-                title="编辑库"
-                onEdit={handleEdit}
-                onDownload={handleDownload}
-                onVectorize={handleVectorize}
-              />
-              <p className="text-sm text-gray-500 mt-4 text-center">
-                保存所有您编辑过的设计作品
-              </p>
-            </TabsContent>
-            
-            <TabsContent value="vectorized" className="mt-6">
-              <DesignLibrary
-                designs={library.vectorized}
-                title="矢量库"
-                onEdit={handleEdit}
-                onDownload={handleDownload}
-                onVectorize={handleVectorize}
-              />
-              <p className="text-sm text-gray-500 mt-4 text-center">
-                保存所有矢量化处理过的设计
-              </p>
-            </TabsContent>
-            
-            <TabsContent value="downloaded" className="mt-6">
-              <DesignLibrary
-                designs={library.downloaded}
-                title="下载库"
-                onEdit={handleEdit}
-                onDownload={handleDownload}
-                onVectorize={handleVectorize}
-              />
-              <p className="text-sm text-gray-500 mt-4 text-center">
-                保存所有您下载过的设计文件
-              </p>
-            </TabsContent>
-          </Tabs>
+      <main className="container mx-auto py-6 px-4 md:px-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">我的设计库</h1>
+          <Link to="/design">
+            <Button className="bg-sock-purple hover:bg-sock-purple/90 text-white">
+              新建设计
+            </Button>
+          </Link>
         </div>
+
+        <Tabs defaultValue="drafts" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="drafts">草稿库 ({library.drafts.length})</TabsTrigger>
+            <TabsTrigger value="edited">编辑库 ({library.edited.length})</TabsTrigger>
+            <TabsTrigger value="vectorized">矢量库 ({library.vectorized.length})</TabsTrigger>
+            <TabsTrigger value="downloaded">下载库 ({library.downloaded.length})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="drafts">
+            <DesignLibrary
+              designs={library.drafts}
+              title="草稿库"
+              onEdit={handleEdit}
+              onDownload={handleDownload}
+              onVectorize={handleVectorize}
+              onImageClick={handleImageClick}
+            />
+          </TabsContent>
+
+          <TabsContent value="edited">
+            <DesignLibrary
+              designs={library.edited}
+              title="编辑库"
+              onEdit={handleEdit}
+              onDownload={handleDownload}
+              onVectorize={handleVectorize}
+              onImageClick={handleImageClick}
+            />
+          </TabsContent>
+
+          <TabsContent value="vectorized">
+            <DesignLibrary
+              designs={library.vectorized}
+              title="矢量库"
+              onEdit={handleEdit}
+              onDownload={handleDownload}
+              onVectorize={handleVectorize}
+              onImageClick={handleImageClick}
+            />
+          </TabsContent>
+
+          <TabsContent value="downloaded">
+            <DesignLibrary
+              designs={library.downloaded}
+              title="下载库"
+              onEdit={handleEdit}
+              onDownload={handleDownload}
+              onVectorize={handleVectorize}
+              onImageClick={handleImageClick}
+            />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

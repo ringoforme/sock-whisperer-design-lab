@@ -110,7 +110,7 @@ export class SessionService {
     return false;
   }
 
-  // 添加对话消息
+  // 添加对话消息 - Updated to return the message ID for image association
   async addMessage(sessionId: string, role: 'user' | 'assistant', content: string, metadata?: any): Promise<ConversationMessage> {
     console.log('添加消息到会话:', sessionId, role, content.substring(0, 50) + '...');
     
@@ -237,12 +237,13 @@ export class SessionService {
     return data;
   }
 
-  // 记录生成的图片 - 更新以包含user_id
-  async addGeneratedImage(sessionId: string, promptId: string, imageUrl: string, designName: string, status: 'success' | 'failed' | 'pending' = 'success', errorMessage?: string): Promise<GeneratedImage> {
+  // 记录生成的图片 - Updated to include message_id
+  async addGeneratedImage(sessionId: string, promptId: string, imageUrl: string, designName: string, messageId?: string, status: 'success' | 'failed' | 'pending' = 'success', errorMessage?: string): Promise<GeneratedImage> {
     console.log('记录生成图片，会话ID:', sessionId, '提示词ID:', promptId);
     console.log('图片URL:', imageUrl);
     console.log('设计名称:', designName);
     console.log('状态:', status);
+    console.log('消息ID:', messageId);
     
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -259,7 +260,8 @@ export class SessionService {
         design_name: designName,
         generation_status: status,
         error_message: errorMessage,
-        user_id: user.id
+        user_id: user.id,
+        message_id: messageId
       })
       .select()
       .single();
@@ -384,6 +386,19 @@ export class SessionService {
     return data || [];
   }
 
+  // New function to get session info by image ID for navigation
+  async getSessionByImageId(imageId: string): Promise<{session_id: string, session_title: string, message_id?: string} | null> {
+    console.log('获取图片对应的会话信息:', imageId);
+    const { data, error } = await supabase.rpc('get_session_by_image_id', { image_id: imageId });
+
+    if (error) {
+      console.error('获取会话信息失败:', error);
+      throw error;
+    }
+
+    return data && data.length > 0 ? data[0] : null;
+  }
+
   // Generate intelligent session title based on conversation content
   async generateSessionTitle(sessionId: string, userMessage: string): Promise<string> {
     try {
@@ -495,7 +510,7 @@ export class SessionService {
     console.log('会话标题更新成功:', title);
   }
 
-  // 获取会话的完整历史记录
+  // 获取会话的完整历史记录 - Updated to handle message-image associations properly
   async getSessionHistory(sessionId: string) {
     console.log('获取会话历史记录:', sessionId);
     

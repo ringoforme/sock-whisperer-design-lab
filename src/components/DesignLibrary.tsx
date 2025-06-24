@@ -11,6 +11,7 @@ interface DesignLibraryProps {
   onEdit?: (design: Design) => void;
   onDownload?: (design: Design) => void;
   onVectorize?: (design: Design) => void;
+  onImageClick?: (design: Design) => void;
 }
 
 const DesignLibrary: React.FC<DesignLibraryProps> = ({
@@ -18,7 +19,8 @@ const DesignLibrary: React.FC<DesignLibraryProps> = ({
   title,
   onEdit,
   onDownload,
-  onVectorize
+  onVectorize,
+  onImageClick
 }) => {
   return (
     <div>
@@ -39,7 +41,8 @@ const DesignLibrary: React.FC<DesignLibraryProps> = ({
                   <img 
                     src={design.imageUrl} 
                     alt={design.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => onImageClick?.(design)}
                   />
                 </div>
                 <div className="p-4 pt-2">

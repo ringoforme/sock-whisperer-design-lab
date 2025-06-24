@@ -181,6 +181,7 @@ export type Database = {
           is_downloaded: boolean | null
           is_edited: boolean | null
           is_vectorized: boolean | null
+          message_id: string | null
           prompt_id: string
           session_id: string
           thumbnail_url: string | null
@@ -197,6 +198,7 @@ export type Database = {
           is_downloaded?: boolean | null
           is_edited?: boolean | null
           is_vectorized?: boolean | null
+          message_id?: string | null
           prompt_id: string
           session_id: string
           thumbnail_url?: string | null
@@ -213,12 +215,20 @@ export type Database = {
           is_downloaded?: boolean | null
           is_edited?: boolean | null
           is_vectorized?: boolean | null
+          message_id?: string | null
           prompt_id?: string
           session_id?: string
           thumbnail_url?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "generated_images_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_messages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "generated_images_prompt_id_fkey"
             columns: ["prompt_id"]
@@ -267,7 +277,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_session_by_image_id: {
+        Args: { image_id: string }
+        Returns: {
+          session_id: string
+          session_title: string
+          message_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
