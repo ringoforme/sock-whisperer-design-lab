@@ -55,7 +55,7 @@ export async function regenerateImage(prompt: string, sessionId?: string): Promi
             expandedPrompt.id,
             designData.url,
             designData.design_name || '修改后设计',
-            designData.url ? 'success' : 'failed'
+            'success' // Use literal status value
           );
         }
         
@@ -88,7 +88,7 @@ export async function regenerateImage(prompt: string, sessionId?: string): Promi
             expandedPrompt.id,
             'https://placehold.co/1024x1024/f87171/ffffff?text=Regeneration+Failed',
             '重新生成失败',
-            'failed',
+            'failed', // Use literal status value
             error instanceof Error ? error.message : '未知错误'
           );
         }

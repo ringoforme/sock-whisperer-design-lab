@@ -1,11 +1,13 @@
+
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Edit, ArrowLeft, File } from 'lucide-react';
+import { Download, Edit, ArrowLeft, File, Plus } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DesignLibrary from '@/components/DesignLibrary';
+import AppHeader from '@/components/AppHeader';
 import { useDesignStorage } from '@/hooks/useDesignStorage';
 import { downloadService } from '@/services/downloadService';
 import { sessionService } from '@/services/sessionService';

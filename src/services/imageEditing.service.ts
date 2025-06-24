@@ -59,7 +59,7 @@ export async function editImage(originalImageUrl: string, editInstruction: strin
             expandedPrompt.id,
             designData.url,
             designData.design_name || '编辑后设计',
-            designData.url ? 'success' : 'failed'
+            'success' // Use literal status value
           );
         }
         
@@ -92,7 +92,7 @@ export async function editImage(originalImageUrl: string, editInstruction: strin
             expandedPrompt.id,
             'https://placehold.co/1024x1024/f87171/ffffff?text=Edit+Failed',
             '编辑失败',
-            'failed',
+            'failed', // Use literal status value
             error instanceof Error ? error.message : '未知错误'
           );
         }
