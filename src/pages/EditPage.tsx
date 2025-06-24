@@ -10,6 +10,7 @@ import { useDesignStorage } from '@/hooks/useDesignStorage';
 import { Design } from '@/types/design';
 import { toast } from 'sonner';
 import { downloadService } from '@/services/downloadService';
+import DesignImageDisplay from '@/components/DesignImageDisplay';
 
 const EditPage = () => {
   const { designId } = useParams<{ designId: string }>();
@@ -181,37 +182,22 @@ const EditPage = () => {
       </header>
 
       <main className="container mx-auto py-8 px-4">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle>{currentDesign.title}</CardTitle>
-            {currentDesign.originalPrompt && (
-              <p className="text-sm text-gray-600">
-                原始提示词: {currentDesign.originalPrompt}
-              </p>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="aspect-square relative mb-6">
-              <img 
-                src={currentDesign.imageUrl} 
-                alt={currentDesign.title}
-                className="w-full h-full object-cover rounded-lg shadow-lg cursor-pointer hover:scale-105 transition-transform"
-                onClick={handleImageClick}
-              />
-            </div>
-            
-            <div className="flex justify-center space-x-4">
-              <Button variant="outline" onClick={handleDownload}>
-                <Download className="h-4 w-4 mr-2" />
-                下载
-              </Button>
-              <Button variant="outline" onClick={handleVectorize}>
-                <File className="h-4 w-4 mr-2" />
-                矢量化
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <DesignImageDisplay
+          imageUrl={currentDesign.imageUrl}
+          designName={currentDesign.title}
+          showEditButton={false}
+          onImageClick={handleImageClick}
+          onDownload={handleDownload}
+          onVectorize={handleVectorize}
+        />
+        
+        {currentDesign.originalPrompt && (
+          <div className="max-w-2xl mx-auto mt-4">
+            <p className="text-sm text-gray-600 text-center">
+              原始提示词: {currentDesign.originalPrompt}
+            </p>
+          </div>
+        )}
       </main>
 
       {/* 图片预览模态框 */}

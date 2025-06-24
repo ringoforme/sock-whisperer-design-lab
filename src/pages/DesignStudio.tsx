@@ -19,6 +19,7 @@ import { ConversationManager } from "@/services/conversationManager";
 import { supabase } from "@/integrations/supabase/client";
 import type { DesignData } from "@/types/design";
 import type { Message } from "@/types/message";
+import DesignImageDisplay from "@/components/DesignImageDisplay";
 type DesignState = DesignData & {
   isEditing?: boolean;
   error?: string;
@@ -571,34 +572,16 @@ const DesignStudio = () => {
                     {error}
                   </div>}
 
-                {design && <div className="flex justify-center">
-                    <Card className={`w-full max-w-2xl overflow-hidden transition-all ${design.isEditing ? "ring-2 ring-sock-purple" : ""} ${design.error ? "border-red-300" : ""}`}>
-                      <CardContent className="p-0">
-                        <div className="aspect-square relative bg-gray-100">
-                          <img src={design.url} alt={design.design_name} className={`w-full h-full object-cover transition-transform ${!design.error ? "cursor-pointer hover:scale-105" : ""}`} onClick={handleImageClick} />
-                          {design.error && <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex flex-col items-center justify-center text-white p-2">
-                              <AlertCircle className="h-8 w-8 mb-2" />
-                              <span className="text-sm font-bold text-center">
-                                生成失败
-                              </span>
-                            </div>}
-                          {!design.error && <div className="absolute bottom-2 right-2 flex space-x-2">
-                              <Button variant="secondary" size="icon" onClick={handleDownload} className="bg-white/90 hover:bg-white">
-                                <Download className="h-4 w-4" />
-                              </Button>
-                              <Button variant="secondary" size="icon" onClick={handleEdit} className={design.isEditing ? "bg-sock-purple text-white" : "bg-white/90 hover:bg-white"}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </div>}
-                        </div>
-                        <div className="p-3">
-                          <span className={`text-sm font-medium ${design.error ? "text-red-500" : ""}`}>
-                            {design.design_name}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>}
+                {design && <DesignImageDisplay 
+                    imageUrl={design.url}
+                    designName={design.design_name}
+                    error={design.error}
+                    isEditing={design.isEditing}
+                    onImageClick={handleImageClick}
+                    onEdit={handleEdit}
+                    onDownload={handleDownload}
+                    onVectorize={handleVectorize}
+                  />}
 
                 {!design && !isGenerating && !isChatLoading && <div className="text-center text-gray-500 py-10">
                     <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
