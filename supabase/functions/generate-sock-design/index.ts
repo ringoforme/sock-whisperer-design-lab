@@ -3,7 +3,6 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 import { OpenAIService } from './openai-service.ts';
-import { StreamingOpenAIService } from './streaming-service.ts';
 import type { GenerationRequest, GenerationResponse, SessionContext } from './types.ts';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -16,10 +15,13 @@ const corsHeaders = {
 function buildUserInput(body: GenerationRequest): string {
   let userInput = '';
   
+  // 处理两种输入格式：新的 sessionContext 和旧的 requirements
   if (body.sessionContext) {
+    // 新格式：完整会话上下文
     const { sessionContext } = body;
     console.log('处理完整会话上下文:', sessionContext);
     
+    // 构建用于扩展的上下文描述
     const conversationSummary = sessionContext.messages
       .filter((m: any) => m.isUser)
       .map((m: any) => m.text)
@@ -30,6 +32,7 @@ function buildUserInput(body: GenerationRequest): string {
 收集的信息: ${JSON.stringify(sessionContext.collectedInfo)}
 对话状态: ${JSON.stringify(sessionContext.conversationState)}`;
   } else if (body.requirements) {
+    // 旧格式：简单需求
     userInput = JSON.stringify(body.requirements);
   } else {
     throw new Error('缺少必要的输入参数');
@@ -54,62 +57,30 @@ serve(async (req) => {
     }
 
     console.log('收到请求体:', JSON.stringify(body, null, 2));
-    
-    // Check if streaming is requested
-    const isStreaming = body.stream === true;
-    
-    if (isStreaming) {
-      // Handle streaming response
-      const userInput = buildUserInput(body);
-      const streamingService = new StreamingOpenAIService(openAIApiKey);
-      
-      const stream = new ReadableStream({
-        async start(controller) {
-          try {
-            for await (const event of streamingService.generateImageStream(userInput)) {
-              const eventData = `data: ${JSON.stringify(event)}\n\n`;
-              controller.enqueue(new TextEncoder().encode(eventData));
-            }
-            controller.close();
-          } catch (error) {
-            console.error('流式生成失败:', error);
-            const errorEvent = `data: ${JSON.stringify({ 
-              type: 'error', 
-              data: error.message 
-            })}\n\n`;
-            controller.enqueue(new TextEncoder().encode(errorEvent));
-            controller.close();
-          }
-        }
-      });
 
-      return new Response(stream, {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
-    } else {
-      // Handle non-streaming response (existing logic)
-      const userInput = buildUserInput(body);
-      const openAIService = new OpenAIService(openAIApiKey);
+    const userInput = buildUserInput(body);
+    console.log('处理后的用户输入:', userInput);
 
-      const expandedPrompt = await openAIService.expandPrompt(userInput);
-      const imageUrl = await openAIService.generateImage(expandedPrompt);
+    // 初始化OpenAI服务
+    const openAIService = new OpenAIService(openAIApiKey);
 
-      const response: GenerationResponse = { 
-        imageUrl,
-        expandedPrompt: expandedPrompt,
-        designName: '袜子设计',
-        success: true 
-      };
+    // 第一步：扩展提示词
+    const expandedPrompt = await openAIService.expandPrompt(userInput);
+    console.log('扩展后的提示词:', expandedPrompt);
 
-      return new Response(JSON.stringify(response), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // 第二步：直接使用扩展后的提示词生成图像
+    const imageUrl = await openAIService.generateImage(expandedPrompt);
+
+    const response: GenerationResponse = { 
+      imageUrl,
+      expandedPrompt: expandedPrompt,
+      designName: '袜子设计',
+      success: true 
+    };
+
+    return new Response(JSON.stringify(response), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   } catch (error) {
     console.error('Error in generate-sock-design function:', error);

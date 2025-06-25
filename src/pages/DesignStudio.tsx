@@ -19,8 +19,6 @@ import { ConversationManager } from "@/services/conversationManager";
 import { supabase } from "@/integrations/supabase/client";
 import type { DesignData } from "@/types/design";
 import type { Message } from "@/types/message";
-import ProgressiveImageDisplay from "@/components/ProgressiveImageDisplay";
-import { StreamingGenerationService } from "@/services/streamingGeneration.service";
 
 type DesignState = DesignData & {
   isEditing?: boolean;
@@ -44,7 +42,6 @@ const DesignStudio = () => {
   const [pendingEditInstruction, setPendingEditInstruction] = useState<string>('');
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
-  const [isStreamingGeneration, setIsStreamingGeneration] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const {
@@ -249,12 +246,9 @@ const DesignStudio = () => {
   // 生成图片功能 - 现在传递完整的会话上下文
   const triggerImageGeneration = async () => {
     setIsGenerating(true);
-    setIsStreamingGeneration(true);
     setError(null);
-    setDesign(null); // Clear previous design
-    
     try {
-      console.log('开始流式生成设计，会话ID:', currentSessionId);
+      console.log('开始生成设计，会话ID:', currentSessionId);
       const sessionContext = {
         sessionId: currentSessionId,
         messages: messages,
@@ -262,92 +256,55 @@ const DesignStudio = () => {
         collectedInfo: conversationManager.getCollectedInfo(),
         requirements: conversationManager.getRequirements()
       };
-
-      let finalImageUrl = '';
-      let expandedPrompt = '';
+      const newDesign = await generateDesigns(sessionContext);
       let imageId: string | undefined;
       let messageId: string | undefined;
 
-      // Use streaming service
-      for await (const event of StreamingGenerationService.generateDesignStream(sessionContext)) {
-        switch (event.type) {
-          case 'expanded_prompt':
-            expandedPrompt = event.data;
-            console.log('收到扩展提示词:', expandedPrompt);
-            break;
-            
-          case 'partial_image':
-            console.log(`收到部分图片 ${event.index}`);
-            // The ProgressiveImageDisplay component will handle this
-            break;
-            
-          case 'final_image':
-            finalImageUrl = `data:image/png;base64,${event.data}`;
-            console.log('收到最终图片');
-            break;
-            
-          case 'error':
-            throw new Error(event.data);
-        }
-      }
+      // Create assistant message first to get the message ID
+      const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
+      if (currentSessionId) {
+        const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
+        messageId = addedMessage.id;
 
-      if (finalImageUrl) {
-        // Create assistant message and get message ID
-        const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
-        if (currentSessionId) {
-          const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
-          messageId = addedMessage.id;
-
-          // Record the image in database
-          try {
-            const sessionHistory = await sessionService.getSessionHistory(currentSessionId);
-            const latestImage = sessionHistory.images
-              .filter(img => img.generation_status === 'success')
-              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-            
-            if (latestImage) {
-              imageId = latestImage.id;
-              await supabase.from('generated_images').update({
-                message_id: messageId
-              }).eq('id', imageId);
-            }
-          } catch (error) {
-            console.error('关联图片和消息失败:', error);
+        // Now get the image record and associate it with the message
+        try {
+          const sessionHistory = await sessionService.getSessionHistory(currentSessionId);
+          const latestImage = sessionHistory.images.filter(img => img.generation_status === 'success').sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          if (latestImage) {
+            imageId = latestImage.id;
+            // Update the image with the message_id
+            await supabase.from('generated_images').update({
+              message_id: messageId
+            }).eq('id', imageId);
           }
+        } catch (error) {
+          console.error('关联图片和消息失败:', error);
         }
-
-        const newDesign = {
-          url: finalImageUrl,
-          prompt_en: expandedPrompt,
-          design_name: '袜子设计',
-          isEditing: false,
-          imageId
-        };
-
-        setDesign(newDesign);
-        setCurrentImageUrl(finalImageUrl);
-
-        const messageWithThumbnail: Message = {
-          id: Date.now(),
-          text: successMessage,
-          isUser: false,
-          imageUrl: finalImageUrl,
-          designName: '袜子设计'
-        };
-        setMessages(prev => [...prev, messageWithThumbnail]);
-
-        if (currentSessionId) {
-          await sessionService.updateSessionStatus(currentSessionId, 'completed');
-        }
-        toast.success("设计生成成功！");
       }
+      setDesign({
+        ...newDesign,
+        isEditing: false,
+        imageId
+      });
+      setCurrentImageUrl(newDesign.url);
+      const messageWithThumbnail: Message = {
+        id: Date.now(),
+        text: successMessage,
+        isUser: false,
+        imageUrl: newDesign.url,
+        designName: newDesign.design_name
+      };
+      setMessages(prev => [...prev, messageWithThumbnail]);
+      if (currentSessionId) {
+        await sessionService.updateSessionStatus(currentSessionId, 'completed');
+      }
+      toast.success("设计生成成功！");
     } catch (err: any) {
       console.error('生成设计失败:', err);
       setError(err.message);
       toast.error(`生成失败: ${err.message}`);
     } finally {
       setIsGenerating(false);
-      setIsStreamingGeneration(false);
     }
   };
 
@@ -639,17 +596,78 @@ const DesignStudio = () => {
                   )}
                 </div>
 
-                {/* Use ProgressiveImageDisplay instead of old logic */}
-                <ProgressiveImageDisplay
-                  isGenerating={isStreamingGeneration}
-                  onDownload={handleDownload}
-                  onVectorize={handleVectorize}
-                  onEdit={handleEdit}
-                  onImageClick={handleImageClick}
-                  finalImageUrl={design?.url}
-                  designName={design?.design_name}
-                  error={design?.error || error}
-                />
+                {(isGenerating || isChatLoading) && (
+                  <div className="text-center text-gray-500 py-10">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sock-purple mx-auto mb-4"></div>
+                    {isGenerating ? "正在为您生成设计，请稍候..." : "正在思考回复，请稍候..."}
+                  </div>
+                )}
+
+                {error && (
+                  <div className="text-center text-red-500 bg-red-100 p-4 rounded-lg mb-4">
+                    {error}
+                  </div>
+                )}
+
+                {design && (
+                  <div className="flex justify-center">
+                    <Card className={`w-full max-w-2xl mx-auto overflow-hidden transition-all ${design.isEditing ? "ring-2 ring-sock-purple" : ""} ${design.error ? "border-red-300" : ""}`}>
+                      <CardContent className="p-6">
+                        {/* Buttons above the image */}
+                        {!design.error && (
+                          <div className="flex justify-end space-x-4 mb-6">
+                            <Button variant="outline" onClick={handleDownload}>
+                              <Download className="h-4 w-4 mr-2" />
+                              下载
+                            </Button>
+                            <Button variant="outline" onClick={handleVectorize}>
+                              <File className="h-4 w-4 mr-2" />
+                              矢量化
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {/* Image container */}
+                        <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden">
+                          <img 
+                            src={design.url} 
+                            alt={design.design_name} 
+                            className={`w-full h-full object-contain transition-transform ${!design.error ? "cursor-pointer hover:scale-105" : ""}`} 
+                            onClick={handleImageClick} 
+                          />
+                          {design.error && (
+                            <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex flex-col items-center justify-center text-white p-2">
+                              <AlertCircle className="h-8 w-8 mb-2" />
+                              <span className="text-sm font-bold text-center">
+                                生成失败
+                              </span>
+                            </div>
+                          )}
+                          {/* Floating edit button in bottom right */}
+                          {!design.error && (
+                            <div className="absolute bottom-2 right-2">
+                              <Button 
+                                variant="secondary" 
+                                size="icon" 
+                                onClick={handleEdit} 
+                                className={design.isEditing ? "bg-sock-purple text-white" : "bg-white/90 hover:bg-white"}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Design name */}
+                        <div className="mt-3 text-center">
+                          <span className={`text-sm font-medium ${design.error ? "text-red-500" : ""}`}>
+                            {design.design_name}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 {!design && !isGenerating && !isChatLoading && (
                   <div className="text-center text-gray-500 py-10">
