@@ -1,4 +1,3 @@
-
 // Type definitions for the sock design generation service
 export interface SessionContext {
   sessionId?: string;
@@ -9,8 +8,9 @@ export interface SessionContext {
 }
 
 export interface GenerationRequest {
-  sessionContext?: SessionContext;
   requirements?: any;
+  sessionContext?: SessionContext;
+  stream?: boolean; // Add streaming flag
 }
 
 export interface GenerationResponse {
