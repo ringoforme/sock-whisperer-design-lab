@@ -1,16 +1,17 @@
 
 import { useState, useCallback, useRef } from 'react';
-import { optimizedSessionService, OptimizedDesignLibrary } from '@/services/optimizedSessionService';
+import { optimizedSessionService } from '@/services/optimizedSessionService';
+import type { OptimizedDesignLibrary as OptimizedDesignItem } from '@/services/optimizedSessionService';
 import { cacheService } from '@/services/cacheService';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 interface OptimizedDesignLibrary {
-  all: OptimizedDesignLibrary[];
-  drafts: OptimizedDesignLibrary[];
-  edited: OptimizedDesignLibrary[];
-  vectorized: OptimizedDesignLibrary[];
-  downloaded: OptimizedDesignLibrary[];
+  all: OptimizedDesignItem[];
+  drafts: OptimizedDesignItem[];
+  edited: OptimizedDesignItem[];
+  vectorized: OptimizedDesignItem[];
+  downloaded: OptimizedDesignItem[];
 }
 
 export const useOptimizedDesignStorage = () => {
@@ -94,7 +95,7 @@ export const useOptimizedDesignStorage = () => {
   }, [user, getCacheKey]);
 
   // Get single design quickly
-  const getDesign = useCallback(async (designId: string): Promise<OptimizedDesignLibrary | null> => {
+  const getDesign = useCallback(async (designId: string): Promise<OptimizedDesignItem | null> => {
     try {
       return await optimizedSessionService.getDesignById(designId);
     } catch (error) {
@@ -111,7 +112,7 @@ export const useOptimizedDesignStorage = () => {
     try {
       // Optimistic update - update UI immediately
       setLibrary(prev => {
-        const updateDesign = (designs: OptimizedDesignLibrary[]) =>
+        const updateDesign = (designs: OptimizedDesignItem[]) =>
           designs.map(design => 
             design.id === designId 
               ? { ...design, ...updates }
