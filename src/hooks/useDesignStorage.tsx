@@ -1,10 +1,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Design, DesignLibrary } from '@/types/design';
-import { useOptimizedDesignStorage } from './useOptimizedDesignStorage';
+import { useFastDesignStorage } from './useFastDesignStorage';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Convert OptimizedDesignLibrary to Design format for backward compatibility
+// Convert FastDesignItem to Design format for backward compatibility
 const convertToDesign = (item: any): Design => ({
   id: item.id,
   imageUrl: item.image_url,
@@ -23,33 +23,26 @@ export const useDesignStorage = () => {
   });
   
   const { 
-    library: optimizedLibrary, 
+    library: fastLibrary, 
     loading, 
     error, 
-    loadDesigns: loadOptimizedDesigns,
+    loadDesigns: loadFastDesigns,
     updateDesignStatus,
-    refresh: refreshOptimized
-  } = useOptimizedDesignStorage();
+    refresh: refreshFast
+  } = useFastDesignStorage();
   
   const { user, loading: authLoading } = useAuth();
 
-  // Convert optimized library to legacy format
+  // Convert fast library to legacy format
   useEffect(() => {
     const converted = {
-      edited: optimizedLibrary.edited.map(convertToDesign),
-      drafts: optimizedLibrary.drafts.map(convertToDesign),
-      vectorized: optimizedLibrary.vectorized.map(convertToDesign),
-      downloaded: optimizedLibrary.downloaded.map(convertToDesign)
+      edited: fastLibrary.edited.map(convertToDesign),
+      drafts: fastLibrary.drafts.map(convertToDesign),
+      vectorized: fastLibrary.vectorized.map(convertToDesign),
+      downloaded: fastLibrary.downloaded.map(convertToDesign)
     };
     setLibrary(converted);
-  }, [optimizedLibrary]);
-
-  // Load designs when user changes
-  useEffect(() => {
-    if (!authLoading && user) {
-      loadOptimizedDesigns();
-    }
-  }, [user?.id, authLoading, loadOptimizedDesigns]);
+  }, [fastLibrary]);
 
   // Legacy methods for backward compatibility
   const markAsEdited = async (designId: string) => {
@@ -66,7 +59,7 @@ export const useDesignStorage = () => {
 
   const addDesign = async (design: Design, type: keyof DesignLibrary) => {
     console.log('addDesign called - refreshing data instead');
-    await refreshOptimized();
+    await refreshFast();
   };
 
   const removeDesign = async (designId: string, type: keyof DesignLibrary) => {
@@ -79,8 +72,8 @@ export const useDesignStorage = () => {
 
   const refreshLibrary = useCallback(() => {
     console.log('手动刷新设计库');
-    return refreshOptimized();
-  }, [refreshOptimized]);
+    return refreshFast();
+  }, [refreshFast]);
 
   return {
     library,

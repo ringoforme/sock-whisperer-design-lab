@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, Edit, ArrowLeft, File, Plus, AlertCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import DesignLibrary from '@/components/DesignLibrary';
+import DesignLibraryWithSkeleton from '@/components/DesignLibraryWithSkeleton';
 import AppHeader from '@/components/AppHeader';
 import { useDesignStorage } from '@/hooks/useDesignStorage';
 import { downloadService } from '@/services/downloadService';
@@ -42,21 +42,15 @@ const Drafts = () => {
     }
   };
 
-  // Updated to navigate to session with edit mode
   const handleEdit = async (design: Design) => {
     try {
       console.log('处理编辑请求，设计ID:', design.id);
       
-      // Get session info for this image
       const sessionInfo = await sessionService.getSessionByImageId(design.id);
       
       if (sessionInfo) {
         console.log('找到会话信息:', sessionInfo);
-        
-        // Mark as edited
         await markAsEdited(design.id);
-        
-        // Navigate to design studio with session and image parameters
         navigate(`/design?sessionId=${sessionInfo.session_id}&imageId=${design.id}`);
         toast.success("正在跳转到编辑模式...");
       } else {
@@ -69,18 +63,14 @@ const Drafts = () => {
     }
   };
 
-  // Handle image click to navigate to session
   const handleImageClick = async (design: Design) => {
     try {
       console.log('处理图片点击，设计ID:', design.id);
       
-      // Get session info for this image
       const sessionInfo = await sessionService.getSessionByImageId(design.id);
       
       if (sessionInfo) {
         console.log('找到会话信息:', sessionInfo);
-        
-        // Navigate to design studio with session parameter
         navigate(`/design?sessionId=${sessionInfo.session_id}`);
         toast.success("正在跳转到设计会话...");
       } else {
@@ -93,7 +83,6 @@ const Drafts = () => {
     }
   };
 
-  // Show authentication prompt if there's an auth-related error
   if (error && error.includes('未登录')) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -161,7 +150,7 @@ const Drafts = () => {
           </TabsList>
 
           <TabsContent value="drafts">
-            <DesignLibrary
+            <DesignLibraryWithSkeleton
               designs={library.drafts}
               title="草稿库"
               loading={loading}
@@ -175,7 +164,7 @@ const Drafts = () => {
           </TabsContent>
 
           <TabsContent value="edited">
-            <DesignLibrary
+            <DesignLibraryWithSkeleton
               designs={library.edited}
               title="编辑库"
               loading={loading}
@@ -189,7 +178,7 @@ const Drafts = () => {
           </TabsContent>
 
           <TabsContent value="vectorized">
-            <DesignLibrary
+            <DesignLibraryWithSkeleton
               designs={library.vectorized}
               title="矢量库"
               loading={loading}
@@ -203,7 +192,7 @@ const Drafts = () => {
           </TabsContent>
 
           <TabsContent value="downloaded">
-            <DesignLibrary
+            <DesignLibraryWithSkeleton
               designs={library.downloaded}
               title="下载库"
               loading={loading}
