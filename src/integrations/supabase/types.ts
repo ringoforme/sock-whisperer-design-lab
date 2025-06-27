@@ -42,6 +42,13 @@ export type Database = {
             referencedRelation: "design_sessions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "conversation_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_history_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       design_briefs: {
@@ -90,6 +97,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "design_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_briefs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_history_view"
             referencedColumns: ["id"]
           },
         ]
@@ -165,6 +179,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "design_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expanded_prompts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_history_view"
             referencedColumns: ["id"]
           },
         ]
@@ -243,6 +264,13 @@ export type Database = {
             referencedRelation: "design_sessions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "generated_images_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_history_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -274,7 +302,76 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      session_history_view: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          initial_idea: string | null
+          session_title: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+          user_message_count: number | null
+        }
+        Relationships: []
+      }
+      user_design_library: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          design_name: string | null
+          generation_status: string | null
+          id: string | null
+          image_url: string | null
+          is_downloaded: boolean | null
+          is_edited: boolean | null
+          is_vectorized: boolean | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category?: never
+          created_at?: string | null
+          design_name?: string | null
+          generation_status?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_downloaded?: boolean | null
+          is_edited?: boolean | null
+          is_vectorized?: boolean | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: never
+          created_at?: string | null
+          design_name?: string | null
+          generation_status?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_downloaded?: boolean | null
+          is_edited?: boolean | null
+          is_vectorized?: boolean | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_images_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "design_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_images_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_history_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_session_by_image_id: {

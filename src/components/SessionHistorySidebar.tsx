@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { MessageCircle, Plus, Search, Trash2, Clock, Menu } from "lucide-react";
-import { sessionService, DesignSession } from "@/services/sessionService";
+import { useOptimizedSessionHistory } from "@/hooks/useOptimizedSessionHistory";
+import { sessionService } from "@/services/sessionService";
 import { toast } from "sonner";
 
 interface SessionHistorySidebarProps {
@@ -20,43 +20,21 @@ const SessionHistorySidebar: React.FC<SessionHistorySidebarProps> = ({
   onSessionSelect,
   onNewSession,
 }) => {
-  const [sessions, setSessions] = useState<DesignSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const { sessions, loading, loadSessions, refresh } = useOptimizedSessionHistory();
 
   useEffect(() => {
     loadSessions();
-  }, []);
-
-  const loadSessions = async () => {
-    try {
-      const userSessions = await sessionService.getUserSessions();
-      // 过滤掉没有用户消息的会话
-      const validSessions = await Promise.all(
-        userSessions.map(async (session) => {
-          const messages = await sessionService.getSessionMessages(session.id);
-          const hasUserMessages = messages.some(msg => msg.role === 'user');
-          return hasUserMessages ? session : null;
-        })
-      );
-      setSessions(validSessions.filter(Boolean) as DesignSession[]);
-    } catch (error) {
-      console.error('加载会话失败:', error);
-      toast.error('加载会话失败');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [loadSessions]);
 
   const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
       await sessionService.deleteSession(sessionId);
-      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      refresh(); // Use optimized refresh
       toast.success('会话已删除');
       
-      // 如果删除的是当前会话，创建新会话
       if (sessionId === currentSessionId) {
         onNewSession();
       }
@@ -77,7 +55,7 @@ const SessionHistorySidebar: React.FC<SessionHistorySidebarProps> = ({
   };
 
   const filteredSessions = sessions.filter(session =>
-    session.session_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    session.session_title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     session.initial_idea.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -145,7 +123,7 @@ const SessionHistorySidebar: React.FC<SessionHistorySidebarProps> = ({
           <div className="flex-1 overflow-y-auto px-4">
             <div className="mb-2">
               <h3 className="text-sm font-medium text-gray-600 mb-2">会话历史</h3>
-              {isLoading ? (
+              {loading ? (
                 <div className="text-center text-gray-500 py-10">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-sock-purple mx-auto mb-2"></div>
                   加载中...
@@ -169,10 +147,10 @@ const SessionHistorySidebar: React.FC<SessionHistorySidebarProps> = ({
                     >
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-medium text-sm truncate flex-1 pr-2">
-                          {session.session_title}
+                          {session.session_title || session.initial_idea}
                         </h3>
                         <div className="flex items-center space-x-1">
-                          <Badge className={`text-xs ${getStatusColor(session.status)}`}>
+                          <Badge className={`text-xs ${getStatusColor(session.status || 'active')}`}>
                             {session.status === 'completed' ? '完成' : 
                              session.status === 'active' ? '活跃' : '暂停'}
                           </Badge>
