@@ -1,8 +1,5 @@
 # Sock Whisperer Design Lab 1 项目文档
 
-## 项目简介
-
-Sock Whisperer Design Lab 1 是一个集成了 AI 智能设计、图像生成和用户管理的袜子设计平台。前端采用 React + TypeScript，后端基于 Supabase Functions 和 OpenAI API，支持用户自定义袜子设计、历史记录管理、AI 智能生成与编辑等功能。
 
 ---
 
@@ -36,16 +33,6 @@ sock-whisperer-design-lab-1/
 ├── README.md                 # 项目说明文档
 └── ...                       # 其他配置文件
 ```
-
----
-
-## 主要功能
-
-- **AI 智能袜子设计**：输入创意描述，自动生成袜子设计图。
-- **设计编辑与再生成**：支持对生成的设计进行编辑和二次生成。
-- **历史记录与草稿管理**：保存用户的设计历史和草稿，便于随时回溯和修改。
-- **用户认证与权限管理**：集成 Supabase 进行用户登录、注册和权限控制。
-- **高质量图像生成**：调用 OpenAI gpt-image-1 API，输出高分辨率袜子设计图。
 
 ---
 
