@@ -116,11 +116,3 @@ supabase functions serve
    可使用 Vercel、Render 等平台，参考 `vercel.json`、`render.yaml` 配置文件。
 
 ---
-
-## 贡献与反馈
-
-欢迎提交 Issue 或 Pull Request 参与项目改进！
-
----
-
-如需英文文档或更详细的开发者文档，请告知！
