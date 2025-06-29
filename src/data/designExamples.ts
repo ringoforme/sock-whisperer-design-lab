@@ -14,9 +14,9 @@ export const designExamples: DesignExample[] = [
   {
     id: 1,
     title: "万圣节蝙蝠主题",
-    description: "神秘的黑紫色蝙蝠图案，完美的万圣节装扮",
+    description: "神秘的蝙蝠图案，完美的万圣节装扮",
     imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/1E180046-2710-4A52-BF5A.PNG",
-    prompt: "创作万圣节主题的黑色船袜，配上紫色蝙蝠图案，神秘又时尚",
+    prompt: "创作万圣节主题的黄色船袜，配上蝙蝠图案，神秘又时尚",
     tags: ["万圣节", "蝙蝠", "黑色", "紫色"],
     style: "festive"
   },
@@ -24,7 +24,7 @@ export const designExamples: DesignExample[] = [
     id: 2,
     title: "彩虹渐变运动袜",
     description: "活力四射的彩虹渐变，运动时尚的完美选择",
-    imageUrl: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=400&h=400&fit=crop",
+    imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/",
     prompt: "设计一双彩虹渐变的中筒运动袜，从脚踝到小腿呈现七彩过渡效果",
     tags: ["彩虹", "渐变", "运动", "中筒"],
     style: "sport"
@@ -33,7 +33,7 @@ export const designExamples: DesignExample[] = [
     id: 3,
     title: "简约商务条纹",
     description: "经典的黑白细条纹，商务场合的优雅选择",
-    imageUrl: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=400&h=400&fit=crop",
+    imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/",
     prompt: "创作黑白相间的细条纹商务袜，简约优雅适合正式场合",
     tags: ["条纹", "商务", "黑白", "简约"],
     style: "business"
@@ -51,7 +51,7 @@ export const designExamples: DesignExample[] = [
     id: 5,
     title: "星空夜景主题",
     description: "深蓝星空配金色星星，浪漫的夜景主题",
-    imageUrl: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=400&h=400&fit=crop",
+    imageUrl: “https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/night_stars.jpg",
     prompt: "创作深蓝色长筒袜，装饰金色星星和银色月亮，营造浪漫星空效果",
     tags: ["星空", "蓝色", "星星", "浪漫"],
     style: "casual"
@@ -60,8 +60,8 @@ export const designExamples: DesignExample[] = [
     id: 6,
     title: "几何拼接艺术",
     description: "现代几何图案拼接，艺术感十足的设计",
-    imageUrl: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=400&h=400&fit=crop",
-    prompt: "设计几何拼接图案的中筒袜，使用蓝色、橙色、白色三角形拼接",
+    imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/22FC413F-55A9-4191-BF5B-514548D6DDF1.jpg",
+    prompt: " src/image/22FC413F-55A9-4191-BF5B-514548D6DDF1.jpg",
     tags: ["几何", "拼接", "现代", "艺术"],
     style: "casual"
   }
