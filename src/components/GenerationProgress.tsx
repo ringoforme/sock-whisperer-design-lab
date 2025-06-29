@@ -48,46 +48,40 @@ const GenerationProgress: React.FC<GenerationProgressProps> = ({
     const startProgress = () => {
       interval = setInterval(() => {
         setProgress(prev => {
-          // Phase 1: 0-25% (较慢增长，5-7秒)
-          if (prev < 25) {
-            const increment = Math.random() * 1.5 + 1; // 1-2.5% 随机增量
-            const newProgress = Math.min(prev + increment, 25);
-            if (newProgress >= 20 && phase === 'analyzing') {
+          // Phase 1: 0-35% (线性增长，3-5秒)
+          if (prev < 35) {
+            const increment = Math.random() * 3 + 2; // 2-5% 随机增量
+            const newProgress = Math.min(prev + increment, 35);
+            if (newProgress >= 30 && phase === 'analyzing') {
               setPhase('generating');
             }
             return newProgress;
           }
-          // Phase 2: 25-60% (中等增长，12-15秒)
-          else if (prev < 60) {
-            const increment = Math.random() * 1.8 + 0.8; // 0.8-2.6% 随机增量
-            const newProgress = Math.min(prev + increment, 60);
-            if (newProgress >= 55 && phase === 'generating') {
+          // Phase 2: 35-70% (线性增长，8-12秒)
+          else if (prev < 70) {
+            const increment = Math.random() * 2 + 1; // 1-3% 随机增量
+            const newProgress = Math.min(prev + increment, 70);
+            if (newProgress >= 65 && phase === 'generating') {
               setPhase('finalizing');
             }
             return newProgress;
           }
-          // Phase 3: 60-85% (较慢增长，8-10秒)
-          else if (prev < 85) {
-            const increment = Math.random() * 1.2 + 0.5; // 0.5-1.7% 随机增量
-            return Math.min(prev + increment, 85);
+          // Phase 3: 70-95% (缓慢随机增长)
+          else if (prev < 95) {
+            const increment = Math.random() * 1 + 0.5; // 0.5-1.5% 缓慢增量
+            return Math.min(prev + increment, 95);
           }
-          // Phase 4: 85-98% (最慢增长，等待真实完成)
-          else if (prev < 98) {
-            const increment = Math.random() * 0.8 + 0.2; // 0.2-1.0% 缓慢增量
-            return Math.min(prev + increment, 98);
-          }
-          // 保持在98%，等待真实完成信号
+          // 保持在95%，等待真实完成信号
           return prev;
         });
-      }, 300); // 每300ms更新一次，稍微放慢节奏
+      }, 200); // 每200ms更新一次
 
-      // 文字轮换 - 降低频率
+      // 文字轮换
       textInterval = setInterval(() => {
         const messages = phaseMessages[phase];
-        const currentIndex = messages.indexOf(phaseText);
-        const nextIndex = (currentIndex + 1) % messages.length;
-        setPhaseText(messages[nextIndex]);
-      }, 4000); // 每4秒更换一次文字，降低频率
+        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+        setPhaseText(randomMessage);
+      }, 2000); // 每2秒更换一次文字
     };
 
     startProgress();
@@ -96,7 +90,7 @@ const GenerationProgress: React.FC<GenerationProgressProps> = ({
       if (interval) clearInterval(interval);
       if (textInterval) clearInterval(textInterval);
     };
-  }, [isGenerating, phase, phaseText]);
+  }, [isGenerating, phase]);
 
   // 当外部传递完成信号时，立即跳到100%
   useEffect(() => {
