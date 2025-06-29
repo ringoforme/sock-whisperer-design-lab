@@ -1,7 +1,7 @@
-
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { FileText, Book, Utensils, BarChart, Send, User, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -208,16 +208,15 @@ const Home = () => {
             
             {/* Enhanced Chat box */}
             <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-6 mb-8">
-              <input 
-                type="text" 
+              <Textarea 
                 placeholder="让Sox Lab为您创造一个..." 
-                className="w-full px-4 py-3 text-lg bg-transparent border-none focus:outline-none" 
+                className="w-full px-4 py-3 text-lg bg-transparent border-none focus:outline-none resize-none min-h-[60px] focus-visible:ring-0" 
                 value={chatInput} 
                 onChange={e => setChatInput(e.target.value)} 
                 onKeyPress={handleKeyPress} 
               />
               <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                <div>
+                <div className="flex items-center gap-2">
                   <input 
                     type="file" 
                     ref={fileInputRef} 
@@ -228,6 +227,7 @@ const Home = () => {
                   <Button variant="outline" size="sm" onClick={handleAttachClick}>
                     {selectedFile ? `${selectedFile.name.slice(0, 15)}...` : "上传"}
                   </Button>
+                  <span className="text-xs text-gray-500">按Enter发送，Shift+Enter换行</span>
                 </div>
                 <div className="flex items-center">
                   <Button variant="outline" size="sm" className="mr-2" onClick={handleCreateClick}>
