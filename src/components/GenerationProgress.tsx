@@ -81,7 +81,7 @@ const GenerationProgress: React.FC<GenerationProgressProps> = ({
         const messages = phaseMessages[phase];
         const randomMessage = messages[Math.floor(Math.random() * messages.length)];
         setPhaseText(randomMessage);
-      }, 2000); // 每2秒更换一次文字
+      }, 4000); // 每4秒更换一次文字
     };
 
     startProgress();
