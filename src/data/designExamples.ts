@@ -37,16 +37,7 @@ export const designExamples: DesignExample[] = [
     prompt: "创作黑白相间的细条纹商务袜，简约优雅适合正式场合",
     tags: ["立体派", "抽象", "人物肖像", "艺术风格", "红蓝黄"],
     style: "artistic"
-  },
-  {
-    "id": 2,
-    "title": "几何拼色人物肖像",
-    "description": "采用立体派风格绘制的多女性面孔图案，色彩鲜艳，视觉冲击力强，展现艺术与时尚的融合。",
-    "imageUrl": "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/53601751198880_.pic.jpg",
-    "prompt": "设计一款以立体派风格为灵感的中筒袜，图案为多位女性抽象面孔，使用拼色块和强烈的色彩对比，艺术感十足",
-    "tags": ["立体派", "抽象", "人物肖像", "艺术风格", "红蓝黄"],
-    "style": "artistic"
-}
+  }
 ,
   {
     id: 4,
