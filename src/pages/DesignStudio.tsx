@@ -19,6 +19,7 @@ import { ConversationManager } from "@/services/conversationManager";
 import { supabase } from "@/integrations/supabase/client";
 import type { DesignData } from "@/types/design";
 import type { Message } from "@/types/message";
+import GenerationProgress from "@/components/GenerationProgress";
 
 type DesignState = DesignData & {
   isEditing?: boolean;
@@ -596,10 +597,23 @@ const DesignStudio = () => {
                   )}
                 </div>
 
+                {/* 新的进度条组件 */}
                 {(isGenerating || isChatLoading) && (
-                  <div className="text-center text-gray-500 py-10">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sock-purple mx-auto mb-4"></div>
-                    {isGenerating ? "正在为您生成设计，请稍候..." : "正在思考回复，请稍候..."}
+                  <div className="text-center py-10">
+                    {isGenerating ? (
+                      <GenerationProgress 
+                        isGenerating={isGenerating}
+                        onComplete={() => {
+                          // 进度条完成后的回调，可以添加额外的动效
+                          console.log('进度条动画完成');
+                        }}
+                      />
+                    ) : (
+                      <div className="text-gray-500">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sock-purple mx-auto mb-4"></div>
+                        正在思考回复，请稍候...
+                      </div>
+                    )}
                   </div>
                 )}
 
