@@ -16,7 +16,7 @@ export const designExamples: DesignExample[] = [
     title: "万圣节蝙蝠主题",
     description: "神秘的蝙蝠图案，完美的万圣节装扮",
     imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/1E180046-2710-4A52-BF5A.PNG",
-    prompt: "创作万圣节主题的黄色船袜，配上蝙蝠图案，神秘又时尚",
+    prompt: "创作万圣节主题的黄色中筒袜，配上蝙蝠图案，神秘又时尚",
     tags: ["万圣节", "蝙蝠", "黑色", "紫色"],
     style: "festive"
   },
@@ -36,16 +36,16 @@ export const designExamples: DesignExample[] = [
     imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/53601751198880_.pic.jpg",
     prompt: "创作黑白相间的细条纹商务袜，简约优雅适合正式场合",
     tags: ["立体派", "抽象", "人物肖像", "艺术风格", "红蓝黄"],
-    style: "artistic"
+    style: "casual"
   }
 ,
   {
     id: 4,
     title: "可爱猫咪图案",
-    description: "萌萌的小猫咪图案，少女心满满的可爱设计",
+    description: "萌萌的小熊图案，少女心满满的可爱设计",
     imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/2025-06-27T22-15-04.png",
-    prompt: "设计粉色背景的船袜，上面有白色小猫咪图案和爱心装饰",
-    tags: ["猫咪", "粉色", "可爱", "爱心"],
+    prompt: "设计米色背景的船袜，上面有小熊图案",
+    tags: ["小熊", "棕色", "可爱", "爱心"],
     style: "casual"
   },
   {
