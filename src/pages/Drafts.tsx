@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Edit, ArrowLeft, File, Plus, AlertCircle } from 'lucide-react';
+import { Download, Edit, ArrowLeft, File, AlertCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DesignLibraryWithSkeleton from '@/components/DesignLibraryWithSkeleton';
 import AppHeader from '@/components/AppHeader';
@@ -102,13 +101,6 @@ const Drafts = () => {
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
           <AppHeader title="设计库" />
           <nav className="flex items-center space-x-4">
-            <Button 
-              onClick={() => navigate('/design')}
-              className="bg-sock-purple hover:bg-sock-dark-purple text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Design
-            </Button>
             <Link to="/design" className="text-gray-700 hover:text-sock-purple transition-colors">
               设计工作室
             </Link>
