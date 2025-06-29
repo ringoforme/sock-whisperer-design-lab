@@ -8,7 +8,7 @@ import { useOptimizedSessionHistory } from '@/hooks/useOptimizedSessionHistory';
 import { sessionService } from '@/services/sessionService';
 import { llmService } from '@/services/llmService';
 import { generateDesigns } from '@/services/imageGeneration.service';
-import { imageEditingService } from '@/services/imageEditing.service';
+import { editImage } from '@/services/imageEditing.service';
 import { ConversationManager } from '@/services/conversationManager';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,6 +32,7 @@ const DesignStudio = () => {
   // 状态管理
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [currentDesign, setCurrentDesign] = useState<DesignData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditingMode, setIsEditingMode] = useState(false);
@@ -41,11 +42,9 @@ const DesignStudio = () => {
 
   const {
     sessions,
-    selectedSessionId,
-    isLoading: sessionsLoading,
-    refreshSessions,
-    setSelectedSessionId,
-    loadSessionMessages
+    loading: sessionsLoading,
+    loadSessions,
+    refresh: refreshSessions
   } = useOptimizedSessionHistory();
 
   // 初始化会话
@@ -61,6 +60,7 @@ const DesignStudio = () => {
           console.log('示例编辑模式，创建新会话');
           const session = await sessionService.createSession(`编辑示例: ${exampleTitle}`);
           setCurrentSessionId(session.id);
+          setSelectedSessionId(session.id);
           llmService.setCurrentSession(session.id);
           
           // 设置为编辑模式
@@ -92,6 +92,7 @@ const DesignStudio = () => {
           // 正常提示词模式
           const session = await sessionService.createSession(initialPrompt);
           setCurrentSessionId(session.id);
+          setSelectedSessionId(session.id);
           llmService.setCurrentSession(session.id);
           
           const welcomeMessage = `欢迎来到Sox Lab设计工作室！我已经收到您的初始想法："${initialPrompt}"。让我们一起完善这个设计创意吧！`;
@@ -109,6 +110,7 @@ const DesignStudio = () => {
           // 空会话模式
           const session = await sessionService.createSession('开始新的袜子设计会话');
           setCurrentSessionId(session.id);
+          setSelectedSessionId(session.id);
           llmService.setCurrentSession(session.id);
           
           const welcomeMessage = `欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我：
@@ -194,9 +196,6 @@ const DesignStudio = () => {
         };
         
         setMessages(prev => [...prev, assistantMessage]);
-        
-        // 更新对话管理器状态
-        conversationManager.processUserInput(messageText);
       } else {
         throw new Error(response.error || 'AI回复失败');
       }
@@ -276,7 +275,7 @@ const DesignStudio = () => {
         throw new Error('没有找到编辑指令');
       }
 
-      const editedDesign = await imageEditingService.editImage(
+      const editedDesign = await editImage(
         currentDesign.url,
         latestUserMessage.text,
         currentSessionId
@@ -341,7 +340,7 @@ const DesignStudio = () => {
       setHasPendingEditInstruction(false);
       
       // 加载会话消息
-      const sessionMessages = await loadSessionMessages(sessionId);
+      const sessionMessages = await sessionService.getSessionMessages(sessionId);
       
       // 转换为UI消息格式
       const uiMessages: Message[] = sessionMessages.map(msg => ({
@@ -373,6 +372,10 @@ const DesignStudio = () => {
     }
   };
 
+  const handleNewSession = () => {
+    navigate('/design');
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -393,11 +396,9 @@ const DesignStudio = () => {
     <div className="min-h-screen bg-background flex">
       {/* 左侧会话历史 */}
       <SessionHistorySidebar
-        sessions={sessions}
-        selectedSessionId={selectedSessionId}
+        currentSessionId={selectedSessionId}
         onSessionSelect={handleSessionSelect}
-        isLoading={sessionsLoading}
-        onRefresh={refreshSessions}
+        onNewSession={handleNewSession}
       />
       
       {/* 主内容区 */}
@@ -421,11 +422,37 @@ const DesignStudio = () => {
         
         {/* 设计区域 */}
         <div className="w-1/2">
-          <SockDesignArea
-            currentDesign={currentDesign}
-            isGenerating={isGenerating}
-            sessionId={currentSessionId}
-          />
+          {currentDesign ? (
+            <div className="h-full flex items-center justify-center p-8">
+              <div className="max-w-md w-full">
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <h3 className="text-lg font-semibold mb-4 text-center">
+                    {currentDesign.design_name}
+                  </h3>
+                  <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                    <img 
+                      src={currentDesign.url} 
+                      alt={currentDesign.design_name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {isGenerating && (
+                    <div className="mt-4 text-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-sock-purple mx-auto"></div>
+                      <p className="text-sm text-gray-600 mt-2">处理中...</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500">
+              <div className="text-center">
+                <p className="text-lg mb-2">还没有设计图片</p>
+                <p className="text-sm">开始聊天并生成您的袜子设计</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
