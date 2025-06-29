@@ -123,16 +123,7 @@ const GenerationProgress: React.FC<GenerationProgressProps> = ({
       <Progress 
         value={progress} 
         className="h-2 bg-gray-200"
-        style={{
-          background: 'linear-gradient(90deg, #e5deff 0%, #d3e4fd 100%)'
-        }}
       />
-      
-      <style jsx>{`
-        .progress-bar {
-          background: linear-gradient(90deg, var(--sock-purple), var(--sock-dark-purple));
-        }
-      `}</style>
     </div>
   );
 };
