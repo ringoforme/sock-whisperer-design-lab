@@ -15,7 +15,7 @@ export const designExamples: DesignExample[] = [
     id: 1,
     title: "万圣节蝙蝠主题",
     description: "神秘的黑紫色蝙蝠图案，完美的万圣节装扮",
-    imageUrl: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=400&h=400&fit=crop",
+    imageUrl: "https://ringoforme.github.io/sock-whisperer-design-lab/images/",
     prompt: "创作万圣节主题的黑色船袜，配上紫色蝙蝠图案，神秘又时尚",
     tags: ["万圣节", "蝙蝠", "黑色", "紫色"],
     style: "festive"
@@ -42,7 +42,7 @@ export const designExamples: DesignExample[] = [
     id: 4,
     title: "可爱猫咪图案",
     description: "萌萌的小猫咪图案，少女心满满的可爱设计",
-    imageUrl: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=400&h=400&fit=crop",
+    imageUrl: "https://ringoforme.github.io/sock-whisperer-design-lab/src/image/2025-06-27T22-15-04.png",
     prompt: "设计粉色背景的船袜，上面有白色小猫咪图案和爱心装饰",
     tags: ["猫咪", "粉色", "可爱", "爱心"],
     style: "casual"
