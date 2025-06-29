@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import { DesignExample } from '@/data/designExamples';
 import { llmService } from '@/services/llmService';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { tempDesignService } from '@/services/tempDesignService';
 
 const Home = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -105,11 +105,16 @@ const Home = () => {
   };
 
   const handleExampleClick = (example: DesignExample) => {
-    const params = new URLSearchParams({
-      prompt: example.prompt,
-      example: example.id.toString()
+    // 创建临时设计对象
+    const tempDesign = tempDesignService.createTempDesignFromExample(example);
+    
+    // 直接跳转到编辑页面
+    navigate(`/edit/${tempDesign.id}`);
+    
+    toast({
+      title: "进入编辑模式",
+      description: `正在编辑: ${example.title}`
     });
-    navigate(`/design?${params.toString()}`);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
