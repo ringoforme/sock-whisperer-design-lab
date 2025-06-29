@@ -28,6 +28,7 @@ export const useDesignStorage = () => {
     error, 
     loadDesigns: loadFastDesigns,
     updateDesignStatus,
+    deleteDesign: deleteDesignFast,
     refresh: refreshFast
   } = useFastDesignStorage();
   
@@ -57,13 +58,18 @@ export const useDesignStorage = () => {
     await updateDesignStatus(designId, { is_downloaded: true });
   };
 
+  const deleteDesign = async (designId: string) => {
+    await deleteDesignFast(designId);
+  };
+
   const addDesign = async (design: Design, type: keyof DesignLibrary) => {
     console.log('addDesign called - refreshing data instead');
     await refreshFast();
   };
 
   const removeDesign = async (designId: string, type: keyof DesignLibrary) => {
-    console.log('removeDesign called - not implemented for database storage');
+    console.log('removeDesign called - using deleteDesign instead');
+    await deleteDesign(designId);
   };
 
   const updateDesign = async (designId: string, type: keyof DesignLibrary, updates: Partial<Design>) => {
@@ -85,6 +91,7 @@ export const useDesignStorage = () => {
     markAsEdited,
     markAsVectorized,
     markAsDownloaded,
+    deleteDesign,
     refreshLibrary
   };
 };

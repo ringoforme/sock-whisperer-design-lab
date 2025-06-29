@@ -146,6 +146,42 @@ export const useFastDesignStorage = () => {
     }
   }, [user, loadDesigns]);
 
+  // Delete design with optimistic update
+  const deleteDesign = useCallback(async (designId: string) => {
+    try {
+      // Immediate optimistic update - remove from UI
+      setLibrary(prev => {
+        const removeDesign = (designs: FastDesignItem[]) =>
+          designs.filter(design => design.id !== designId);
+
+        const newLibrary = {
+          all: removeDesign(prev.all),
+          drafts: removeDesign(prev.drafts),
+          edited: removeDesign(prev.edited),
+          vectorized: removeDesign(prev.vectorized),
+          downloaded: removeDesign(prev.downloaded)
+        };
+
+        // Update cache immediately
+        if (user) {
+          fastCache.set(`design_library_${user.id}`, newLibrary);
+        }
+
+        return newLibrary;
+      });
+
+      // Background database update
+      await fastDesignService.hideDesignFromUser(designId);
+      toast.success('设计已从您的库中移除');
+    } catch (error) {
+      console.error('删除设计失败:', error);
+      toast.error('删除失败，正在重新加载...');
+      
+      // Revert by reloading
+      loadDesigns(false);
+    }
+  }, [user, loadDesigns]);
+
   // Fast refresh
   const refresh = useCallback(() => {
     console.log('Refreshing design library');
@@ -179,6 +215,7 @@ export const useFastDesignStorage = () => {
     loadDesigns,
     getDesign,
     updateDesignStatus,
+    deleteDesign,
     refresh
   };
 };

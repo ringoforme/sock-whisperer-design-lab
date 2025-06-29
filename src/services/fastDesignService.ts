@@ -30,7 +30,7 @@ class FastDesignService {
 
     console.time('Fast Design Library Query');
     
-    // Single optimized query with only essential fields
+    // Single optimized query with only essential fields, filtering hidden designs
     const { data, error } = await supabase
       .from('generated_images')
       .select(`
@@ -45,6 +45,7 @@ class FastDesignService {
       `)
       .eq('user_id', user.id)
       .eq('generation_status', 'success')
+      .eq('is_hidden_from_user', false)
       .order('created_at', { ascending: false })
       .limit(100); // Limit to prevent overwhelming queries
 
@@ -107,6 +108,21 @@ class FastDesignService {
     }
   }
 
+  // Soft delete design from user view
+  async hideDesignFromUser(designId: string): Promise<void> {
+    console.log('Hiding design from user:', designId);
+    
+    const { error } = await supabase
+      .from('generated_images')
+      .update({ is_hidden_from_user: true })
+      .eq('id', designId);
+
+    if (error) {
+      console.error('隐藏设计失败:', error);
+      throw error;
+    }
+  }
+
   // Get single design quickly
   async getDesignById(designId: string): Promise<FastDesignItem | null> {
     const { data, error } = await supabase
@@ -123,6 +139,7 @@ class FastDesignService {
       `)
       .eq('id', designId)
       .eq('generation_status', 'success')
+      .eq('is_hidden_from_user', false)
       .maybeSingle();
 
     if (error) {

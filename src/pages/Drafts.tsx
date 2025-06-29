@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +15,7 @@ import { toast } from 'sonner';
 import type { Design } from '@/types/design';
 
 const Drafts = () => {
-  const { library, loading, error, markAsDownloaded, markAsVectorized, markAsEdited, refreshLibrary } = useDesignStorage();
+  const { library, loading, error, markAsDownloaded, markAsVectorized, markAsEdited, deleteDesign, refreshLibrary } = useDesignStorage();
   const navigate = useNavigate();
 
   const handleDownload = async (design: Design) => {
@@ -79,6 +80,15 @@ const Drafts = () => {
     } catch (error) {
       console.error('处理图片点击失败:', error);
       toast.error("跳转到设计会话失败");
+    }
+  };
+
+  const handleDelete = async (design: Design) => {
+    try {
+      await deleteDesign(design.id);
+    } catch (error) {
+      console.error('删除设计失败:', error);
+      toast.error("删除失败，请重试");
     }
   };
 
@@ -152,6 +162,7 @@ const Drafts = () => {
               onVectorize={handleVectorize}
               onImageClick={handleImageClick}
               onRefresh={refreshLibrary}
+              onDelete={handleDelete}
             />
           </TabsContent>
 
@@ -166,6 +177,7 @@ const Drafts = () => {
               onVectorize={handleVectorize}
               onImageClick={handleImageClick}
               onRefresh={refreshLibrary}
+              onDelete={handleDelete}
             />
           </TabsContent>
 
@@ -180,6 +192,7 @@ const Drafts = () => {
               onVectorize={handleVectorize}
               onImageClick={handleImageClick}
               onRefresh={refreshLibrary}
+              onDelete={handleDelete}
             />
           </TabsContent>
 
@@ -194,6 +207,7 @@ const Drafts = () => {
               onVectorize={handleVectorize}
               onImageClick={handleImageClick}
               onRefresh={refreshLibrary}
+              onDelete={handleDelete}
             />
           </TabsContent>
         </Tabs>

@@ -201,6 +201,7 @@ export type Database = {
           image_url: string
           is_downloaded: boolean | null
           is_edited: boolean | null
+          is_hidden_from_user: boolean | null
           is_vectorized: boolean | null
           message_id: string | null
           prompt_id: string
@@ -218,6 +219,7 @@ export type Database = {
           image_url: string
           is_downloaded?: boolean | null
           is_edited?: boolean | null
+          is_hidden_from_user?: boolean | null
           is_vectorized?: boolean | null
           message_id?: string | null
           prompt_id: string
@@ -235,6 +237,7 @@ export type Database = {
           image_url?: string
           is_downloaded?: boolean | null
           is_edited?: boolean | null
+          is_hidden_from_user?: boolean | null
           is_vectorized?: boolean | null
           message_id?: string | null
           prompt_id?: string

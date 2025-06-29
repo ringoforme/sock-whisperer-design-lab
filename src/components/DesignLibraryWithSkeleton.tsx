@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Download, File, Edit, RefreshCw, AlertCircle } from 'lucide-react';
+import { Download, File, Edit, RefreshCw, AlertCircle, Trash2 } from 'lucide-react';
 import { Design } from '@/types/design';
+import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface DesignLibraryWithSkeletonProps {
   designs: Design[];
@@ -16,6 +17,7 @@ interface DesignLibraryWithSkeletonProps {
   onVectorize?: (design: Design) => void;
   onImageClick?: (design: Design) => void;
   onRefresh?: () => void;
+  onDelete?: (design: Design) => void;
 }
 
 const SkeletonCard = () => (
@@ -35,6 +37,7 @@ const SkeletonCard = () => (
       <div className="flex gap-2">
         <Skeleton className="h-9 w-9" />
         <Skeleton className="h-9 w-9" />
+        <Skeleton className="h-9 w-9" />
       </div>
     </CardFooter>
   </Card>
@@ -49,8 +52,25 @@ const DesignLibraryWithSkeleton: React.FC<DesignLibraryWithSkeletonProps> = ({
   onDownload,
   onVectorize,
   onImageClick,
-  onRefresh
+  onRefresh,
+  onDelete
 }) => {
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; design: Design | null }>({
+    open: false,
+    design: null
+  });
+
+  const handleDeleteClick = (design: Design) => {
+    setDeleteDialog({ open: true, design });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteDialog.design && onDelete) {
+      onDelete(deleteDialog.design);
+    }
+    setDeleteDialog({ open: false, design: null });
+  };
+
   if (loading && designs.length === 0) {
     return (
       <div className="space-y-4">
@@ -171,12 +191,29 @@ const DesignLibraryWithSkeleton: React.FC<DesignLibraryWithSkeletonProps> = ({
                   <Button variant="ghost" size="icon" onClick={() => onVectorize?.(design)}>
                     <File className="h-4 w-4" />
                   </Button>
+                  {onDelete && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleDeleteClick(design)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardFooter>
             </Card>
           ))}
         </div>
       )}
+
+      <DeleteConfirmDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog({ open, design: null })}
+        onConfirm={handleDeleteConfirm}
+        designTitle={deleteDialog.design?.title || ''}
+      />
     </div>
   );
 };
