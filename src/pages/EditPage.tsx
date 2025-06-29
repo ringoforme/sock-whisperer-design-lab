@@ -10,7 +10,6 @@ import { useDesignStorage } from '@/hooks/useDesignStorage';
 import { Design } from '@/types/design';
 import { toast } from 'sonner';
 import { downloadService } from '@/services/downloadService';
-import { tempDesignService } from '@/services/tempDesignService';
 
 const EditPage = () => {
   const { designId } = useParams<{ designId: string }>();
@@ -20,21 +19,10 @@ const EditPage = () => {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
-  const [isTempDesign, setIsTempDesign] = useState(false);
 
   useEffect(() => {
     if (designId) {
-      // 首先检查是否是临时设计
-      if (tempDesignService.isTempDesign(designId)) {
-        const tempDesign = tempDesignService.getTempDesign(designId);
-        if (tempDesign) {
-          setCurrentDesign(tempDesign);
-          setIsTempDesign(true);
-          return;
-        }
-      }
-
-      // 从设计库中查找
+      // 从所有库中查找设计
       const allDesigns = [
         ...library.edited,
         ...library.drafts,
@@ -44,7 +32,6 @@ const EditPage = () => {
       const design = allDesigns.find(d => d.id === designId);
       if (design) {
         setCurrentDesign(design);
-        setIsTempDesign(false);
       } else {
         toast.error('设计未找到');
         navigate('/design');
@@ -93,37 +80,15 @@ const EditPage = () => {
   const handleSave = () => {
     if (!currentDesign) return;
     
-    if (isTempDesign) {
-      // 将临时设计保存到用户的设计库
-      const savedDesign = {
-        ...currentDesign,
-        id: `saved_${Date.now()}`, // 生成新的正式ID
-        type: 'edited' as const,
-        title: `编辑版 - ${currentDesign.title}`
-      };
-      
-      addDesign(savedDesign, 'edited');
-      tempDesignService.removeTempDesign(currentDesign.id);
-      
-      // 更新当前设计状态
-      setCurrentDesign(savedDesign);
-      setIsTempDesign(false);
-      
-      // 更新URL
-      navigate(`/edit/${savedDesign.id}`, { replace: true });
-      
-      toast.success('示例设计已保存到您的设计库');
-    } else {
-      // 原有的保存逻辑
-      const editedDesign = {
-        ...currentDesign,
-        type: 'edited' as const,
-        title: `编辑版 - ${currentDesign.title}`
-      };
-      
-      addDesign(editedDesign, 'edited');
-      toast.success('设计已保存到编辑库');
-    }
+    // 保存到编辑库
+    const editedDesign = {
+      ...currentDesign,
+      type: 'edited' as const,
+      title: `编辑版 - ${currentDesign.title}`
+    };
+    
+    addDesign(editedDesign, 'edited');
+    toast.success('设计已保存到编辑库');
   };
 
   const handleDownload = async () => {
@@ -192,7 +157,7 @@ const EditPage = () => {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <AppHeader title={isTempDesign ? "编辑示例设计" : "编辑设计"} />
+            <AppHeader title="编辑设计" />
           </div>
           <div className="flex space-x-2">
             <Button
@@ -209,7 +174,7 @@ const EditPage = () => {
             />
             <Button variant="outline" onClick={handleSave}>
               <Save className="h-4 w-4 mr-2" />
-              {isTempDesign ? "保存到库" : "保存"}
+              保存
             </Button>
           </div>
         </div>
@@ -218,10 +183,7 @@ const EditPage = () => {
       <main className="container mx-auto py-8 px-4">
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle>
-              {currentDesign.title}
-              {isTempDesign && <span className="text-sm text-gray-500 ml-2">(示例设计)</span>}
-            </CardTitle>
+            <CardTitle>{currentDesign.title}</CardTitle>
             {currentDesign.originalPrompt && (
               <p className="text-sm text-gray-600">
                 原始提示词: {currentDesign.originalPrompt}

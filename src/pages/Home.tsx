@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -104,21 +105,11 @@ const Home = () => {
   };
 
   const handleExampleClick = (example: DesignExample) => {
-    // 直接跳转到设计工作室，并携带示例信息
     const params = new URLSearchParams({
-      editExample: 'true',
-      exampleId: example.id.toString(),
-      exampleTitle: example.title,
-      exampleImageUrl: example.imageUrl,
-      examplePrompt: example.prompt
+      prompt: example.prompt,
+      example: example.id.toString()
     });
-    
     navigate(`/design?${params.toString()}`);
-    
-    toast({
-      title: "进入编辑模式",
-      description: `正在编辑示例: ${example.title}`
-    });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -151,7 +142,7 @@ const Home = () => {
         <div className="container mx-auto max-w-7xl flex justify-between items-center">
           <div className="flex items-center">
             <div className="bg-gradient-to-r from-orange-500 to-purple-500 w-8 h-8 rounded-md mr-2"></div>
-            <h1 className="text-2xl font-bold">Sox Lab</h1>
+            <h1 className="text-2xl font-bold">Sox Lab工作室</h1>
           </div>
           <div className="flex gap-4 items-center">
             {user ? (
@@ -268,7 +259,7 @@ const Home = () => {
 
       <footer className="py-8 px-4 text-center text-gray-500 text-sm">
         <div className="container mx-auto">
-          <p>© 2025 Sox Lab. 由Sox Lab Studio提供支持。</p>
+          <p>© 2025 Sox Lab工作室. 由Sox Lab工作室提供支持。</p>
         </div>
       </footer>
     </div>
