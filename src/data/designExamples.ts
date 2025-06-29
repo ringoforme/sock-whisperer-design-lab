@@ -42,7 +42,7 @@ export const designExamples: DesignExample[] = [
     id: 4,
     title: "可爱猫咪图案",
     description: "萌萌的小猫咪图案，少女心满满的可爱设计",
-    imageUrl: "https://ringoforme.github.io/sock-whisperer-design-lab/src/image/2025-06-27T22-15-04.png",
+    imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/2025-06-27T22-15-04.png",
     prompt: "设计粉色背景的船袜，上面有白色小猫咪图案和爱心装饰",
     tags: ["猫咪", "粉色", "可爱", "爱心"],
     style: "casual"
