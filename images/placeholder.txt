@@ -1,0 +1,45 @@
+步骤一：在仓库中新建图片文件夹
+打开你的仓库页面，点击 Add file → Create new file。
+
+在文件名输入框中，输入 images/占位文件.txt（或 images/README.md，名字随意），这样可以创建一个名为 images 的新文件夹。
+
+填写任意内容后，点击 Commit new file 提交。
+
+步骤二：上传图片到 images 文件夹
+进入刚刚创建的 images 文件夹。
+
+点击 Add file → Upload files，选择你要上传的图片文件。
+
+上传后，点击页面下方的 Commit changes 完成上传。
+
+步骤三：获取图片的访问 URL
+如果你启用了 GitHub Pages（假设使用默认的 main 分支，且根目录作为 Pages 站点），图片的访问链接格式通常为：
+
+text
+https://ringoforme.github.io/sock-whisperer-design-lab/images/your-image.png
+只需将 your-image.png 替换为你的实际图片文件名即可。
+
+如果没有启用 GitHub Pages，也可以用原始链接访问图片：
+
+text
+https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/images/your-image.png
+步骤四：在项目中引用图片
+在 HTML、Markdown 或代码中直接使用上面的 URL 作为图片的 src，例如：
+
+xml
+<img src="https://ringoforme.github.io/sock-whisperer-design-lab/images/your-image.png" alt="占位图">
+补充说明
+如果你还没有启用 GitHub Pages，可以在仓库的 Settings → Pages 中设置分支和目录，通常选择 main 分支的根目录或 /docs 目录作为站点源。
+
+推荐把图片统一放在 images 或 assets/images 文件夹，方便管理。
+
+上传图片后，刷新几分钟即可通过 URL 访问。
+
+这样，你就可以把自己的图片放到 GitHub Pages，并用 URL 在项目中随时引用了！
+
+Related
+如果这是我的项目，我应该如何管理和组织我的代码和资源
+我的GitHub仓库中包含哪些关键文件和结构设计
+如何确保我在这个项目中的代码安全性和版本控制
+这个项目的主要功能或目标是什么我可以从中学到什么
+如果我想扩展或优化这个项目，下一步应该关注哪些方面
