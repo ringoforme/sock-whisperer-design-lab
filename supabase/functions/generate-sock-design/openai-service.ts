@@ -56,7 +56,7 @@ export class OpenAIService {
         prompt: prompt,
         n: 1,
         size: '1024x1536',
-        quality: 'low'
+        quality: 'high'
       }),
     });
 
