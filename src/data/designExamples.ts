@@ -24,7 +24,7 @@ export const designExamples: DesignExample[] = [
     id: 2,
     title: "彩虹渐变运动袜",
     description: "活力四射的彩虹渐变，运动时尚的完美选择",
-    imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/",
+    imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/2025-06-27T22-15-04.png",
     prompt: "设计一双彩虹渐变的中筒运动袜，从脚踝到小腿呈现七彩过渡效果",
     tags: ["彩虹", "渐变", "运动", "中筒"],
     style: "sport"
@@ -33,7 +33,7 @@ export const designExamples: DesignExample[] = [
     id: 3,
     title: "简约商务条纹",
     description: "经典的黑白细条纹，商务场合的优雅选择",
-    imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/",
+    imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/53601751198880_.pic.jpg",
     prompt: "创作黑白相间的细条纹商务袜，简约优雅适合正式场合",
     tags: ["条纹", "商务", "黑白", "简约"],
     style: "business"
@@ -51,7 +51,7 @@ export const designExamples: DesignExample[] = [
     id: 5,
     title: "星空夜景主题",
     description: "深蓝星空配金色星星，浪漫的夜景主题",
-    imageUrl: “https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/night_stars.jpg",
+    imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/night_stars.jpg",
     prompt: "创作深蓝色长筒袜，装饰金色星星和银色月亮，营造浪漫星空效果",
     tags: ["星空", "蓝色", "星星", "浪漫"],
     style: "casual"
@@ -61,7 +61,7 @@ export const designExamples: DesignExample[] = [
     title: "几何拼接艺术",
     description: "现代几何图案拼接，艺术感十足的设计",
     imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/22FC413F-55A9-4191-BF5B-514548D6DDF1.jpg",
-    prompt: " src/image/22FC413F-55A9-4191-BF5B-514548D6DDF1.jpg",
+    prompt: "设计现代几何拼接图案的袜子，使用多种颜色和形状组合",
     tags: ["几何", "拼接", "现代", "艺术"],
     style: "casual"
   }
