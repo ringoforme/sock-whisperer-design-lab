@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,6 @@ import { DesignExample } from '@/data/designExamples';
 import { llmService } from '@/services/llmService';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDesignStorage } from '@/hooks/useDesignStorage';
 
 const Home = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -22,7 +22,6 @@ const Home = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile, signOut } = useAuth();
-  const { addDesign } = useDesignStorage();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -106,23 +105,11 @@ const Home = () => {
   };
 
   const handleExampleClick = (example: DesignExample) => {
-    // 创建一个临时设计对象用于编辑
-    const tempDesign = {
-      id: `example-${example.id}-${Date.now()}`,
-      title: example.title,
-      imageUrl: example.imageUrl,
-      originalPrompt: example.prompt,
-      createdAt: new Date().toISOString(),
-      type: 'edited' as const,
-      tags: example.tags,
-      style: example.style
-    };
-
-    // 添加到设计库的编辑库中
-    addDesign(tempDesign, 'edited');
-
-    // 跳转到编辑页面
-    navigate(`/edit/${tempDesign.id}`);
+    const params = new URLSearchParams({
+      prompt: example.prompt,
+      example: example.id.toString()
+    });
+    navigate(`/design?${params.toString()}`);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
