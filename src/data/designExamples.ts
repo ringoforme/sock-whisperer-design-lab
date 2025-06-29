@@ -22,9 +22,9 @@ export const designExamples: DesignExample[] = [
   },
   {
     id: 2,
-    title: "彩虹渐变运动袜",
+    title: "苹果彩虹渐变运动袜",
     description: "活力四射的彩虹渐变，运动时尚的完美选择",
-    imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/2025-06-27T22-15-04.png",
+    imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/rainbowApple.png",
     prompt: "设计一双彩虹渐变的中筒运动袜，从脚踝到小腿呈现七彩过渡效果",
     tags: ["彩虹", "渐变", "运动", "中筒"],
     style: "sport"
