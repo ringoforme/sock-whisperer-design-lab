@@ -11,7 +11,6 @@ import { DesignExample } from '@/data/designExamples';
 import { llmService } from '@/services/llmService';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { tempDesignService } from '@/services/tempDesignService';
 
 const Home = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -105,15 +104,20 @@ const Home = () => {
   };
 
   const handleExampleClick = (example: DesignExample) => {
-    // 创建临时设计对象
-    const tempDesign = tempDesignService.createTempDesignFromExample(example);
+    // 直接跳转到设计工作室，并携带示例信息
+    const params = new URLSearchParams({
+      editExample: 'true',
+      exampleId: example.id.toString(),
+      exampleTitle: example.title,
+      exampleImageUrl: example.imageUrl,
+      examplePrompt: example.prompt
+    });
     
-    // 直接跳转到编辑页面
-    navigate(`/edit/${tempDesign.id}`);
+    navigate(`/design?${params.toString()}`);
     
     toast({
       title: "进入编辑模式",
-      description: `正在编辑: ${example.title}`
+      description: `正在编辑示例: ${example.title}`
     });
   };
 
