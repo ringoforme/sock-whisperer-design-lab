@@ -141,7 +141,7 @@ const Home = () => {
       <header className="py-4 px-4">
         <div className="container mx-auto max-w-7xl flex justify-between items-center">
           <div className="flex items-center">
-            <div className="bg-gradient-to-r from-yellow-500 to-purple-500 w-8 h-8 rounded-md mr-2"></div>
+            <div className="bg-gradient-to-r from-orange-500 to-purple-500 w-8 h-8 rounded-md mr-2"></div>
             <h1 className="text-2xl font-bold">Sox Lab工作室</h1>
           </div>
           <div className="flex gap-4 items-center">
