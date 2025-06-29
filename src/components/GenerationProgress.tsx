@@ -12,7 +12,7 @@ const GenerationProgress: React.FC<GenerationProgressProps> = ({
   onComplete
 }) => {
   const [progress, setProgress] = useState(0);
-  const [phase, setPhase] = useState<'analyzing' | 'generating' | 'finalizing'>('analyzing');
+  const [phase, setPhase] = useState<'analyzing' | 'generating' | 'optimizing' | 'finalizing'>('analyzing');
   const [phaseText, setPhaseText] = useState('分析您的设计需求...');
 
   const phaseMessages = {
@@ -25,11 +25,17 @@ const GenerationProgress: React.FC<GenerationProgressProps> = ({
       '正在生成设计图案...',
       '创建独特的袜子设计...',
       '调配色彩和图案...',
-      '优化设计细节...'
+      '构建设计框架...'
+    ],
+    optimizing: [
+      '优化设计细节...',
+      '调整色彩平衡...',
+      '完善图案质量...',
+      '精细化处理...'
     ],
     finalizing: [
-      '完善设计细节...',
       '最后的润色处理...',
+      '质量检查中...',
       '即将完成...'
     ]
   };
@@ -48,40 +54,49 @@ const GenerationProgress: React.FC<GenerationProgressProps> = ({
     const startProgress = () => {
       interval = setInterval(() => {
         setProgress(prev => {
-          // Phase 1: 0-35% (线性增长，3-5秒)
-          if (prev < 35) {
-            const increment = Math.random() * 3 + 2; // 2-5% 随机增量
-            const newProgress = Math.min(prev + increment, 35);
-            if (newProgress >= 30 && phase === 'analyzing') {
+          // Phase 1: 0-25% (4-6秒，分析阶段)
+          if (prev < 25) {
+            const increment = Math.random() * 2 + 1.5; // 1.5-3.5% 增量
+            const newProgress = Math.min(prev + increment, 25);
+            if (newProgress >= 20 && phase === 'analyzing') {
               setPhase('generating');
             }
             return newProgress;
           }
-          // Phase 2: 35-70% (线性增长，8-12秒)
-          else if (prev < 70) {
-            const increment = Math.random() * 2 + 1; // 1-3% 随机增量
-            const newProgress = Math.min(prev + increment, 70);
-            if (newProgress >= 65 && phase === 'generating') {
+          // Phase 2: 25-60% (10-15秒，主要生成阶段)
+          else if (prev < 60) {
+            const increment = Math.random() * 1.5 + 0.8; // 0.8-2.3% 增量
+            const newProgress = Math.min(prev + increment, 60);
+            if (newProgress >= 55 && phase === 'generating') {
+              setPhase('optimizing');
+            }
+            return newProgress;
+          }
+          // Phase 3: 60-85% (17-21秒，优化阶段)
+          else if (prev < 85) {
+            const increment = Math.random() * 1 + 0.4; // 0.4-1.4% 增量
+            const newProgress = Math.min(prev + increment, 85);
+            if (newProgress >= 80 && phase === 'optimizing') {
               setPhase('finalizing');
             }
             return newProgress;
           }
-          // Phase 3: 70-95% (缓慢随机增长)
-          else if (prev < 95) {
-            const increment = Math.random() * 1 + 0.5; // 0.5-1.5% 缓慢增量
-            return Math.min(prev + increment, 95);
+          // Phase 4: 85-98% (持续缓慢增长，不卡住)
+          else if (prev < 98) {
+            const increment = Math.random() * 0.6 + 0.2; // 0.2-0.8% 缓慢增量
+            return Math.min(prev + increment, 98);
           }
-          // 保持在95%，等待真实完成信号
+          // 保持在98%，等待真实完成信号
           return prev;
         });
-      }, 200); // 每200ms更新一次
+      }, 300); // 每300ms更新一次，稍微放慢节奏
 
-      // 文字轮换
+      // 文字轮换 - 每5秒更换一次，降低频率
       textInterval = setInterval(() => {
         const messages = phaseMessages[phase];
         const randomMessage = messages[Math.floor(Math.random() * messages.length)];
         setPhaseText(randomMessage);
-      }, 4000); // 每4秒更换一次文字
+      }, 5000);
     };
 
     startProgress();
