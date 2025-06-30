@@ -244,12 +244,23 @@ const DesignStudio = () => {
     });
   };
 
-  // 生成图片功能 - 现在传递完整的会话上下文
+  // 生成图片功能 - 修复消息关联时序问题
   const triggerImageGeneration = async () => {
     setIsGenerating(true);
     setError(null);
     try {
       console.log('开始生成设计，会话ID:', currentSessionId);
+      
+      // 先创建助手消息并获取消息ID
+      const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
+      let messageId: string | undefined;
+      
+      if (currentSessionId) {
+        const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
+        messageId = addedMessage.id;
+        console.log('助手消息已创建，消息ID:', messageId);
+      }
+
       const sessionContext = {
         sessionId: currentSessionId,
         messages: messages,
@@ -257,37 +268,17 @@ const DesignStudio = () => {
         collectedInfo: conversationManager.getCollectedInfo(),
         requirements: conversationManager.getRequirements()
       };
-      const newDesign = await generateDesigns(sessionContext);
-      let imageId: string | undefined;
-      let messageId: string | undefined;
-
-      // Create assistant message first to get the message ID
-      const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
-      if (currentSessionId) {
-        const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
-        messageId = addedMessage.id;
-
-        // Now get the image record and associate it with the message
-        try {
-          const sessionHistory = await sessionService.getSessionHistory(currentSessionId);
-          const latestImage = sessionHistory.images.filter(img => img.generation_status === 'success').sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-          if (latestImage) {
-            imageId = latestImage.id;
-            // Update the image with the message_id
-            await supabase.from('generated_images').update({
-              message_id: messageId
-            }).eq('id', imageId);
-          }
-        } catch (error) {
-          console.error('关联图片和消息失败:', error);
-        }
-      }
+      
+      // 传递消息ID给生成服务
+      const newDesign = await generateDesigns(sessionContext, messageId);
+      
       setDesign({
         ...newDesign,
         isEditing: false,
-        imageId
+        imageId: undefined // 将在后续设置
       });
       setCurrentImageUrl(newDesign.url);
+      
       const messageWithThumbnail: Message = {
         id: Date.now(),
         text: successMessage,
@@ -296,6 +287,7 @@ const DesignStudio = () => {
         designName: newDesign.design_name
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
+      
       if (currentSessionId) {
         await sessionService.updateSessionStatus(currentSessionId, 'completed');
       }

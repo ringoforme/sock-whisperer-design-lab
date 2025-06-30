@@ -44,8 +44,9 @@ function buildUserInput(body: GenerationRequest): string {
   return userInput;
 }
 
-async function batchWriteToDatabase(supabase: any, sessionContext: SessionContext, expandedPrompt: string, imageUrl: string, designName: string): Promise<void> {
+async function batchWriteToDatabase(supabase: any, sessionContext: SessionContext, expandedPrompt: string, imageUrl: string, designName: string, messageId?: string): Promise<void> {
   console.log('开始批量写入数据库...');
+  console.log('关联消息ID:', messageId);
   
   try {
     // 1. 创建或更新设计简报
@@ -97,8 +98,8 @@ async function batchWriteToDatabase(supabase: any, sessionContext: SessionContex
       throw sessionError;
     }
 
-    // 4. 记录生成的图片
-    console.log('写入生成图片记录...');
+    // 4. 记录生成的图片，直接设置message_id
+    console.log('写入生成图片记录，消息ID:', messageId);
     const { data: imageRecord, error: imageError } = await supabase
       .from('generated_images')
       .insert({
@@ -107,7 +108,8 @@ async function batchWriteToDatabase(supabase: any, sessionContext: SessionContex
         image_url: imageUrl,
         design_name: designName,
         generation_status: 'success',
-        user_id: sessionData.user_id
+        user_id: sessionData.user_id,
+        message_id: messageId // 直接设置消息ID，避免后续更新操作
       })
       .select()
       .single();
@@ -116,7 +118,7 @@ async function batchWriteToDatabase(supabase: any, sessionContext: SessionContex
       console.error('写入生成图片记录失败:', imageError);
       throw imageError;
     }
-    console.log('生成图片记录写入成功:', imageRecord.id);
+    console.log('生成图片记录写入成功，图片ID:', imageRecord.id, '消息ID:', messageId);
 
     console.log('批量数据库写入完成');
   } catch (error) {
@@ -182,10 +184,10 @@ serve(async (req) => {
 
     // 第三步：批量写入数据库（在后台执行）
     if (body.sessionContext?.sessionId) {
-      console.log('开始后台数据库写入任务...');
+      console.log('开始后台数据库写入任务，消息ID:', body.messageId);
       // 使用 EdgeRuntime.waitUntil 在后台执行数据库写入
       EdgeRuntime.waitUntil(
-        batchWriteToDatabase(supabase, body.sessionContext, expandedPrompt, imageUrl, designName)
+        batchWriteToDatabase(supabase, body.sessionContext, expandedPrompt, imageUrl, designName, body.messageId)
           .catch(error => {
             console.error('后台数据库写入失败:', error);
           })
