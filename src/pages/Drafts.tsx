@@ -125,24 +125,6 @@ const Drafts = () => {
       </header>
 
       <main className="container mx-auto py-6 px-4 md:px-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">我的设计库</h1>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={refreshLibrary}
-              disabled={loading}
-            >
-              刷新数据
-            </Button>
-            <Link to="/design">
-              <Button className="bg-sock-purple hover:bg-sock-purple/90 text-white">
-                新建设计
-              </Button>
-            </Link>
-          </div>
-        </div>
-
         <Tabs defaultValue="drafts" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="drafts">草稿库 ({library.drafts.length})</TabsTrigger>
