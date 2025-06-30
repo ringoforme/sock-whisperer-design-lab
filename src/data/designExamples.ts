@@ -1,4 +1,3 @@
-
 // 优秀设计样例数据
 export interface DesignExample {
   id: number;
@@ -37,11 +36,10 @@ export const designExamples: DesignExample[] = [
     prompt: "创作黑白相间的细条纹商务袜，简约优雅适合正式场合",
     tags: ["立体派", "抽象", "人物肖像", "艺术风格", "红蓝黄"],
     style: "casual"
-  }
-,
+  },
   {
     id: 4,
-    title: "可爱猫咪图案",
+    title: "可爱小熊图案",
     description: "萌萌的小熊图案，少女心满满的可爱设计",
     imageUrl: "https://raw.githubusercontent.com/ringoforme/sock-whisperer-design-lab/main/src/image/2025-06-27T22-15-04.png",
     prompt: "设计米色背景的船袜，上面有小熊图案",
