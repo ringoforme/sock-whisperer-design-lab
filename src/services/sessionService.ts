@@ -132,12 +132,11 @@ export class SessionService {
 
     console.log('消息添加成功:', data.id);
 
-    // Generate intelligent title for first user message
     if (role === 'user') {
       const messages = await this.getSessionMessages(sessionId);
       const userMessages = messages.filter(msg => msg.role === 'user');
       
-      if (userMessages.length === 1) { // This is the first user message
+      if (userMessages.length === 1) {
         const intelligentTitle = await this.generateSessionTitle(sessionId, content);
         await this.updateSessionTitle(sessionId, intelligentTitle);
       }
@@ -404,13 +403,11 @@ export class SessionService {
     try {
       console.log('生成会话标题，用户消息:', userMessage);
       
-      // First check if we already have a custom title
       const session = await this.getSession(sessionId);
       if (session && session.session_title !== '新设计会话' && session.session_title !== userMessage.substring(0, 15)) {
         return session.session_title;
       }
 
-      // Improved title generation logic
       let title = this.extractDesignTheme(userMessage);
       console.log('提取的主题标题:', title);
       
@@ -425,16 +422,12 @@ export class SessionService {
   private extractDesignTheme(userMessage: string): string {
     const message = userMessage.toLowerCase();
     
-    // Define design patterns and themes
     const themes = {
-      // Sock types
       '长筒袜': '长筒袜设计',
       '短袜': '短袜设计', 
       '中筒袜': '中筒袜设计',
       '船袜': '船袜设计',
       '运动袜': '运动袜设计',
-      
-      // Styles and patterns
       '复古': '复古风袜子',
       '可爱': '可爱袜子设计',
       '商务': '商务袜子',
@@ -449,8 +442,6 @@ export class SessionService {
       '星空': '星空主题袜子',
       '彩虹': '彩虹袜子设计',
       '渐变': '渐变色袜子',
-      
-      // Colors
       '红色': '红色袜子设计',
       '蓝色': '蓝色袜子设计',
       '绿色': '绿色袜子设计',
@@ -459,8 +450,6 @@ export class SessionService {
       '粉色': '粉色袜子设计',
       '黑色': '黑色袜子设计',
       '白色': '白色袜子设计',
-      
-      // Occasions
       '上班': '商务袜子设计',
       '运动': '运动袜子设计',
       '日常': '日常袜子设计',
@@ -468,14 +457,12 @@ export class SessionService {
       '聚会': '聚会袜子设计'
     };
     
-    // Look for matches in the message
     for (const [keyword, theme] of Object.entries(themes)) {
       if (message.includes(keyword)) {
         return theme;
       }
     }
     
-    // If no specific theme found, try to extract key descriptive words
     const words = userMessage.split(/[，。！？、\s]+/).filter(word => 
       word.length > 0 && 
       !['请', '帮我', '设计', '一双', '一款', '想要', '袜子'].includes(word)
@@ -488,7 +475,6 @@ export class SessionService {
       }
     }
     
-    // Fallback to generic title
     return '袜子设计';
   }
 
@@ -529,7 +515,7 @@ export class SessionService {
     console.log('- 扩展提示词数量:', prompts.length);
     console.log('- 生成图片数量:', images.length);
 
-    // Find the latest successful image
+    // Find the latest successful image with improved logic
     const successfulImages = images.filter(img => img.generation_status === 'success');
     console.log('成功生成的图片数量:', successfulImages.length);
     
