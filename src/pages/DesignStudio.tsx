@@ -24,7 +24,7 @@ import GenerationProgress from "@/components/GenerationProgress";
 type DesignState = DesignData & {
   isEditing?: boolean;
   error?: string;
-  imageId?: string;
+  imageId?: string; // Add imageId to track database record
 };
 
 const DesignStudio = () => {
@@ -43,7 +43,6 @@ const DesignStudio = () => {
   const [pendingEditInstruction, setPendingEditInstruction] = useState<string>('');
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
-  const [isLoadingSession, setIsLoadingSession] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const {
@@ -58,29 +57,30 @@ const DesignStudio = () => {
     const sessionId = params.get("sessionId");
     const imageId = params.get("imageId");
     const initialPrompt = params.get("prompt");
-    
-    if (sessionId && !isLoadingSession) {
+    if (sessionId) {
       console.log('从URL参数加载会话:', sessionId, '图片ID:', imageId);
       loadSession(sessionId, imageId);
-    } else if (initialPrompt && !currentSessionId) {
+    } else if (initialPrompt) {
       // Handle direct prompt generation
       initializeSession().then(() => {
         handleSendMessage(initialPrompt);
       });
-    } else if (!currentSessionId && !sessionId) {
+    } else {
       // Only create new session if no parameters
       initializeSession();
     }
-  }, [location, isLoadingSession, currentSessionId]);
+  }, [location]);
 
   const initializeSession = async () => {
     try {
       console.log('开始初始化会话...');
+      // 创建新的设计会话
       const session = await sessionService.createSession("开始新的袜子设计会话");
       setCurrentSessionId(session.id);
       llmService.setCurrentSession(session.id);
       console.log('会话已初始化:', session.id);
 
+      // 添加系统消息到数据库
       await sessionService.addMessage(session.id, 'assistant', '欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？');
     } catch (error) {
       console.error('初始化会话失败:', error);
@@ -88,9 +88,11 @@ const DesignStudio = () => {
     }
   };
 
+  // 创建新会话
   const createNewSession = async (initialIdea?: string) => {
     try {
       if (!initialIdea) {
+        // 重置到初始状态
         setMessages([{
           id: 1,
           text: "欢迎来到Sox Lab设计工作室！我是您的专属设计助手。让我们开始创造属于您的独特袜子设计吧！请告诉我您想要什么样的袜子？",
@@ -101,6 +103,7 @@ const DesignStudio = () => {
         setCurrentSessionId(null);
         setCurrentImageUrl('');
         conversationManager.reset();
+        // 重新初始化会话
         await initializeSession();
         return;
       }
@@ -115,100 +118,48 @@ const DesignStudio = () => {
     }
   };
 
-  // Helper function to deduplicate messages
-  const deduplicateMessages = (messages: any[]) => {
-    const seen = new Set();
-    return messages.filter(msg => {
-      // Create a unique key based on content, role, and approximate timestamp
-      const key = `${msg.role}-${msg.content.substring(0, 50)}-${Math.floor(new Date(msg.created_at).getTime() / 60000)}`;
-      if (seen.has(key)) {
-        console.log('去重消息:', msg.content.substring(0, 50));
-        return false;
-      }
-      seen.add(key);
-      return true;
-    });
-  };
-
-  // Helper function to match images with messages more intelligently
-  const matchImagesWithMessages = (messages: any[], images: any[]) => {
-    // Sort images by creation time
-    const sortedImages = images
-      .filter(img => img.generation_status === 'success')
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
-    return messages.map((msg, index) => {
-      const message: Message = {
-        id: index + 1,
-        text: msg.content,
-        isUser: msg.role === 'user'
-      };
-
-      // For assistant messages, check if there's a matching image
-      if (msg.role === 'assistant') {
-        // Method 1: Direct message_id match
-        let matchedImage = sortedImages.find(img => img.message_id === msg.id);
-        
-        // Method 2: If no direct match, try to match by content patterns and timing
-        if (!matchedImage) {
-          const isGenerationMessage = msg.content.includes('生成') || 
-                                    msg.content.includes('设计') || 
-                                    msg.content.includes('太棒了') ||
-                                    msg.content.includes('根据您的想法');
-          
-          if (isGenerationMessage) {
-            // Find the closest image created after this message
-            const msgTime = new Date(msg.created_at).getTime();
-            matchedImage = sortedImages.find(img => {
-              const imgTime = new Date(img.created_at).getTime();
-              return imgTime >= msgTime && imgTime - msgTime < 5 * 60 * 1000; // Within 5 minutes
-            });
-          }
-        }
-
-        // Method 3: For edit-related messages, find the most recent image
-        if (!matchedImage && (msg.content.includes('编辑') || msg.content.includes('修改') || msg.content.includes('调整'))) {
-          const msgTime = new Date(msg.created_at).getTime();
-          matchedImage = sortedImages.reverse().find(img => {
-            const imgTime = new Date(img.created_at).getTime();
-            return imgTime >= msgTime;
-          });
-          sortedImages.reverse(); // Restore original order
-        }
-
-        if (matchedImage) {
-          message.imageUrl = matchedImage.image_url;
-          message.designName = matchedImage.design_name;
-          console.log('为消息匹配图片:', msg.content.substring(0, 30), '->', matchedImage.design_name);
-        }
-      }
-
-      return message;
-    });
-  };
-
+  // Enhanced loadSession method to handle imageId for edit mode
   const loadSession = async (sessionId: string, imageId?: string) => {
-    if (isLoadingSession) return;
-    
     try {
-      setIsLoadingSession(true);
       console.log('开始加载会话:', sessionId, '图片ID:', imageId);
       const sessionHistory = await sessionService.getSessionHistory(sessionId);
-      
       if (!sessionHistory.session) {
         toast.error('会话不存在');
         return;
       }
-      
       console.log('会话历史数据:', sessionHistory);
       setCurrentSessionId(sessionId);
 
-      // Deduplicate messages first
-      const uniqueMessages = deduplicateMessages(sessionHistory.messages);
-      console.log('去重后消息数量:', uniqueMessages.length, '原始数量:', sessionHistory.messages.length);
+      // Restore message history - avoid duplicate welcome message
+      const sessionMessages: Message[] = [];
 
-      // Match images with messages using improved logic
-      const sessionMessages = matchImagesWithMessages(uniqueMessages, sessionHistory.images);
+      // Create a map of image_id to message_id for precise matching
+      const imageToMessageMap = new Map();
+      sessionHistory.images.forEach(img => {
+        if (img.message_id) {
+          imageToMessageMap.set(img.message_id, {
+            imageUrl: img.image_url,
+            designName: img.design_name
+          });
+        }
+      });
+
+      // Add messages with proper image thumbnails only for generating messages
+      sessionHistory.messages.forEach((msg, index) => {
+        const message: Message = {
+          id: index + 1,
+          text: msg.content,
+          isUser: msg.role === 'user'
+        };
+
+        // Only add thumbnail if this message generated an image (has message_id match)
+        if (msg.role === 'assistant' && imageToMessageMap.has(msg.id)) {
+          const imageData = imageToMessageMap.get(msg.id);
+          message.imageUrl = imageData.imageUrl;
+          message.designName = imageData.designName;
+        }
+        sessionMessages.push(message);
+      });
 
       // Add welcome message if no messages exist
       if (sessionMessages.length === 0) {
@@ -218,13 +169,12 @@ const DesignStudio = () => {
           isUser: false
         });
       }
-
       setMessages(sessionMessages);
       console.log('恢复的消息数量:', sessionMessages.length);
 
       // Restore conversation manager state
       conversationManager.reset();
-      uniqueMessages.forEach(msg => {
+      sessionHistory.messages.forEach(msg => {
         const role = msg.role as 'user' | 'assistant';
         conversationManager.addToHistory(role, msg.content);
       });
@@ -232,14 +182,17 @@ const DesignStudio = () => {
       // Handle specific image selection and edit mode
       let targetImage = sessionHistory.latestImage;
       if (imageId) {
+        // Find the specific image by ID
         const specificImage = sessionHistory.images.find(img => img.id === imageId);
         if (specificImage) {
           targetImage = specificImage;
           console.log('找到指定图片:', specificImage);
 
+          // Automatically enter edit mode
           setIsEditingMode(true);
           conversationManager.setEditingMode();
 
+          // Add edit mode message
           const editModeMessage: Message = {
             id: Date.now(),
             text: "现在正在编辑模式，您可以告诉我想要做什么调整。",
@@ -247,6 +200,7 @@ const DesignStudio = () => {
           };
           setMessages(prev => [...prev, editModeMessage]);
 
+          // Record edit mode message in database
           await sessionService.addMessage(sessionId, 'assistant', "现在正在编辑模式，您可以告诉我想要做什么调整。");
           toast.success('已进入编辑模式');
         }
@@ -260,6 +214,7 @@ const DesignStudio = () => {
           prompt_en: '',
           design_name: targetImage.design_name,
           isEditing: !!imageId,
+          // Set editing state if imageId provided
           imageId: targetImage.id
         };
         setDesign(designData);
@@ -270,16 +225,14 @@ const DesignStudio = () => {
         setDesign(null);
         setCurrentImageUrl('');
       }
-      
       toast.success('会话加载成功');
     } catch (error) {
       console.error('加载会话失败:', error);
       toast.error('加载会话失败');
-    } finally {
-      setIsLoadingSession(false);
     }
   };
 
+  // 处理缩略图点击
   const handleThumbnailClick = (imageUrl: string, designName?: string) => {
     console.log('缩略图被点击:', imageUrl, designName);
     setCurrentImageUrl(imageUrl);
@@ -291,6 +244,7 @@ const DesignStudio = () => {
     });
   };
 
+  // 生成图片功能 - 现在传递完整的会话上下文
   const triggerImageGeneration = async () => {
     setIsGenerating(true);
     setError(null);
@@ -307,16 +261,19 @@ const DesignStudio = () => {
       let imageId: string | undefined;
       let messageId: string | undefined;
 
+      // Create assistant message first to get the message ID
       const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
       if (currentSessionId) {
         const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
         messageId = addedMessage.id;
 
+        // Now get the image record and associate it with the message
         try {
           const sessionHistory = await sessionService.getSessionHistory(currentSessionId);
           const latestImage = sessionHistory.images.filter(img => img.generation_status === 'success').sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
           if (latestImage) {
             imageId = latestImage.id;
+            // Update the image with the message_id
             await supabase.from('generated_images').update({
               message_id: messageId
             }).eq('id', imageId);
@@ -352,6 +309,7 @@ const DesignStudio = () => {
     }
   };
 
+  // 触发图像编辑功能
   const triggerImageEdit = async () => {
     if (!design || !pendingEditInstruction.trim()) {
       toast.error("请先输入编辑指令");
@@ -359,6 +317,7 @@ const DesignStudio = () => {
     }
     setIsGenerating(true);
     try {
+      // 使用 editImage 函数编辑图片
       const editedDesign = await editImage(design.url, pendingEditInstruction, currentSessionId);
       setDesign({
         ...editedDesign,
@@ -369,10 +328,12 @@ const DesignStudio = () => {
       const responseMessage = "我已根据您的指令编辑了设计。";
       let messageId: string | undefined;
 
+      // 记录助手回复到数据库并获取消息ID
       if (currentSessionId) {
         const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
         messageId = addedMessage.id;
 
+        // Update the latest image with the message_id
         try {
           const sessionHistory = await sessionService.getSessionHistory(currentSessionId);
           const latestImage = sessionHistory.images.filter(img => img.generation_status === 'success').sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
@@ -394,6 +355,7 @@ const DesignStudio = () => {
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
 
+      // 清空待处理的编辑指令
       setPendingEditInstruction('');
     } catch (err: any) {
       toast.error(`编辑失败: ${err.message}`);
@@ -402,6 +364,7 @@ const DesignStudio = () => {
     }
   };
 
+  // 修改后的消息处理函数 - 防止重复保存
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating || isChatLoading) return;
     const userMsg: Message = {
@@ -411,6 +374,7 @@ const DesignStudio = () => {
     };
     setMessages(prev => [...prev, userMsg]);
 
+    // Save user message to database once
     let userMessageId: string | undefined;
     if (currentSessionId) {
       try {
@@ -429,6 +393,7 @@ const DesignStudio = () => {
         isUser: false
       }]);
 
+      // Save assistant response to database once
       if (currentSessionId) {
         try {
           await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
@@ -449,6 +414,7 @@ const DesignStudio = () => {
           isUser: false
         }]);
 
+        // Save assistant response to database once
         if (currentSessionId) {
           try {
             await sessionService.addMessage(currentSessionId, 'assistant', gptResponse);
@@ -465,6 +431,7 @@ const DesignStudio = () => {
           isUser: false
         }]);
 
+        // Save fallback response to database once
         if (currentSessionId) {
           try {
             await sessionService.addMessage(currentSessionId, 'assistant', fallbackResponse);
@@ -554,12 +521,14 @@ const DesignStudio = () => {
     }
   };
 
+  // 处理图片点击放大
   const handleImageClick = () => {
     if (design && !design.error) {
       setIsImageModalOpen(true);
     }
   };
 
+  // 处理新设计按钮点击
   const handleNewDesign = () => {
     createNewSession();
     toast.success("已开始新的设计会话");
@@ -628,12 +597,14 @@ const DesignStudio = () => {
                   )}
                 </div>
 
+                {/* 新的进度条组件 */}
                 {(isGenerating || isChatLoading) && (
                   <div className="text-center py-10">
                     {isGenerating ? (
                       <GenerationProgress 
                         isGenerating={isGenerating}
                         onComplete={() => {
+                          // 进度条完成后的回调，可以添加额外的动效
                           console.log('进度条动画完成');
                         }}
                       />
@@ -656,6 +627,7 @@ const DesignStudio = () => {
                   <div className="flex justify-center">
                     <Card className={`w-full max-w-2xl mx-auto overflow-hidden transition-all ${design.isEditing ? "ring-2 ring-sock-purple" : ""} ${design.error ? "border-red-300" : ""}`}>
                       <CardContent className="p-6">
+                        {/* Buttons above the image */}
                         {!design.error && (
                           <div className="flex justify-end space-x-4 mb-6">
                             <Button variant="outline" onClick={handleDownload}>
@@ -669,6 +641,7 @@ const DesignStudio = () => {
                           </div>
                         )}
                         
+                        {/* Image container */}
                         <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden">
                           <img 
                             src={design.url} 
@@ -684,6 +657,7 @@ const DesignStudio = () => {
                               </span>
                             </div>
                           )}
+                          {/* Floating edit button in bottom right */}
                           {!design.error && (
                             <div className="absolute bottom-2 right-2">
                               <Button 
@@ -698,6 +672,7 @@ const DesignStudio = () => {
                           )}
                         </div>
                         
+                        {/* Design name */}
                         <div className="mt-3 text-center">
                           <span className={`text-sm font-medium ${design.error ? "text-red-500" : ""}`}>
                             {design.design_name}
@@ -721,6 +696,7 @@ const DesignStudio = () => {
         </div>
       </main>
 
+      {/* 图片预览模态框 */}
       {design && (
         <ImageModal
           isOpen={isImageModalOpen}
