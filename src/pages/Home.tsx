@@ -115,7 +115,7 @@ const Home = () => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      handleCreateClick(); // 直接调用快速创建，而不是缓慢的AI对话流程
     }
   };
 
@@ -227,7 +227,7 @@ const Home = () => {
                   <Button variant="outline" size="sm" onClick={handleAttachClick}>
                     {selectedFile ? `${selectedFile.name.slice(0, 15)}...` : "上传"}
                   </Button>
-                  <span className="text-xs text-gray-500">按Enter发送，Shift+Enter换行</span>
+                  <span className="text-xs text-gray-500">按Enter快速创建，点击发送按钮获取AI建议</span>
                 </div>
                 <div className="flex items-center">
                   <Button variant="outline" size="sm" className="mr-2" onClick={handleCreateClick}>
