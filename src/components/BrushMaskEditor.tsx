@@ -42,6 +42,7 @@ const BrushMaskEditor: React.FC<BrushMaskEditorProps> = ({
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!imageLoaded) return;
+    console.log('Mouse down event triggered');
     setIsDrawing(true);
     const canvas = maskCanvasRef.current;
     if (!canvas) return;
@@ -50,6 +51,7 @@ const BrushMaskEditor: React.FC<BrushMaskEditorProps> = ({
     const x = (e.clientX - rect.left) * (canvas.width / rect.width);
     const y = (e.clientY - rect.top) * (canvas.height / rect.height);
     
+    console.log('Drawing at coordinates:', { x, y, canvasWidth: canvas.width, canvasHeight: canvas.height });
     drawOnCanvas(x, y, canvas);
   }, [imageLoaded, drawOnCanvas]);
 
@@ -169,17 +171,17 @@ const BrushMaskEditor: React.FC<BrushMaskEditorProps> = ({
           
           <Separator orientation="vertical" className="h-6" />
           
-          <div className="flex items-center gap-2 min-w-[120px]">
-            <span className="text-sm">大小:</span>
+          <div className="flex items-center gap-2 w-full sm:w-[240px] min-w-[120px]">
+            <span className="text-sm whitespace-nowrap">大小:</span>
             <Slider
               value={brushSize}
               onValueChange={setBrushSize}
               max={50}
               min={5}
               step={1}
-              className="flex-1"
+              className="flex-1 min-w-[120px] sm:min-w-[180px]"
             />
-            <span className="text-sm w-8">{brushSize[0]}</span>
+            <span className="text-sm w-8 text-center">{brushSize[0]}</span>
           </div>
           
           <Separator orientation="vertical" className="h-6" />
@@ -209,26 +211,30 @@ const BrushMaskEditor: React.FC<BrushMaskEditorProps> = ({
               </div>
             </div>
           )}
-          <canvas
-            ref={canvasRef}
-            className="block max-w-full max-h-[400px] object-contain"
-            style={{ display: imageLoaded ? 'block' : 'none' }}
-          />
-          <canvas
-            ref={maskCanvasRef}
-            className={`absolute inset-0 cursor-crosshair ${
-              showMask ? 'opacity-50' : 'opacity-0'
-            }`}
-            style={{ 
-              display: imageLoaded ? 'block' : 'none',
-              backgroundColor: showMask ? 'rgba(255, 0, 0, 0.3)' : 'transparent',
-              pointerEvents: imageLoaded ? 'auto' : 'none'
-            }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-          />
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              className="block max-w-full max-h-[400px] object-contain"
+              style={{ display: imageLoaded ? 'block' : 'none' }}
+            />
+            <canvas
+              ref={maskCanvasRef}
+              className={`absolute top-0 left-0 cursor-crosshair ${
+                showMask ? 'opacity-50' : 'opacity-0'
+              }`}
+              style={{ 
+                display: imageLoaded ? 'block' : 'none',
+                backgroundColor: showMask ? 'rgba(255, 0, 0, 0.3)' : 'transparent',
+                pointerEvents: imageLoaded ? 'auto' : 'none',
+                width: '100%',
+                height: '100%'
+              }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            />
+          </div>
         </div>
 
         {/* Edit Prompt */}
