@@ -4,15 +4,16 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Download, Edit, AlertCircle, MessageCircle, Plus, File } from "lucide-react";
+import { Download, Edit, AlertCircle, MessageCircle, Plus, File, Brush } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import ImageModal from "@/components/ImageModal";
+import BrushMaskEditor from "@/components/BrushMaskEditor";
 import AppHeader from "@/components/AppHeader";
 import SessionHistorySidebar from "@/components/SessionHistorySidebar";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 import { downloadService } from "@/services/downloadService";
-import { generateDesigns, editImage } from "@/services/design.service";
+import { generateDesigns, editImage, brushEditImage } from "@/services/design.service";
 import { sessionService } from "@/services/sessionService";
 import { llmService } from "@/services/llmService";
 import { ConversationManager } from "@/services/conversationManager";
@@ -42,6 +43,7 @@ const DesignStudio = () => {
   const [conversationManager] = useState(() => new ConversationManager());
   const [pendingEditInstruction, setPendingEditInstruction] = useState<string>('');
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isBrushEditorOpen, setIsBrushEditorOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   const location = useLocation();
   const navigate = useNavigate();
@@ -356,6 +358,59 @@ const DesignStudio = () => {
     }
   };
 
+  // 触发笔刷遮罩编辑功能
+  const triggerBrushEdit = async (maskData: string, editPrompt: string) => {
+    if (!design) {
+      toast.error("没有可编辑的设计");
+      return;
+    }
+    setIsGenerating(true);
+    setIsBrushEditorOpen(false);
+    try {
+      // 使用 brushEditImage 函数编辑图片
+      const editedDesign = await brushEditImage(design.url, maskData, editPrompt, currentSessionId);
+      setDesign({
+        ...editedDesign,
+        isEditing: true
+      });
+      setCurrentImageUrl(editedDesign.url);
+      toast.success(`笔刷编辑完成！`);
+      const responseMessage = "我已根据您的笔刷遮罩编辑了设计。";
+      let messageId: string | undefined;
+
+      // 记录助手回复到数据库并获取消息ID
+      if (currentSessionId) {
+        const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
+        messageId = addedMessage.id;
+
+        // Update the latest image with the message_id
+        try {
+          const sessionHistory = await sessionService.getSessionHistory(currentSessionId);
+          const latestImage = sessionHistory.images.filter(img => img.generation_status === 'success').sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          if (latestImage) {
+            await supabase.from('generated_images').update({
+              message_id: messageId
+            }).eq('id', latestImage.id);
+          }
+        } catch (error) {
+          console.error('关联编辑图片和消息失败:', error);
+        }
+      }
+      const messageWithThumbnail: Message = {
+        id: Date.now(),
+        text: responseMessage,
+        isUser: false,
+        imageUrl: editedDesign.url,
+        designName: editedDesign.design_name
+      };
+      setMessages(prev => [...prev, messageWithThumbnail]);
+    } catch (err: any) {
+      toast.error(`笔刷编辑失败: ${err.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // 修改后的消息处理函数 - 防止重复保存
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating || isChatLoading) return;
@@ -520,6 +575,15 @@ const DesignStudio = () => {
     }
   };
 
+  // 处理笔刷编辑
+  const handleBrushEdit = () => {
+    if (!design || design.error) {
+      toast.error("无法对该设计进行笔刷编辑");
+      return;
+    }
+    setIsBrushEditorOpen(true);
+  };
+
   // 处理新设计按钮点击
   const handleNewDesign = () => {
     createNewSession();
@@ -621,14 +685,18 @@ const DesignStudio = () => {
                       <CardContent className="p-6">
                         {/* Buttons above the image */}
                         {!design.error && (
-                          <div className="flex justify-end space-x-4 mb-6">
-                            <Button variant="outline" onClick={handleDownload}>
+                          <div className="flex justify-end space-x-2 mb-6">
+                            <Button variant="outline" size="sm" onClick={handleDownload}>
                               <Download className="h-4 w-4 mr-2" />
                               下载
                             </Button>
-                            <Button variant="outline" onClick={handleVectorize}>
+                            <Button variant="outline" size="sm" onClick={handleVectorize}>
                               <File className="h-4 w-4 mr-2" />
                               矢量化
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={handleBrushEdit}>
+                              <Brush className="h-4 w-4 mr-2" />
+                              笔刷编辑
                             </Button>
                           </div>
                         )}
@@ -696,6 +764,18 @@ const DesignStudio = () => {
           imageUrl={design.url}
           imageTitle={design.design_name}
         />
+      )}
+
+      {/* 笔刷遮罩编辑器 */}
+      {design && isBrushEditorOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <BrushMaskEditor
+            imageUrl={design.url}
+            onEdit={triggerBrushEdit}
+            onClose={() => setIsBrushEditorOpen(false)}
+            isLoading={isGenerating}
+          />
+        </div>
       )}
     </div>
   );
