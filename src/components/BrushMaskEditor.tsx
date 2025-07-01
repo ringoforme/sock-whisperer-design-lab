@@ -200,20 +200,29 @@ const BrushMaskEditor: React.FC<BrushMaskEditorProps> = ({
         </div>
 
         {/* Canvas */}
-        <div className="relative border rounded-lg overflow-hidden bg-checkered">
+        <div className="relative border rounded-lg overflow-hidden bg-checkered min-h-[400px] flex items-center justify-center">
+          {!imageLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-muted">
+              <div className="text-center space-y-2">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-sm text-muted-foreground">加载图片中...</p>
+              </div>
+            </div>
+          )}
           <canvas
             ref={canvasRef}
-            className="absolute inset-0 w-full h-full object-contain"
-            style={{ maxHeight: '400px' }}
+            className="block max-w-full max-h-[400px] object-contain"
+            style={{ display: imageLoaded ? 'block' : 'none' }}
           />
           <canvas
             ref={maskCanvasRef}
-            className={`absolute inset-0 w-full h-full object-contain cursor-crosshair ${
+            className={`absolute inset-0 cursor-crosshair ${
               showMask ? 'opacity-50' : 'opacity-0'
             }`}
             style={{ 
-              maxHeight: '400px',
-              backgroundColor: showMask ? 'rgba(255, 0, 0, 0.3)' : 'transparent'
+              display: imageLoaded ? 'block' : 'none',
+              backgroundColor: showMask ? 'rgba(255, 0, 0, 0.3)' : 'transparent',
+              pointerEvents: imageLoaded ? 'auto' : 'none'
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
