@@ -153,6 +153,7 @@ export class SessionService {
       .from('conversation_messages')
       .select('*')
       .eq('session_id', sessionId)
+      .is('metadata',null)
       .order('created_at', { ascending: true });
 
     if (error) {
