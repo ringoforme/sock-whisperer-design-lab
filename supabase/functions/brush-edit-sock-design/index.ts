@@ -14,6 +14,7 @@ serve(async (req) => {
 
   try {
     const { imageUrl, maskData, editInstruction } = await req.json();
+    console.log('use local supabase');
     console.log('笔刷遮罩编辑请求:', { imageUrl: imageUrl?.slice(0, 50) + '...', maskData: maskData?.slice(0, 50) + '...', editInstruction });
 
     // 验证输入参数
@@ -63,8 +64,9 @@ serve(async (req) => {
     formData.append('mask', maskBlob, 'mask.png');
     formData.append('prompt', editInstruction);
     formData.append('n', '1');
-    formData.append('size', '1024x1024');
+    formData.append('size', '1024x1536');
     formData.append('response_format', 'b64_json');
+    formData.append('model', 'gpt-image-1');
 
     const editResponse = await fetch('https://api.openai.com/v1/images/edits', {
       method: 'POST',
