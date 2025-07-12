@@ -14,7 +14,6 @@ serve(async (req) => {
 
   try {
     const { imageUrl, maskData, editInstruction } = await req.json();
-    console.log('use local supabase');
     console.log('笔刷遮罩编辑请求:', { imageUrl: imageUrl?.slice(0, 50) + '...', maskData: maskData?.slice(0, 50) + '...', editInstruction });
 
     // 验证输入参数
