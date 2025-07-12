@@ -38,7 +38,7 @@ const CanvasArea = forwardRef<CanvasAreaRef, CanvasAreaProps>(({
     if (!ctx) return;
 
     ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
     ctx.beginPath();
     ctx.arc(x, y, brushSize[0] / 2, 0, 2 * Math.PI);
     ctx.fill();
@@ -125,7 +125,7 @@ const CanvasArea = forwardRef<CanvasAreaRef, CanvasAreaProps>(({
       ctx.drawImage(img, 0, 0);
       
       // Set up mask canvas
-      maskCtx.fillStyle = 'rgba(0, 0, 0, 0)';
+      maskCtx.fillStyle = 'rgba(255, 255, 255, 255)';
       maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
       
       setImageLoaded(true);

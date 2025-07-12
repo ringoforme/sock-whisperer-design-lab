@@ -358,6 +358,41 @@ const DesignStudio = () => {
     }
   };
 
+  // 编辑 mask
+  function replacePixels(base64Str, conditionFn, replaceColor): Promise<string>{
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const a = data[i + 3];
+                if (conditionFn(r, g, b, a)) {
+                    data[i]     = replaceColor[0]; // R
+                    data[i + 1] = replaceColor[1]; // G
+                    data[i + 2] = replaceColor[2]; // B
+                    data[i + 3] = replaceColor[3]; // A
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+            const newBase64 = canvas.toDataURL();
+            resolve(newBase64);
+        };
+        img.onerror = reject;
+        img.src = base64Str;
+    });
+}
+
   // 触发笔刷遮罩编辑功能
   const triggerBrushEdit = async (maskData: string, editPrompt: string) => {
     if (!design) {
@@ -367,8 +402,14 @@ const DesignStudio = () => {
     setIsGenerating(true);
     setIsBrushEditorOpen(false);
     try {
+      // 修改 mask 使其满足api需求
+      const newMask = await replacePixels(maskData,(r,g,b,a) => r == 0 && b ==0 && g ==0, [0,0,0,0]);
+      console.log("newMask", newMask);
       // 使用 brushEditImage 函数编辑图片
-      const editedDesign = await brushEditImage(design.url, maskData, editPrompt, currentSessionId);
+      // console.log("editPrompt:",editPrompt)
+      // console.log("maskData:",maskData)
+      // console.log("imageurl:",design.url)
+      const editedDesign = await brushEditImage(design.url, newMask, editPrompt, currentSessionId);
       setDesign({
         ...editedDesign,
         isEditing: true
