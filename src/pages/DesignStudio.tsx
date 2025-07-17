@@ -46,7 +46,7 @@ const DesignStudio = () => {
   const [isBrushEditorOpen, setIsBrushEditorOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   const location = useLocation();
-  const navigate = useNavigate();
+  
   const {
     markAsDownloaded,
     markAsVectorized,
@@ -140,7 +140,8 @@ const DesignStudio = () => {
       sessionHistory.images.forEach(img => {
         if (img.message_id) {
           imageToMessageMap.set(img.message_id, {
-            imageUrl: img.image_url,
+            brief_image_url: img.brief_image_url,
+            detail_image_url: img.detail_image_url,
             designName: img.design_name
           });
         }
@@ -157,7 +158,8 @@ const DesignStudio = () => {
         // Only add thumbnail if this message generated an image (has message_id match)
         if (msg.role === 'assistant' && imageToMessageMap.has(msg.id)) {
           const imageData = imageToMessageMap.get(msg.id);
-          message.imageUrl = imageData.imageUrl;
+          message.detail_image_url = imageData.detail_image_url;
+          message.brief_image_url = imageData.brief_image_url;
           message.designName = imageData.designName;
         }
         sessionMessages.push(message);
@@ -188,7 +190,7 @@ const DesignStudio = () => {
         const specificImage = sessionHistory.images.find(img => img.id === imageId);
         if (specificImage) {
           targetImage = specificImage;
-          console.log('找到指定图片:', specificImage);
+          // console.log('找到指定图片:', specificImage);
 
           // Automatically enter edit mode
           setIsEditingMode(true);
@@ -212,7 +214,7 @@ const DesignStudio = () => {
       if (targetImage) {
         console.log('恢复图片:', targetImage);
         const designData = {
-          url: targetImage.image_url,
+          url: targetImage.detail_image_url,
           prompt_en: '',
           design_name: targetImage.design_name,
           isEditing: !!imageId,
@@ -220,7 +222,7 @@ const DesignStudio = () => {
           imageId: targetImage.id
         };
         setDesign(designData);
-        setCurrentImageUrl(targetImage.image_url);
+        setCurrentImageUrl(targetImage.detail_image_url);
         console.log('设计状态已设置:', designData);
       } else {
         console.log('没有找到图片，设置design为null');
@@ -285,7 +287,7 @@ const DesignStudio = () => {
         id: Date.now(),
         text: successMessage,
         isUser: false,
-        imageUrl: newDesign.url,
+        detail_image_url: newDesign.url,
         designName: newDesign.design_name
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
@@ -344,7 +346,7 @@ const DesignStudio = () => {
         id: Date.now(),
         text: responseMessage,
         isUser: false,
-        imageUrl: editedDesign.url,
+        detail_image_url: editedDesign.url,
         designName: editedDesign.design_name
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
@@ -406,9 +408,6 @@ const DesignStudio = () => {
       const newMask = await replacePixels(maskData,(r,g,b,a) => r == 0 && b ==0 && g ==0, [0,0,0,0]);
       console.log("newMask", newMask);
       // 使用 brushEditImage 函数编辑图片
-      // console.log("editPrompt:",editPrompt)
-      // console.log("maskData:",maskData)
-      // console.log("imageurl:",design.url)
       const editedDesign = await brushEditImage(design.url, newMask, editPrompt, currentSessionId);
       setDesign({
         ...editedDesign,
@@ -441,7 +440,7 @@ const DesignStudio = () => {
         id: Date.now(),
         text: responseMessage,
         isUser: false,
-        imageUrl: editedDesign.url,
+        detail_image_url: editedDesign.url,
         designName: editedDesign.design_name
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
@@ -662,7 +661,7 @@ const DesignStudio = () => {
             <ChatWindow 
               messages={messages} 
               onSendMessage={handleSendMessage} 
-              onGenerateImage={triggerImageGeneration} 
+              onGenerateImage={triggerImageGeneration}
               onEditImage={triggerImageEdit} 
               onThumbnailClick={handleThumbnailClick} 
               isEditingMode={isEditingMode} 
