@@ -15,6 +15,7 @@ export interface GenerationRequest {
 
 export interface GenerationResponse {
   imageUrl: string;
+  brief_image_url: string;
   expandedPrompt: string;
   designName: string;
   success: boolean;

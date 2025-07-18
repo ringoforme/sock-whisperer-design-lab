@@ -50,6 +50,7 @@ export async function generateDesigns(sessionContext: SessionContext, messageId?
     // 构造返回的设计数据
     const designData: DesignData = {
       url: data.imageUrl,
+      brief_image_url: data.brief_image_url,
       prompt_en: data.expandedPrompt,
       design_name: data.designName || '袜子设计'
     };

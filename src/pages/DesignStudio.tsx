@@ -215,6 +215,7 @@ const DesignStudio = () => {
         console.log('恢复图片:', targetImage);
         const designData = {
           url: targetImage.detail_image_url,
+          brief_image_url: targetImage.brief_image_url,
           prompt_en: '',
           design_name: targetImage.design_name,
           isEditing: !!imageId,
@@ -242,6 +243,7 @@ const DesignStudio = () => {
     setCurrentImageUrl(imageUrl);
     setDesign({
       url: imageUrl,
+      brief_image_url:'',
       prompt_en: '',
       design_name: designName || '设计',
       isEditing: false
@@ -262,7 +264,7 @@ const DesignStudio = () => {
       if (currentSessionId) {
         const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
         messageId = addedMessage.id;
-        console.log('助手消息已创建，消息ID:', messageId);
+        // console.log('助手消息已创建，消息ID:', messageId);
       }
 
       const sessionContext = {
@@ -288,6 +290,7 @@ const DesignStudio = () => {
         text: successMessage,
         isUser: false,
         detail_image_url: newDesign.url,
+        brief_image_url: newDesign.brief_image_url,
         designName: newDesign.design_name
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
