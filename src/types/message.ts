@@ -3,7 +3,8 @@ export interface Message {
   id: number;
   text: string;
   isUser: boolean;
-  imageUrl?: string;
+  detail_image_url?: string;
+  brief_image_url?: string;
   designName?: string;
   isSelected?: boolean;
 }

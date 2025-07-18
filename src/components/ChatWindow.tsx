@@ -220,12 +220,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 {message.text}
               </div>
               {/* 添加缩略图显示 */}
-              {message.imageUrl && !message.isUser && (
+              {message.brief_image_url && !message.isUser && (
                 <ThumbnailMessage
-                  imageUrl={message.imageUrl}
+                  imageUrl={message.brief_image_url}
                   designName={message.designName}
-                  isSelected={currentImageUrl === message.imageUrl}
-                  onThumbnailClick={() => handleThumbnailClickInternal(message.imageUrl!, message.designName)}
+                  isSelected={currentImageUrl === message.detail_image_url}
+                  onThumbnailClick={() => handleThumbnailClickInternal(message.detail_image_url!, message.designName)}
                 />
               )}
             </div>

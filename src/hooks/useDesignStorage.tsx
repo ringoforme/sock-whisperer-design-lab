@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 // Convert FastDesignItem to Design format for backward compatibility
 const convertToDesign = (item: any): Design => ({
   id: item.id,
-  imageUrl: item.image_url,
+  imageUrl: item.brief_image_url,
   title: item.design_name,
   createdAt: item.created_at || new Date().toISOString(),
   type: item.category as 'draft' | 'edited' | 'vectorized' | 'downloaded',
