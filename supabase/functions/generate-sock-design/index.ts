@@ -2,13 +2,15 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
-
 import { OpenAIService } from './openai-service.ts';
 import type { GenerationRequest, GenerationResponse, SessionContext } from './types.ts';
+import { randomUUID } from 'node:crypto';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,7 +46,7 @@ function buildUserInput(body: GenerationRequest): string {
   return userInput;
 }
 
-async function batchWriteToDatabase(supabase: any, sessionContext: SessionContext, expandedPrompt: string, imageUrl: string, designName: string, messageId?: string): Promise<void> {
+async function batchWriteToDatabase(supabase: any, sessionContext: SessionContext, expandedPrompt: string, detail_image_url: string, thumbnail: string, designName: string, messageId?: string): Promise<void> {
   console.log('开始批量写入数据库...');
   console.log('关联消息ID:', messageId);
   
@@ -105,7 +107,8 @@ async function batchWriteToDatabase(supabase: any, sessionContext: SessionContex
       .insert({
         session_id: sessionContext.sessionId,
         prompt_id: promptRecord.id,
-        image_url: imageUrl,
+        detail_image_url: detail_image_url,
+        brief_image_url: thumbnail,
         design_name: designName,
         generation_status: 'success',
         user_id: sessionData.user_id,
@@ -180,14 +183,39 @@ serve(async (req) => {
     const imageUrl = await openAIService.generateImage(expandedPrompt);
     console.log('图像生成完成');
 
-    const designName = '袜子设计';
+    // 第三步： 把图像放到云存储 
+    console.log("开始云存储")
+    const storageBucket = 'designs'
+    const base64Match = imageUrl.match(/^data:(.*?);base64,(.*)$/);
+    if (!base64Match) return new Response(JSON.stringify({ error: 'Invalid base64 format that api generated' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+    const mimeType = base64Match[1];
+    const base64Data = base64Match[2];
+    const binary = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+    const storagePath = `images/${randomUUID()}.png`;
+
+    const { error: uploadError } = await supabase.storage.from(storageBucket).upload(storagePath, binary.buffer, { contentType: mimeType, upsert: true });
+
+    if (uploadError) return new Response(JSON.stringify({ error: uploadError.message }), { status: 500, headers: corsHeaders });
+
+    console.log("上传图片成功")
+
+    const { data: publicUrlData } = supabase.storage.from(storageBucket).getPublicUrl(storagePath);
+    const detailUrl = publicUrlData.publicUrl;
+    console.log("获取detail url")
+
+    const { data: publicUrlBriefData } = supabase.storage.from(storageBucket).getPublicUrl(storagePath, {transform: {width: 256, height: 384}})
+    const briefUrl = publicUrlBriefData.publicUrl
+    console.log("获取brief url")
+
 
     // 第三步：批量写入数据库（在后台执行）
+    const designName = '袜子设计';
     if (body.sessionContext?.sessionId) {
       console.log('开始后台数据库写入任务，消息ID:', body.messageId);
       // 使用 EdgeRuntime.waitUntil 在后台执行数据库写入
       EdgeRuntime.waitUntil(
-        batchWriteToDatabase(supabase, body.sessionContext, expandedPrompt, imageUrl, designName, body.messageId)
+        batchWriteToDatabase(supabase, body.sessionContext, expandedPrompt, detailUrl, briefUrl, designName, body.messageId)
           .catch(error => {
             console.error('后台数据库写入失败:', error);
           })
@@ -196,7 +224,8 @@ serve(async (req) => {
 
     // 立即返回最小展示数据
     const response: GenerationResponse = { 
-      imageUrl,
+      imageUrl: detailUrl,
+      brief_image_url: briefUrl,
       expandedPrompt: expandedPrompt,
       designName: designName,
       success: true 
@@ -212,6 +241,7 @@ serve(async (req) => {
     
     const errorResponse: GenerationResponse = { 
       imageUrl: '',
+      brief_image_url: '',
       expandedPrompt: '',
       designName: '',
       error: error.message || 'Image generation failed',

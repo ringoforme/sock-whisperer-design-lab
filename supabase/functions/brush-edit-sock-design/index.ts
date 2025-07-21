@@ -14,7 +14,7 @@ serve(async (req) => {
 
   try {
     const { imageUrl, maskData, editInstruction } = await req.json();
-    console.log('笔刷遮罩编辑请求:', { imageUrl: imageUrl?.slice(0, 50) + '...', maskData: maskData?.slice(0, 50) + '...', editInstruction });
+    console.log('笔刷遮罩编辑请求:', { imageUrl: imageUrl, maskData: maskData?.slice(0, 50) + '...', editInstruction });
 
     // 验证输入参数
     if (!imageUrl || !maskData || !editInstruction) {
@@ -28,18 +28,19 @@ serve(async (req) => {
 
     // 准备原图数据
     let imageBase64: string;
+    let imageBlob;
     if (imageUrl.startsWith('data:image/')) {
       // 已经是base64格式
       imageBase64 = imageUrl.split(',')[1];
+      imageBlob = new Blob([Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0))], { type: 'image/png' });
     } else {
       // 下载图片并转换为base64
-      console.log('下载原图片...');
+      console.log('下载原图片....');
       const imageResponse = await fetch(imageUrl);
       if (!imageResponse.ok) {
         throw new Error(`无法下载原图片: ${imageResponse.statusText}`);
       }
-      const imageArrayBuffer = await imageResponse.arrayBuffer();
-      imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageArrayBuffer)));
+      imageBlob = await imageResponse.blob();
     }
 
     // 准备遮罩数据
@@ -49,14 +50,11 @@ serve(async (req) => {
     } else {
       maskBase64 = maskData;
     }
-
     console.log('调用 OpenAI images.edit API...');
     
     // 调用 OpenAI images.edit API
     const formData = new FormData();
-    
     // 将base64转换为Blob
-    const imageBlob = new Blob([Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0))], { type: 'image/png' });
     const maskBlob = new Blob([Uint8Array.from(atob(maskBase64), c => c.charCodeAt(0))], { type: 'image/png' });
     
     formData.append('image', imageBlob, 'image.png');

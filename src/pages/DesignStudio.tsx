@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import AppHeader from "@/components/AppHeader";
 import SessionHistorySidebar from "@/components/SessionHistorySidebar";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 import { downloadService } from "@/services/downloadService";
-import { generateDesigns, editImage, brushEditImage } from "@/services/design.service";
+import { generateDesigns, editImage } from "@/services/design.service";
 import { sessionService } from "@/services/sessionService";
 import { llmService } from "@/services/llmService";
 import { ConversationManager } from "@/services/conversationManager";
@@ -46,7 +46,7 @@ const DesignStudio = () => {
   const [isBrushEditorOpen, setIsBrushEditorOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   const location = useLocation();
-  const navigate = useNavigate();
+  
   const {
     markAsDownloaded,
     markAsVectorized,
@@ -140,7 +140,8 @@ const DesignStudio = () => {
       sessionHistory.images.forEach(img => {
         if (img.message_id) {
           imageToMessageMap.set(img.message_id, {
-            imageUrl: img.image_url,
+            brief_image_url: img.brief_image_url,
+            detail_image_url: img.detail_image_url,
             designName: img.design_name
           });
         }
@@ -157,7 +158,8 @@ const DesignStudio = () => {
         // Only add thumbnail if this message generated an image (has message_id match)
         if (msg.role === 'assistant' && imageToMessageMap.has(msg.id)) {
           const imageData = imageToMessageMap.get(msg.id);
-          message.imageUrl = imageData.imageUrl;
+          message.detail_image_url = imageData.detail_image_url;
+          message.brief_image_url = imageData.brief_image_url;
           message.designName = imageData.designName;
         }
         sessionMessages.push(message);
@@ -188,7 +190,7 @@ const DesignStudio = () => {
         const specificImage = sessionHistory.images.find(img => img.id === imageId);
         if (specificImage) {
           targetImage = specificImage;
-          console.log('找到指定图片:', specificImage);
+          // console.log('找到指定图片:', specificImage);
 
           // Automatically enter edit mode
           setIsEditingMode(true);
@@ -212,7 +214,8 @@ const DesignStudio = () => {
       if (targetImage) {
         console.log('恢复图片:', targetImage);
         const designData = {
-          url: targetImage.image_url,
+          url: targetImage.detail_image_url,
+          brief_image_url: targetImage.brief_image_url,
           prompt_en: '',
           design_name: targetImage.design_name,
           isEditing: !!imageId,
@@ -220,7 +223,7 @@ const DesignStudio = () => {
           imageId: targetImage.id
         };
         setDesign(designData);
-        setCurrentImageUrl(targetImage.image_url);
+        setCurrentImageUrl(targetImage.detail_image_url);
         console.log('设计状态已设置:', designData);
       } else {
         console.log('没有找到图片，设置design为null');
@@ -240,6 +243,7 @@ const DesignStudio = () => {
     setCurrentImageUrl(imageUrl);
     setDesign({
       url: imageUrl,
+      brief_image_url:'',
       prompt_en: '',
       design_name: designName || '设计',
       isEditing: false
@@ -260,7 +264,7 @@ const DesignStudio = () => {
       if (currentSessionId) {
         const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
         messageId = addedMessage.id;
-        console.log('助手消息已创建，消息ID:', messageId);
+        // console.log('助手消息已创建，消息ID:', messageId);
       }
 
       const sessionContext = {
@@ -285,7 +289,8 @@ const DesignStudio = () => {
         id: Date.now(),
         text: successMessage,
         isUser: false,
-        imageUrl: newDesign.url,
+        detail_image_url: newDesign.url,
+        brief_image_url: newDesign.brief_image_url,
         designName: newDesign.design_name
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
@@ -317,6 +322,7 @@ const DesignStudio = () => {
         ...editedDesign,
         isEditing: true
       });
+      // console.log("editImage:",editedDesign)
       setCurrentImageUrl(editedDesign.url);
       toast.success(`设计已更新！`);
       const responseMessage = "我已根据您的指令编辑了设计。";
@@ -344,7 +350,8 @@ const DesignStudio = () => {
         id: Date.now(),
         text: responseMessage,
         isUser: false,
-        imageUrl: editedDesign.url,
+        detail_image_url: editedDesign.url,
+        brief_image_url: editedDesign.brief_image_url,
         designName: editedDesign.design_name
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
@@ -404,12 +411,9 @@ const DesignStudio = () => {
     try {
       // 修改 mask 使其满足api需求
       const newMask = await replacePixels(maskData,(r,g,b,a) => r == 0 && b ==0 && g ==0, [0,0,0,0]);
-      console.log("newMask", newMask);
+      // console.log("newMask", newMask);
       // 使用 brushEditImage 函数编辑图片
-      // console.log("editPrompt:",editPrompt)
-      // console.log("maskData:",maskData)
-      // console.log("imageurl:",design.url)
-      const editedDesign = await brushEditImage(design.url, newMask, editPrompt, currentSessionId);
+      const editedDesign = await editImage(design.url, editPrompt, currentSessionId, newMask);
       setDesign({
         ...editedDesign,
         isEditing: true
@@ -441,7 +445,8 @@ const DesignStudio = () => {
         id: Date.now(),
         text: responseMessage,
         isUser: false,
-        imageUrl: editedDesign.url,
+        detail_image_url: editedDesign.url,
+        brief_image_url: editedDesign.brief_image_url,
         designName: editedDesign.design_name
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
@@ -662,7 +667,7 @@ const DesignStudio = () => {
             <ChatWindow 
               messages={messages} 
               onSendMessage={handleSendMessage} 
-              onGenerateImage={triggerImageGeneration} 
+              onGenerateImage={triggerImageGeneration}
               onEditImage={triggerImageEdit} 
               onThumbnailClick={handleThumbnailClick} 
               isEditingMode={isEditingMode} 

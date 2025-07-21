@@ -27,6 +27,7 @@ export interface DesignLibrary {
 // 它必须和你的后端返回的JSON字段完全对应
 export interface DesignData {
   url: string;
+  brief_image_url: string;
   prompt_en: string;
   design_name: string;
 }

@@ -4,7 +4,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 export type FastDesignItem = {
   id: string;
-  image_url: string;
+  brief_image_url: string;
   design_name: string;
   created_at: string;
   is_edited: boolean;
@@ -35,7 +35,7 @@ class FastDesignService {
       .from('generated_images')
       .select(`
         id,
-        image_url,
+        brief_image_url,
         design_name,
         created_at,
         is_edited,
@@ -129,7 +129,7 @@ class FastDesignService {
       .from('generated_images')
       .select(`
         id,
-        image_url,
+        brief_image_url,
         design_name,
         created_at,
         is_edited,

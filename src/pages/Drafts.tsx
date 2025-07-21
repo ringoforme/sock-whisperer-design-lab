@@ -71,7 +71,7 @@ const Drafts = () => {
       
       if (sessionInfo) {
         console.log('找到会话信息:', sessionInfo);
-        navigate(`/design?sessionId=${sessionInfo.session_id}`);
+        navigate(`/design?sessionId=${sessionInfo.session_id}&imageId=${design.id}`);
         toast.success("正在跳转到设计会话...");
       } else {
         console.warn('未找到对应的会话信息');
