@@ -4,7 +4,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 import { OpenAIService } from './openai-service.ts';
 import type { GenerationRequest, GenerationResponse, SessionContext } from './types.ts';
-// 引入 upng-js
 import { randomUUID } from 'node:crypto';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');

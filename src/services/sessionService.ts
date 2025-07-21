@@ -239,7 +239,7 @@ export class SessionService {
   }
 
   // 记录生成的图片 - Updated to include message_id
-  async addGeneratedImage(sessionId: string, promptId: string, imageUrl: string, designName: string, messageId?: string, status: 'success' | 'failed' | 'pending' = 'success', errorMessage?: string): Promise<GeneratedImage> {
+  async addGeneratedImage(sessionId: string, promptId: string, imageUrl: string, brief_image_url: string, designName: string, messageId?: string, status: 'success' | 'failed' | 'pending' = 'success', errorMessage?: string): Promise<GeneratedImage> {
     console.log('记录生成图片，会话ID:', sessionId, '提示词ID:', promptId);
     console.log('图片URL:', imageUrl);
     console.log('设计名称:', designName);
@@ -251,13 +251,14 @@ export class SessionService {
     if (!user) {
       throw new Error('用户未登录，无法记录生成图片');
     }
-    
+
     const { data, error } = await supabase
       .from('generated_images')
       .insert({
         session_id: sessionId,
         prompt_id: promptId,
-        image_url: imageUrl,
+        detail_image_url: imageUrl,
+        brief_image_url: brief_image_url,
         design_name: designName,
         generation_status: status,
         error_message: errorMessage,

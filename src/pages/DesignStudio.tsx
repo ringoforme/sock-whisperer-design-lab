@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import AppHeader from "@/components/AppHeader";
 import SessionHistorySidebar from "@/components/SessionHistorySidebar";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 import { downloadService } from "@/services/downloadService";
-import { generateDesigns, editImage, brushEditImage } from "@/services/design.service";
+import { generateDesigns, editImage } from "@/services/design.service";
 import { sessionService } from "@/services/sessionService";
 import { llmService } from "@/services/llmService";
 import { ConversationManager } from "@/services/conversationManager";
@@ -322,6 +322,7 @@ const DesignStudio = () => {
         ...editedDesign,
         isEditing: true
       });
+      // console.log("editImage:",editedDesign)
       setCurrentImageUrl(editedDesign.url);
       toast.success(`设计已更新！`);
       const responseMessage = "我已根据您的指令编辑了设计。";
@@ -350,6 +351,7 @@ const DesignStudio = () => {
         text: responseMessage,
         isUser: false,
         detail_image_url: editedDesign.url,
+        brief_image_url: editedDesign.brief_image_url,
         designName: editedDesign.design_name
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
@@ -409,9 +411,9 @@ const DesignStudio = () => {
     try {
       // 修改 mask 使其满足api需求
       const newMask = await replacePixels(maskData,(r,g,b,a) => r == 0 && b ==0 && g ==0, [0,0,0,0]);
-      console.log("newMask", newMask);
+      // console.log("newMask", newMask);
       // 使用 brushEditImage 函数编辑图片
-      const editedDesign = await brushEditImage(design.url, newMask, editPrompt, currentSessionId);
+      const editedDesign = await editImage(design.url, editPrompt, currentSessionId, newMask);
       setDesign({
         ...editedDesign,
         isEditing: true
@@ -444,6 +446,7 @@ const DesignStudio = () => {
         text: responseMessage,
         isUser: false,
         detail_image_url: editedDesign.url,
+        brief_image_url: editedDesign.brief_image_url,
         designName: editedDesign.design_name
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
