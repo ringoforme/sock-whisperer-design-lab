@@ -14,6 +14,103 @@ const corsHeaders = {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+async function batchWriteToDatabase(supabase: any, sessionId: string, expandedPrompt: string, detail_image_url: string, thumbnail: string, designName: string): Promise<void> {
+  console.log('开始批量写入数据库...');
+  
+  try {
+    // 1. 创建或更新设计简报
+    console.log('写入设计简报...');
+    const { data: brief, error: briefError } = await supabase
+      .from('design_briefs')
+      .upsert({
+        session_id: sessionId,
+        completion_status: 'complete',
+        additional_notes: `基于上传图片生成的设计`
+      })
+      .select()
+      .single();
+
+    if (briefError) {
+      console.error('写入设计简报失败:', briefError);
+      throw briefError;
+    }
+    console.log('设计简报写入成功:', brief.id);
+
+    // 2. 记录扩展提示词
+    console.log('写入扩展提示词...');
+    const { data: promptRecord, error: promptError } = await supabase
+      .from('expanded_prompts')
+      .insert({
+        session_id: sessionId,
+        brief_id: brief.id,
+        original_brief: '用户上传图片',
+        expanded_prompt: expandedPrompt
+      })
+      .select()
+      .single();
+
+    if (promptError) {
+      console.error('写入扩展提示词失败:', promptError);
+      throw promptError;
+    }
+    console.log('扩展提示词写入成功:', promptRecord.id);
+
+    // 3. 获取用户ID（从session context或从数据库查询）
+    const { data: sessionData, error: sessionError } = await supabase
+      .from('design_sessions')
+      .select('user_id')
+      .eq('id', sessionId)
+      .single();
+
+    if (sessionError) {
+      console.error('获取会话用户ID失败:', sessionError);
+      throw sessionError;
+    }
+
+    // 4. 记录生成的图片
+    console.log('写入生成图片记录...');
+    const { data: imageRecord, error: imageError } = await supabase
+      .from('generated_images')
+      .insert({
+        session_id: sessionId,
+        prompt_id: promptRecord.id,
+        detail_image_url: detail_image_url,
+        brief_image_url: thumbnail,
+        design_name: designName,
+        generation_status: 'success',
+        user_id: sessionData.user_id,
+        is_hidden_from_user: false
+      })
+      .select()
+      .single();
+
+    if (imageError) {
+      console.error('写入生成图片记录失败:', imageError);
+      throw imageError;
+    }
+    console.log('生成图片记录写入成功，图片ID:', imageRecord.id);
+
+    console.log('批量数据库写入完成');
+  } catch (error) {
+    console.error('批量写入数据库失败:', error);
+    
+    // 记录失败状态
+    try {
+      await supabase
+        .from('design_briefs')
+        .upsert({
+          session_id: sessionId,
+          completion_status: 'complete',
+          additional_notes: `生成失败：${error.message}`
+        });
+    } catch (fallbackError) {
+      console.error('记录失败状态也失败了:', fallbackError);
+    }
+    
+    throw error;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -142,23 +239,16 @@ serve(async (req) => {
 
     const briefImageUrl = thumbUrlData.publicUrl;
 
-    // Save to database if sessionId provided
+    // Save to database if sessionId provided - use same logic as generate-sock-design
     if (sessionId) {
-      const { error: dbError } = await supabase
-        .from('generated_images')
-        .insert({
-          session_id: sessionId,
-          design_name: designName,
-          detail_image_url: detailImageUrl,
-          brief_image_url: briefImageUrl,
-          generation_status: 'success',
-          prompt_en: prompt,
-          is_draft: true
-        });
-
-      if (dbError) {
-        console.error('保存到数据库失败:', dbError);
-      }
+      console.log('开始后台数据库写入任务');
+      // Use EdgeRuntime.waitUntil to execute database write in background
+      EdgeRuntime.waitUntil(
+        batchWriteToDatabase(supabase, sessionId, prompt, detailImageUrl, briefImageUrl, designName)
+          .catch(error => {
+            console.error('后台数据库写入失败:', error);
+          })
+      );
     }
 
     console.log('图片上传生成成功');
