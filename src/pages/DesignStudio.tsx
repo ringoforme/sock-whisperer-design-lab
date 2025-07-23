@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Download, Edit, AlertCircle, MessageCircle, Plus, File, Brush } from "lucide-react";
+import { Download, Edit, AlertCircle, MessageCircle, Plus, File as FileIcon, Brush } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import ImageModal from "@/components/ImageModal";
@@ -828,7 +828,7 @@ const DesignStudio = () => {
                               下载
                             </Button>
                             <Button variant="outline" size="sm" onClick={handleVectorize}>
-                              <File className="h-4 w-4 mr-2" />
+                              <FileIcon className="h-4 w-4 mr-2" />
                               矢量化
                             </Button>
                             <Button variant="outline" size="sm" onClick={handleBrushEdit}>
