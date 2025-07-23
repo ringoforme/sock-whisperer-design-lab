@@ -285,6 +285,13 @@ const DesignStudio = () => {
       setIsGenerating(true);
       setError(null);
       
+      // Validate sessionId before calling uploadImageDesign
+      if (!currentSessionId) {
+        throw new Error('会话ID未初始化，请刷新页面重试');
+      }
+      
+      console.log('调用 uploadImageDesign，会话ID:', currentSessionId);
+      
       // Generate design from uploaded image
       const newDesign = await uploadImageDesign(file, prompt, currentSessionId);
       
