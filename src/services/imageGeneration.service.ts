@@ -65,3 +65,63 @@ export async function generateDesigns(sessionContext: SessionContext, messageId?
     throw error;
   }
 }
+
+/**
+ * 上传图片生成设计
+ * @param imageFile - 用户上传的图片文件
+ * @param prompt - 用户输入的提示词
+ * @param sessionId - 会话ID，用于保存到数据库
+ * @returns - 返回一个设计方案
+ */
+export async function uploadImageDesign(imageFile: File, prompt: string, sessionId?: string): Promise<DesignData> {
+  console.log('开始上传图片生成设计');
+  console.log('图片文件:', imageFile.name, '大小:', imageFile.size);
+  console.log('提示词:', prompt);
+  console.log('会话ID:', sessionId);
+  
+  try {
+    // 准备 FormData
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    formData.append('prompt', prompt);
+    if (sessionId) {
+      formData.append('sessionId', sessionId);
+    }
+
+    console.log('调用 upload-image-design Edge Function...');
+    
+    // 调用 Supabase Edge Function
+    const { data, error } = await supabase.functions.invoke('upload-image-design', {
+      body: formData
+    });
+
+    if (error) {
+      console.error('Edge Function 调用失败:', error);
+      throw new Error(error.message || "Failed to upload and generate design.");
+    }
+    
+    if (!data.success) {
+      console.error('Edge Function 返回失败:', data);
+      throw new Error(data.error || "Failed to upload and generate design.");
+    }
+    
+    console.log('Edge Function 调用成功，返回数据:', data);
+    
+    // 构造返回的设计数据
+    const designData: DesignData = {
+      url: data.imageUrl,
+      brief_image_url: data.brief_image_url,
+      prompt_en: data.expandedPrompt,
+      design_name: data.designName || '上传设计'
+    };
+    
+    console.log('上传图片生成设计成功');
+    
+    return designData;
+  } catch (error) {
+    console.error('上传图片生成设计失败，详细错误:', error);
+    console.error('错误堆栈:', error instanceof Error ? error.stack : '无堆栈信息');
+    
+    throw error;
+  }
+}

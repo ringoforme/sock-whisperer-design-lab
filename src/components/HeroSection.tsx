@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send } from 'lucide-react';
+import { Send, Upload, X } from 'lucide-react';
 import QuickPrompts from '@/components/QuickPrompts';
 import { llmService } from '@/services/llmService';
 import { useToast } from '@/hooks/use-toast';
@@ -23,16 +23,45 @@ const HeroSection: React.FC<HeroSectionProps> = ({ showApiConfig, setShowApiConf
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "文件类型错误",
+          description: "请选择图片文件 (JPG, PNG)",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "文件过大",
+          description: "文件大小不能超过 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      setSelectedFile(file);
       toast({
         title: "文件已选择",
-        description: `已选择文件: ${e.target.files[0].name}`
+        description: `已选择文件: ${file.name}`
       });
     }
   };
 
   const handleAttachClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleCreateClick = async () => {
@@ -55,6 +84,47 @@ const HeroSection: React.FC<HeroSectionProps> = ({ showApiConfig, setShowApiConf
     } else {
       navigate('/customized');
     }
+  };
+
+  const handleUploadGenerate = () => {
+    if (!selectedFile) {
+      toast({
+        title: "请选择图片",
+        description: "请先选择要处理的图片文件",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!chatInput.trim()) {
+      toast({
+        title: "请输入提示词",
+        description: "请输入您想要的设计要求",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Navigate to design studio with upload parameters
+    const params = new URLSearchParams({
+      mode: 'upload',
+      prompt: chatInput
+    });
+    
+    // Store file in sessionStorage temporarily
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        sessionStorage.setItem('uploadFile', JSON.stringify({
+          name: selectedFile.name,
+          type: selectedFile.type,
+          size: selectedFile.size,
+          data: e.target.result
+        }));
+        navigate(`/design?${params.toString()}`);
+      }
+    };
+    reader.readAsDataURL(selectedFile);
   };
 
   const handleSendMessage = async () => {
@@ -133,6 +203,21 @@ const HeroSection: React.FC<HeroSectionProps> = ({ showApiConfig, setShowApiConf
             onChange={e => setChatInput(e.target.value)} 
             onKeyPress={handleKeyPress} 
           />
+          
+          {/* File preview */}
+          {selectedFile && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Upload className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-700">{selectedFile.name}</span>
+                <span className="text-xs text-gray-500">({(selectedFile.size / 1024 / 1024).toFixed(1)}MB)</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleRemoveFile}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          
           <div className="flex justify-between items-center mt-4 pt-4 border-t">
             <div className="flex items-center gap-2">
               <input 
@@ -143,17 +228,29 @@ const HeroSection: React.FC<HeroSectionProps> = ({ showApiConfig, setShowApiConf
                 accept="image/*" 
               />
               <Button variant="outline" size="sm" onClick={handleAttachClick}>
-                {selectedFile ? `${selectedFile.name.slice(0, 15)}...` : "上传"}
+                <Upload className="h-4 w-4 mr-2" />
+                {selectedFile ? "更换图片" : "上传图片"}
               </Button>
               <span className="text-xs text-gray-500">按Enter快速创建，点击发送按钮获取AI建议</span>
             </div>
-            <div className="flex items-center">
-              <Button variant="outline" size="sm" className="mr-2" onClick={handleCreateClick}>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={handleCreateClick}>
                 创建
               </Button>
-              <Button variant="outline" size="sm" className="mr-2" onClick={handleCustomizedClick}>
+              <Button variant="outline" size="sm" onClick={handleCustomizedClick}>
                 定制
               </Button>
+              {selectedFile && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleUploadGenerate}
+                  className="bg-green-50 hover:bg-green-100 text-green-700"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  上传生成
+                </Button>
+              )}
               <Button 
                 size="sm" 
                 className="rounded-full aspect-square p-2 bg-sock-purple hover:bg-sock-dark-purple" 
