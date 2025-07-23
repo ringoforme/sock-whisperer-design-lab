@@ -14,11 +14,30 @@ const corsHeaders = {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-async function batchWriteToDatabase(supabase: any, sessionId: string, expandedPrompt: string, detail_image_url: string, thumbnail: string, designName: string): Promise<void> {
-  console.log('开始批量写入数据库...');
+async function saveToDatabaseSync(supabase: any, sessionId: string, expandedPrompt: string, detail_image_url: string, thumbnail: string, designName: string): Promise<void> {
+  console.log('开始同步写入数据库...');
   
   try {
-    // 1. 创建或更新设计简报
+    // 1. 获取用户ID
+    console.log('获取会话用户ID...');
+    const { data: sessionData, error: sessionError } = await supabase
+      .from('design_sessions')
+      .select('user_id')
+      .eq('id', sessionId)
+      .single();
+
+    if (sessionError) {
+      console.error('获取会话用户ID失败:', sessionError);
+      throw new Error(`获取会话用户ID失败: ${sessionError.message}`);
+    }
+
+    if (!sessionData?.user_id) {
+      throw new Error('未找到会话对应的用户ID');
+    }
+
+    console.log('找到用户ID:', sessionData.user_id);
+
+    // 2. 创建或更新设计简报
     console.log('写入设计简报...');
     const { data: brief, error: briefError } = await supabase
       .from('design_briefs')
@@ -32,11 +51,11 @@ async function batchWriteToDatabase(supabase: any, sessionId: string, expandedPr
 
     if (briefError) {
       console.error('写入设计简报失败:', briefError);
-      throw briefError;
+      throw new Error(`写入设计简报失败: ${briefError.message}`);
     }
     console.log('设计简报写入成功:', brief.id);
 
-    // 2. 记录扩展提示词
+    // 3. 记录扩展提示词
     console.log('写入扩展提示词...');
     const { data: promptRecord, error: promptError } = await supabase
       .from('expanded_prompts')
@@ -51,21 +70,9 @@ async function batchWriteToDatabase(supabase: any, sessionId: string, expandedPr
 
     if (promptError) {
       console.error('写入扩展提示词失败:', promptError);
-      throw promptError;
+      throw new Error(`写入扩展提示词失败: ${promptError.message}`);
     }
     console.log('扩展提示词写入成功:', promptRecord.id);
-
-    // 3. 获取用户ID（从session context或从数据库查询）
-    const { data: sessionData, error: sessionError } = await supabase
-      .from('design_sessions')
-      .select('user_id')
-      .eq('id', sessionId)
-      .single();
-
-    if (sessionError) {
-      console.error('获取会话用户ID失败:', sessionError);
-      throw sessionError;
-    }
 
     // 4. 记录生成的图片
     console.log('写入生成图片记录...');
@@ -86,13 +93,13 @@ async function batchWriteToDatabase(supabase: any, sessionId: string, expandedPr
 
     if (imageError) {
       console.error('写入生成图片记录失败:', imageError);
-      throw imageError;
+      throw new Error(`写入生成图片记录失败: ${imageError.message}`);
     }
     console.log('生成图片记录写入成功，图片ID:', imageRecord.id);
 
-    console.log('批量数据库写入完成');
+    console.log('同步数据库写入完成');
   } catch (error) {
-    console.error('批量写入数据库失败:', error);
+    console.error('同步写入数据库失败:', error);
     
     // 记录失败状态
     try {
@@ -100,7 +107,7 @@ async function batchWriteToDatabase(supabase: any, sessionId: string, expandedPr
         .from('design_briefs')
         .upsert({
           session_id: sessionId,
-          completion_status: 'complete',
+          completion_status: 'failed',
           additional_notes: `生成失败：${error.message}`
         });
     } catch (fallbackError) {
@@ -141,6 +148,7 @@ serve(async (req) => {
 
     console.log('接收到图片文件:', imageFile.name, '大小:', imageFile.size);
     console.log('提示词:', prompt);
+    console.log('会话ID:', sessionId);
 
     // Validate file size (5MB limit)
     if (imageFile.size > 5 * 1024 * 1024) {
@@ -239,16 +247,17 @@ serve(async (req) => {
 
     const briefImageUrl = thumbUrlData.publicUrl;
 
-    // Save to database if sessionId provided - use same logic as generate-sock-design
+    // Save to database synchronously if sessionId provided
     if (sessionId) {
-      console.log('开始后台数据库写入任务');
-      // Use EdgeRuntime.waitUntil to execute database write in background
-      EdgeRuntime.waitUntil(
-        batchWriteToDatabase(supabase, sessionId, prompt, detailImageUrl, briefImageUrl, designName)
-          .catch(error => {
-            console.error('后台数据库写入失败:', error);
-          })
-      );
+      console.log('开始同步数据库写入...');
+      try {
+        await saveToDatabaseSync(supabase, sessionId, prompt, detailImageUrl, briefImageUrl, designName);
+        console.log('数据库写入成功');
+      } catch (dbError) {
+        console.error('数据库写入失败:', dbError);
+        // Don't fail the entire request if database write fails
+        console.log('数据库写入失败，但继续返回图片结果');
+      }
     }
 
     console.log('图片上传生成成功');
