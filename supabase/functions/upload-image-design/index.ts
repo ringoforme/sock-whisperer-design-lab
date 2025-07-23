@@ -93,7 +93,7 @@ serve(async (req) => {
     console.log('OpenAI API 调用成功');
     
     // Generate design name
-    const designName = `上传设计_${new Date().toISOString().slice(0, 10)}_${Math.random().toString(36).slice(2, 8)}`;
+    const designName = `uploaded-design_${new Date().toISOString().slice(0, 10)}_${Math.random().toString(36).slice(2, 8)}`;
     
     // Convert base64 to blob for upload
     const base64Data = data.data[0].b64_json;
