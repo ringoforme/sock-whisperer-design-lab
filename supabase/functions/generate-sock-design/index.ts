@@ -10,43 +10,80 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function buildUserInput(body: GenerationRequest): string {
-  let userInput = '';
-  
-  // 处理两种输入格式：新的 sessionContext 和旧的 requirements
-  if (body.sessionContext) {
-    // 新格式：完整会话上下文
-    const { sessionContext } = body;
-    console.log('处理完整会话上下文:', sessionContext);
-    
-    // 构建用于扩展的上下文描述
-    const conversationSummary = sessionContext.messages
-      .filter((m: any) => m.isUser)
-      .map((m: any) => m.text)
-      .join(' ');
-    
-    userInput = `会话上下文: ${JSON.stringify(sessionContext.requirements)}
-对话摘要: ${conversationSummary}
-收集的信息: ${JSON.stringify(sessionContext.collectedInfo)}
-对话状态: ${JSON.stringify(sessionContext.conversationState)}`;
-  } else if (body.requirements) {
-    // 旧格式：简单需求
-    userInput = JSON.stringify(body.requirements);
-  } else {
-    throw new Error('缺少必要的输入参数');
+// **新增**: 更强大的上下文构建函数，替代旧的 buildUserInput
+function buildExpansionPayload(body: GenerationRequest): any[] {
+  const { sessionContext, modificationContext } = body;
+
+  if (!sessionContext) {
+    throw new Error('缺少 sessionContext');
   }
 
-  return userInput;
+  // 将对话历史拼接成一个字符串
+  const conversationText = sessionContext.messages
+    .map(m => `${m.isUser ? 'User' : 'Assistant'}: ${m.text}`)
+    .join('\n');
+
+  if (modificationContext && modificationContext.imageUrl && modificationContext.previousPrompt) {
+    // --- 修改模式 ---
+    console.log('构建 [修改模式] 的Payload');
+    // 对于多模态输入，我们将所有上下文打包到一个'user'角色的消息中
+    return [{
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: `
+            Please act as the Prompt Expander. Here is the context for a design modification request.
+            
+            **Previous Expanded Prompt (This is your primary reference, treat it like source code):**
+            \`\`\`markdown
+            ${modificationContext.previousPrompt}
+            \`\`\`
+
+            **Full Conversation History (Use this to understand the user's latest change requests):**
+            \`\`\`
+            ${conversationText}
+            \`\`\`
+
+            Your task is to modify the 'Previous Expanded Prompt' based on the latest user requests in the conversation, using the provided reference image as the visual ground truth. Output the new, complete, structured prompt.
+          `
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: modificationContext.imageUrl
+          }
+        }
+      ]
+    }];
+  } else {
+    // --- 首次生成模式 ---
+    console.log('构建 [首次生成] 的Payload');
+    return [{
+      role: 'user',
+      content: `
+        Please act as the Prompt Expander. Here is the full conversation history for a new sock design.
+        
+        **Full Conversation History:**
+        \`\`\`
+        ${conversationText}
+        \`\`\`
+
+        Your task is to generate a new, complete, structured prompt from scratch based on this conversation.
+      `
+    }];
+  }
 }
 
+
+// 数据库写入函数 batchWriteToDatabase 保持不变，这里省略以保持清爽
 async function batchWriteToDatabase(supabase: any, sessionContext: SessionContext, expandedPrompt: string, detail_image_url: string, thumbnail: string, designName: string, messageId?: string): Promise<void> {
+    // ... 此处代码与您之前的文件完全相同 ...
   console.log('开始批量写入数据库...');
   console.log('关联消息ID:', messageId);
   
@@ -144,6 +181,8 @@ async function batchWriteToDatabase(supabase: any, sessionContext: SessionContex
   }
 }
 
+
+// ---- 主服务逻辑 (Serve) ----
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -152,38 +191,30 @@ serve(async (req) => {
   try {
     const body: GenerationRequest = await req.json();
     
-    if (!openAIApiKey) {
-      return new Response(
-        JSON.stringify({ error: 'OpenAI API key not configured' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return new Response(
-        JSON.stringify({ error: 'Supabase configuration missing' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+    if (!openAIApiKey || !supabaseUrl || !supabaseServiceKey) {
+      return new Response(JSON.stringify({ error: 'Environment configuration missing' }), { status: 500 });
     }
 
     console.log('收到请求体:', JSON.stringify(body, null, 2));
 
-    const userInput = buildUserInput(body);
-    console.log('处理后的用户输入:', userInput);
+    // **修改点**: 使用新的函数来构建发送给AI的Payload
+    const messagesPayload = buildExpansionPayload(body);
+    console.log('处理后的AI Payload:', JSON.stringify(messagesPayload, null, 2));
 
     // 初始化服务
     const openAIService = new OpenAIService(openAIApiKey);
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 第一步：扩展提示词
-    const expandedPrompt = await openAIService.expandPrompt(userInput);
+    // **修改点**: 调用扩展提示词服务，传入完整的消息Payload
+    const expandedPrompt = await openAIService.expandPrompt(messagesPayload);
     console.log('扩展后的提示词:', expandedPrompt);
 
-    // 第二步：生成图像
+    // 第二步：生成图像 (这部分逻辑不变)
     const imageUrl = await openAIService.generateImage(expandedPrompt);
     console.log('图像生成完成');
 
-    // 第三步： 把图像放到云存储 
+    // 第三步：上传到云存储 (这部分逻辑不变)
+    // ...
     console.log("开始云存储")
     const storageBucket = 'designs'
     const base64Match = imageUrl.match(/^data:(.*?);base64,(.*)$/);
@@ -209,7 +240,7 @@ serve(async (req) => {
     console.log("获取brief url")
 
 
-    // 第三步：批量写入数据库（在后台执行）
+    // 第四步：批量写入数据库 (这部分逻辑不变)
     const designName = '袜子设计';
     if (body.sessionContext?.sessionId) {
       console.log('开始后台数据库写入任务，消息ID:', body.messageId);
@@ -222,7 +253,7 @@ serve(async (req) => {
       );
     }
 
-    // 立即返回最小展示数据
+    // 返回响应 (这部分逻辑不变)
     const response: GenerationResponse = { 
       imageUrl: detailUrl,
       brief_image_url: briefUrl,
@@ -238,19 +269,6 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in generate-sock-design function:', error);
-    
-    const errorResponse: GenerationResponse = { 
-      imageUrl: '',
-      brief_image_url: '',
-      expandedPrompt: '',
-      designName: '',
-      error: error.message || 'Image generation failed',
-      success: false 
-    };
-
-    return new Response(JSON.stringify(errorResponse), { 
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-    });
+    return new Response(JSON.stringify({ error: error.message || 'Image generation failed', success: false }), { status: 500, headers: corsHeaders });
   }
 });

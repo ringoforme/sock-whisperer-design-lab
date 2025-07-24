@@ -20,10 +20,11 @@ interface ConversationContext {
   collectedInfo: any;
   isComplete: boolean;
   sessionId?: string;
+  isEditing?: boolean;  // 是否处于编辑模式
 }
 
 // Sox Lab袜子设计助手的系统提示词
-const SYSTEM_PROMPT = `You are "Sox Lab Assistant", a friendly and helpful AI designer specializing in socks. Your goal is to have a natural conversation with the user to help them build a detailed design brief.
+const DESIGN_ASSISTANT_SYSTEM_PROMPT = `You are "Sox Lab Assistant", a friendly and helpful AI designer specializing in socks. Your goal is to have a natural conversation with the user to help them build a detailed design brief.
 
 Follow these steps:
 1.  Start by greeting the user and acknowledging their initial idea if they provided one.
@@ -33,6 +34,9 @@ Follow these steps:
     - Intended Use (e.g., sports, casual, formal)
     - Main Colors (ask for 2-3 main colors)
 3.  Once you believe you have enough information to create a detailed design, end your message with a summary of the brief and guide user to click the "generate" button.
+
+Example of a summary of the brief:
+一双情人节主题的艺术风格袜子，主色调为温暖的橙色与柔和的粉色，整体图案浪漫而富有节日氛围。袜面布满手绘风格的爱心图案、信封、玫瑰花朵和丝带图形，呈现出轻快的节奏和对称的美感。图案以橙色和粉色为主，辅以少量奶油白和金色点缀，构成明亮甜美的视觉效果。设计风格融合了现代插画与复古卡片元素，整体视觉柔和圆润。袜口为浅粉色罗纹，袜子平铺展开如一幅节日贺卡般温馨浪漫，适合情人节送礼或穿搭。
 
 Key guidelines:
 1. Remember and reference previous conversation context
@@ -50,6 +54,24 @@ IMPORTANT RESTRICTIONS:
 Current conversation context will be provided to help you maintain continuity.
 
 Always respond concisely in Chinese and provide helpful, contextual responses based on the full conversation history.`;
+
+const EDIT_ASSISTANT_SYSTEM_PROMPT = `You are "Sox Lab Editor", a helpful AI assistant. Your role is to have a focused, natural conversation with a user about modifying an EXISTING sock design.
+
+Key Instructions:
+
+1.  **Acknowledge and Clarify:** Understand the user's modification request. If it's ambiguous, ask clarifying questions.
+2.  **Provide Suggestions:** Offer specific, creative, and helpful suggestions related to the user's request. For example, if they want a different color, suggest 1-2 concrete and appealing color options.
+3.  **Be Concise:** Keep your responses brief and directly related to the edit being discussed.
+4.  **Guide to Action:** End your response by encouraging the user to either provide more feedback or to click the "Edit Image" button to apply the discussed changes.
+
+**CRITICAL RESTRICTION: DO NOT summarize the entire sock design again.** Your focus is only on the specific changes being requested.
+
+Example Interaction:
+User: "I think the heel and toe colors should be a contrasting color, not black."
+You: "That's a great idea to make the design pop! For a strong contrast, we could use a vibrant Electric Blue or a sharp Fluorescent Green. Which sounds better to you, or do you have another color in mind? Once you're happy with the choice, just click the 'Edit Image' button."
+
+Always respond concisely in Chinese.
+`;
 
 export class LLMService {
   private currentSessionId: string | null = null;
@@ -89,11 +111,6 @@ export class LLMService {
   }
 
   // 原有的单消息发送方法，保持向后兼容
-  async sendMessage(userMessage: string): Promise<LLMResponse> {
-    return this.sendMessageWithHistory(userMessage, []);
-  }
-
-  // 新的支持对话历史和会话管理的方法
   async sendMessageWithHistory(
     userMessage: string, 
     conversationHistory: ConversationMessage[],
@@ -101,10 +118,8 @@ export class LLMService {
   ): Promise<LLMResponse> {
     try {
       console.log('调用GPT API，消息:', userMessage);
-      console.log('对话历史长度:', conversationHistory.length);
-      console.log('对话上下文:', context);
+      console.log('当前模式:', context?.isEditing ? '编辑模式' : '设计模式');
       
-      // 如果有当前会话，先保存用户消息
       if (this.currentSessionId) {
         await sessionService.addMessage(this.currentSessionId, 'user', userMessage, {
           phase: context?.currentPhase,
@@ -112,21 +127,25 @@ export class LLMService {
         });
       }
       
-      // 构建增强的系统提示词，包含上下文信息
-      const enhancedSystemPrompt = `${SYSTEM_PROMPT}
+      // 1. 根据上下文中的 isEditing 标志，选择基础的 System Prompt
+      const basePrompt = context?.isEditing 
+        ? EDIT_ASSISTANT_SYSTEM_PROMPT 
+        : DESIGN_ASSISTANT_SYSTEM_PROMPT;
 
-当前对话状态：
-- 对话阶段：${context?.currentPhase || 'unknown'}
-- 已收集信息：${JSON.stringify(context?.collectedInfo || {}, null, 2)}
-- 信息收集完成度：${context?.isComplete ? '完成' : '进行中'}
+      // 2. 将选择的 Prompt 与动态上下文结合，构建最终的 Prompt
+      const enhancedSystemPrompt = `${basePrompt}
 
-请基于以上上下文和对话历史，提供自然、连贯的回复。避免重复询问已经回答过的问题。`;
+        当前对话状态：
+        - 对话阶段：${context?.currentPhase || 'unknown'}
+        - 已收集信息：${JSON.stringify(context?.collectedInfo || {}, null, 2)}
+        - 信息收集完成度：${context?.isComplete ? '完成' : '进行中'}
 
-      // 调用Supabase Edge Function进行GPT对话
+        请基于以上上下文和对话历史，提供自然、连贯的回复。`;
+
       const { data, error } = await supabase.functions.invoke('chat-with-gpt', {
         body: { 
           message: userMessage,
-          systemPrompt: enhancedSystemPrompt,
+          systemPrompt: enhancedSystemPrompt, // 使用我们新构建的 Prompt
           conversationHistory: conversationHistory.map(msg => ({
             role: msg.role,
             content: msg.content
@@ -142,7 +161,6 @@ export class LLMService {
       if (data && data.success && data.message) {
         console.log('GPT API响应成功:', data.message);
         
-        // 如果有当前会话，保存助手回复
         if (this.currentSessionId) {
           await sessionService.addMessage(this.currentSessionId, 'assistant', data.message, {
             phase: context?.currentPhase,
