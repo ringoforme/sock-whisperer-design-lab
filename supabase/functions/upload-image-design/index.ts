@@ -249,55 +249,18 @@ serve(async (req) => {
 
     // Save to database synchronously if sessionId provided
     if (sessionId) {
-      console.log('开始同步数据库写入，会话ID:', sessionId);
-      
-      // Validate sessionId first
-      const { data: sessionCheck, error: sessionCheckError } = await supabase
-        .from('design_sessions')
-        .select('id, user_id')
-        .eq('id', sessionId)
-        .single();
-      
-      if (sessionCheckError || !sessionCheck) {
-        console.error('会话ID验证失败:', sessionCheckError);
-        return new Response(
-          JSON.stringify({ 
-            error: `会话ID无效或不存在: ${sessionId}`,
-            success: false 
-          }),
-          { 
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
-      }
-      
-      console.log('会话ID验证成功，用户ID:', sessionCheck.user_id);
-      
+      console.log('开始同步数据库写入...');
       try {
         await saveToDatabaseSync(supabase, sessionId, prompt, detailImageUrl, briefImageUrl, designName);
         console.log('数据库写入成功');
       } catch (dbError) {
         console.error('数据库写入失败:', dbError);
-        // Return error response if database write fails
-        return new Response(
-          JSON.stringify({ 
-            error: `数据库写入失败: ${dbError.message}`,
-            success: false 
-          }),
-          { 
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
+        // Don't fail the entire request if database write fails
+        console.log('数据库写入失败，但继续返回图片结果');
       }
-    } else {
-      console.log('未提供会话ID，跳过数据库写入');
     }
 
-    console.log('图片上传生成成功，设计名称:', designName);
-    console.log('详细图片URL:', detailImageUrl);
-    console.log('缩略图URL:', briefImageUrl);
+    console.log('图片上传生成成功');
     
     return new Response(JSON.stringify({ 
       success: true,
