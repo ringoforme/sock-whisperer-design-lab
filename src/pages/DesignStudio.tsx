@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Download, Edit, AlertCircle, MessageCircle, Plus, File as FileIcon, Brush } from "lucide-react";
+import { Download, Edit, AlertCircle, MessageCircle, Plus, File, Brush } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import EditingView from "@/components/EditingView";
 import ImageModal from "@/components/ImageModal";
@@ -13,7 +13,7 @@ import AppHeader from "@/components/AppHeader";
 import SessionHistorySidebar from "@/components/SessionHistorySidebar";
 import { useDesignStorage } from "@/hooks/useDesignStorage";
 import { downloadService } from "@/services/downloadService";
-import { generateDesigns, editImage, uploadImageDesign } from "@/services/design.service";
+import { generateDesigns, editImage } from "@/services/design.service";
 import { sessionService } from "@/services/sessionService";
 import { llmService } from "@/services/llmService";
 import { ConversationManager } from "@/services/conversationManager";
@@ -59,16 +59,9 @@ const DesignStudio = () => {
     const sessionId = params.get("sessionId");
     const imageId = params.get("imageId");
     const initialPrompt = params.get("prompt");
-    const mode = params.get("mode");
-    
     if (sessionId) {
       console.log('从URL参数加载会话:', sessionId, '图片ID:', imageId);
       loadSession(sessionId, imageId);
-    } else if (mode === 'upload' && initialPrompt) {
-      // Handle upload mode
-      initializeSession().then(() => {
-        handleUploadGeneration(initialPrompt);
-      });
     } else if (initialPrompt) {
       // Handle direct prompt generation
       initializeSession().then(() => {
@@ -241,90 +234,6 @@ const DesignStudio = () => {
     } catch (error) {
       console.error('加载会话失败:', error);
       toast.error('加载会话失败');
-    }
-  };
-
-  // New function to handle upload generation
-  const handleUploadGeneration = async (prompt: string) => {
-    // Get uploaded file from sessionStorage
-    const uploadFileData = sessionStorage.getItem('uploadFile');
-    if (!uploadFileData) {
-      toast.error('未找到上传的文件');
-      return;
-    }
-    
-    try {
-      const fileData = JSON.parse(uploadFileData);
-      
-      // Convert data URL back to File
-      const response = await fetch(fileData.data);
-      const blob = await response.blob();
-      const file = new File([blob], fileData.name, { type: fileData.type });
-      
-      // Clean up sessionStorage
-      sessionStorage.removeItem('uploadFile');
-      
-      // Add user message
-      const userMsg: Message = {
-        id: Date.now(),
-        text: `我想基于这张图片生成袜子设计：${prompt}`,
-        isUser: true
-      };
-      setMessages(prev => [...prev, userMsg]);
-      
-      // Save user message to database
-      if (currentSessionId) {
-        try {
-          await sessionService.addMessage(currentSessionId, 'user', userMsg.text);
-        } catch (error) {
-          console.error('记录用户消息失败:', error);
-        }
-      }
-      
-      // Start generation
-      setIsGenerating(true);
-      setError(null);
-      
-      // Generate design from uploaded image
-      const newDesign = await uploadImageDesign(file, prompt, currentSessionId);
-      
-      setDesign({
-        ...newDesign,
-        isEditing: false,
-        imageId: undefined
-      });
-      setCurrentImageUrl(newDesign.url);
-      
-      // Add success message with thumbnail
-      const successMessage = "太棒了！我已经根据您上传的图片生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
-      const messageWithThumbnail: Message = {
-        id: Date.now(),
-        text: successMessage,
-        isUser: false,
-        detail_image_url: newDesign.url,
-        brief_image_url: newDesign.brief_image_url,
-        designName: newDesign.design_name
-      };
-      setMessages(prev => [...prev, messageWithThumbnail]);
-      
-      // Save assistant message to database
-      if (currentSessionId) {
-        try {
-          await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
-          await sessionService.updateSessionStatus(currentSessionId, 'completed');
-        } catch (error) {
-          console.error('记录助手消息失败:', error);
-        }
-      }
-      
-      toast.success("基于上传图片的设计生成成功！");
-      
-    } catch (error: any) {
-      console.error('上传图片生成失败:', error);
-      setError(error.message);
-      toast.error(`上传生成失败: ${error.message}`);
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -828,7 +737,7 @@ const DesignStudio = () => {
                               下载
                             </Button>
                             <Button variant="outline" size="sm" onClick={handleVectorize}>
-                              <FileIcon className="h-4 w-4 mr-2" />
+                              <File className="h-4 w-4 mr-2" />
                               矢量化
                             </Button>
                             <Button variant="outline" size="sm" onClick={handleBrushEdit}>
