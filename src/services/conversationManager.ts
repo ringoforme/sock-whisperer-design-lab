@@ -83,39 +83,33 @@ export class ConversationManager {
     return !!(req.sockType && req.colors?.length && req.pattern && req.occasion);
   }
 
-  public async generateResponse(userMessage: string): Promise<string> {
+  public async generateResponse(userMessage: string, isEditingMode?: boolean): Promise<string> { // <-- 1. 增加 isEditingMode 参数
     console.log('生成回复，用户消息:', userMessage);
     console.log('当前对话阶段:', this.state.phase);
-    console.log('发送前对话历史长度:', this.conversationHistory.length);
     
-    // 添加用户消息到历史记录
-    this.addToHistory('user', userMessage);
+    // 注意：这里的 addToHistory 可能会被重复调用，因为 DesignStudio 中也调用了。
+    // 我们可以考虑优化，但暂时保持原逻辑以确保功能。
+    // this.addToHistory('user', userMessage); // 暂时注释掉，因为上层已添加
     
-    // 准备完整的对话历史，包括刚刚添加的用户消息
     const fullHistory = [...this.conversationHistory];
-    console.log('传递给GPT的完整历史:', fullHistory);
     
     try {
-      console.log('调用 GPT API，传递完整对话历史...');
+      console.log('调用 GPT API...');
       const response = await llmService.sendMessageWithHistory(
         userMessage, 
-        fullHistory,  // 传递完整历史，包括当前用户消息
+        fullHistory,
         {
           currentPhase: this.state.phase,
           collectedInfo: this.state.requirements,
-          isComplete: this.state.isComplete
+          isComplete: this.state.isComplete,
+          isEditing: isEditingMode || false // <-- 2. 将 isEditingMode 状态放入 context
         }
       );
       
       if (response.success && response.message) {
         console.log('GPT API 成功响应:', response.message);
-        
-        // 添加AI回复到历史记录
         this.addToHistory('assistant', response.message);
-        
-        // 尝试从 GPT 回复中提取设计需求信息
         this.extractRequirementsFromGPTResponse(userMessage, response.message);
-        
         return response.message;
       } else {
         console.warn('GPT API 调用失败，使用结构化回复:', response.error);
@@ -130,6 +124,54 @@ export class ConversationManager {
       return fallbackResponse;
     }
   }
+
+  // public async generateResponse(userMessage: string): Promise<string> {
+  //   console.log('生成回复，用户消息:', userMessage);
+  //   console.log('当前对话阶段:', this.state.phase);
+  //   console.log('发送前对话历史长度:', this.conversationHistory.length);
+    
+  //   // 添加用户消息到历史记录
+  //   this.addToHistory('user', userMessage);
+    
+  //   // 准备完整的对话历史，包括刚刚添加的用户消息
+  //   const fullHistory = [...this.conversationHistory];
+  //   console.log('传递给GPT的完整历史:', fullHistory);
+    
+  //   try {
+  //     console.log('调用 GPT API，传递完整对话历史...');
+  //     const response = await llmService.sendMessageWithHistory(
+  //       userMessage, 
+  //       fullHistory,  // 传递完整历史，包括当前用户消息
+  //       {
+  //         currentPhase: this.state.phase,
+  //         collectedInfo: this.state.requirements,
+  //         isComplete: this.state.isComplete
+  //       }
+  //     );
+      
+  //     if (response.success && response.message) {
+  //       console.log('GPT API 成功响应:', response.message);
+        
+  //       // 添加AI回复到历史记录
+  //       this.addToHistory('assistant', response.message);
+        
+  //       // 尝试从 GPT 回复中提取设计需求信息
+  //       this.extractRequirementsFromGPTResponse(userMessage, response.message);
+        
+  //       return response.message;
+  //     } else {
+  //       console.warn('GPT API 调用失败，使用结构化回复:', response.error);
+  //       const fallbackResponse = this.handleStructuredResponse(userMessage.toLowerCase());
+  //       this.addToHistory('assistant', fallbackResponse);
+  //       return fallbackResponse;
+  //     }
+  //   } catch (error) {
+  //     console.error('GPT API 调用异常，降级到结构化对话:', error);
+  //     const fallbackResponse = this.handleStructuredResponse(userMessage.toLowerCase());
+  //     this.addToHistory('assistant', fallbackResponse);
+  //     return fallbackResponse;
+  //   }
+  // }
 
   // 从 GPT 回复中智能提取用户需求
   private extractRequirementsFromGPTResponse(userMessage: string, gptResponse: string): void {

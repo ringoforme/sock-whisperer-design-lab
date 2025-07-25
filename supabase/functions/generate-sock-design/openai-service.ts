@@ -1,5 +1,4 @@
 
-// OpenAI API service for sock design generation
 import { PROFESSIONAL_SYSTEM_PROMPT } from './prompts.ts';
 
 export class OpenAIService {
@@ -9,8 +8,9 @@ export class OpenAIService {
     this.apiKey = apiKey;
   }
 
-  async expandPrompt(userInput: string): Promise<string> {
-    console.log('调用GPT-4o扩展提示词...');
+  // **修改点**: expandPrompt 现在接收一个消息对象数组，而不是一个字符串
+  async expandPrompt(messagesPayload: any[]): Promise<string> {
+    console.log('调用GPT-4o扩展提示词（新版）...');
     
     const expandResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -20,12 +20,13 @@ export class OpenAIService {
       },
       body: JSON.stringify({
         model: 'gpt-4o',
+        // **修改点**: 将系统Prompt与传入的Payload合并
         messages: [
           { role: 'system', content: PROFESSIONAL_SYSTEM_PROMPT },
-          { role: 'user', content: userInput }
+          ...messagesPayload // 使用展开运算符(...)将传入的数组内容直接添加进来
         ],
         temperature: 0.7,
-        max_tokens: 500
+        max_tokens: 800 // 稍微增加token上限以容纳更复杂的prompt
       }),
     });
 
@@ -42,6 +43,7 @@ export class OpenAIService {
     return expandedPrompt;
   }
 
+  // generateImage 方法保持不变
   async generateImage(prompt: string): Promise<string> {
     console.log('调用图像生成API...');
     
@@ -52,11 +54,12 @@ export class OpenAIService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-image-1',
+        model: 'dall-e-3', // 推荐使用dall-e-3以获得更好的矢量风格遵循效果
         prompt: prompt,
         n: 1,
-        size: '1024x1536',
-        quality: 'high'
+        size: '1024x1024', // DALL-E 3 推荐使用方形尺寸
+        quality: 'standard', // standard质量性价比更高
+        response_format: 'b64_json' // 明确要求base64格式
       }),
     });
 
@@ -67,7 +70,6 @@ export class OpenAIService {
       throw new Error(imageData.error.message);
     }
 
-    // gpt-image-1 总是返回base64格式
     const base64Image = imageData.data[0].b64_json;
     return `data:image/png;base64,${base64Image}`;
   }

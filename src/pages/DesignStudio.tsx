@@ -41,11 +41,13 @@ const DesignStudio = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [conversationManager] = useState(() => new ConversationManager());
-  const [pendingEditInstruction, setPendingEditInstruction] = useState<string>('');
+  // const [pendingEditInstruction, setPendingEditInstruction] = useState<string>('');
+  const [editConversation, setEditConversation] = useState<Message[]>([]);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isBrushEditorOpen, setIsBrushEditorOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   const location = useLocation();
+
   
   const {
     markAsDownloaded,
@@ -250,21 +252,19 @@ const DesignStudio = () => {
     });
   };
 
-  // 生成图片功能 - 修复消息关联时序问题
+  // 生成图片功能
   const triggerImageGeneration = async () => {
     setIsGenerating(true);
     setError(null);
     try {
       console.log('开始生成设计，会话ID:', currentSessionId);
-      
-      // 先创建助手消息并获取消息ID
+
       const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
       let messageId: string | undefined;
-      
+
       if (currentSessionId) {
         const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
         messageId = addedMessage.id;
-        // console.log('助手消息已创建，消息ID:', messageId);
       }
 
       const sessionContext = {
@@ -274,17 +274,28 @@ const DesignStudio = () => {
         collectedInfo: conversationManager.getCollectedInfo(),
         requirements: conversationManager.getRequirements()
       };
-      
-      // 传递消息ID给生成服务
-      const newDesign = await generateDesigns(sessionContext, messageId);
-      
+
+      let modificationContext = undefined;
+
+      if (design && design.url && design.prompt_en) {
+        console.log("检测到已有设计，进入 [修改模式]，准备上下文...");
+        modificationContext = {
+          imageUrl: design.url,
+          previousPrompt: design.prompt_en
+        };
+      } else {
+        console.log("未检测到已有设计，进入 [首次生成模式]");
+      }
+
+      const newDesign = await generateDesigns(sessionContext, modificationContext, messageId);
+
       setDesign({
         ...newDesign,
         isEditing: false,
-        imageId: undefined // 将在后续设置
+        imageId: undefined 
       });
       setCurrentImageUrl(newDesign.url);
-      
+
       const messageWithThumbnail: Message = {
         id: Date.now(),
         text: successMessage,
@@ -294,7 +305,7 @@ const DesignStudio = () => {
         designName: newDesign.design_name
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
-      
+
       if (currentSessionId) {
         await sessionService.updateSessionStatus(currentSessionId, 'completed');
       }
@@ -307,33 +318,168 @@ const DesignStudio = () => {
       setIsGenerating(false);
     }
   };
+// const triggerImageGeneration = async () => {
+//   setIsGenerating(true);
+//   setError(null);
+//   try {
+//     console.log('开始生成设计，会话ID:', currentSessionId);
+    
+//     const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
+//     let messageId: string | undefined;
+    
+//     if (currentSessionId) {
+//       const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
+//       messageId = addedMessage.id;
+//     }
+
+//     const sessionContext = {
+//       sessionId: currentSessionId,
+//       messages: messages,
+//       conversationState: conversationManager.getState(),
+//       collectedInfo: conversationManager.getCollectedInfo(),
+//       requirements: conversationManager.getRequirements()
+//     };
+    
+//     // ================================================================
+//     // ========= 开始【核心修改逻辑】 =========
+//     // ================================================================
+//     let modificationContext = undefined;
+
+//     // 检查 design state 中是否存在上一次生成的设计信息
+//     // design.url 和 design.prompt_en (即 expandedPrompt) 是关键
+//     if (design && design.url && design.prompt_en) {
+//       console.log("检测到已有设计，进入 [修改模式]，准备上下文...");
+//       modificationContext = {
+//         imageUrl: design.url,
+//         previousPrompt: design.prompt_en
+//       };
+//     } else {
+//       console.log("未检测到已有设计，进入 [首次生成模式]");
+//     }
+    
+//     // 调用 generateDesigns 服务，并传入可能为 undefined 的 modificationContext
+//     const newDesign = await generateDesigns(sessionContext, modificationContext, messageId);
+//     // ================================================================
+//     // ========= 结束【核心修改逻辑】 =========
+//     // ================================================================
+
+//     // 更新 React 状态以显示新设计
+//     // newDesign 对象中已包含下一次修改可能需要的 expandedPrompt
+//     setDesign({
+//       ...newDesign,
+//       isEditing: false,
+//       imageId: undefined 
+//     });
+//     setCurrentImageUrl(newDesign.url);
+    
+//     const messageWithThumbnail: Message = {
+//       id: Date.now(),
+//       text: successMessage,
+//       isUser: false,
+//       detail_image_url: newDesign.url,
+//       brief_image_url: newDesign.brief_image_url,
+//       designName: newDesign.design_name
+//     };
+//     setMessages(prev => [...prev, messageWithThumbnail]);
+    
+//     if (currentSessionId) {
+//       await sessionService.updateSessionStatus(currentSessionId, 'completed');
+//     }
+//     toast.success("设计生成成功！");
+//   } catch (err: any) {
+//     console.error('生成设计失败:', err);
+//     setError(err.message);
+//     toast.error(`生成失败: ${err.message}`);
+//   } finally {
+//     setIsGenerating(false);
+//   }
+// };
+
+  // const triggerImageGeneration = async () => {
+  //   setIsGenerating(true);
+  //   setError(null);
+  //   try {
+  //     console.log('开始生成设计，会话ID:', currentSessionId);
+      
+  //     // 先创建助手消息并获取消息ID
+  //     const successMessage = "太棒了！我已经根据您的想法生成了一个设计。您可以下载它或者点击编辑来进一步调整。";
+  //     let messageId: string | undefined;
+      
+  //     if (currentSessionId) {
+  //       const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', successMessage);
+  //       messageId = addedMessage.id;
+  //       // console.log('助手消息已创建，消息ID:', messageId);
+  //     }
+
+  //     const sessionContext = {
+  //       sessionId: currentSessionId,
+  //       messages: messages,
+  //       conversationState: conversationManager.getState(),
+  //       collectedInfo: conversationManager.getCollectedInfo(),
+  //       requirements: conversationManager.getRequirements()
+  //     };
+      
+  //     // 传递消息ID给生成服务
+  //     const newDesign = await generateDesigns(sessionContext, messageId);
+      
+  //     setDesign({
+  //       ...newDesign,
+  //       isEditing: false,
+  //       imageId: undefined // 将在后续设置
+  //     });
+  //     setCurrentImageUrl(newDesign.url);
+      
+  //     const messageWithThumbnail: Message = {
+  //       id: Date.now(),
+  //       text: successMessage,
+  //       isUser: false,
+  //       detail_image_url: newDesign.url,
+  //       brief_image_url: newDesign.brief_image_url,
+  //       designName: newDesign.design_name
+  //     };
+  //     setMessages(prev => [...prev, messageWithThumbnail]);
+      
+  //     if (currentSessionId) {
+  //       await sessionService.updateSessionStatus(currentSessionId, 'completed');
+  //     }
+  //     toast.success("设计生成成功！");
+  //   } catch (err: any) {
+  //     console.error('生成设计失败:', err);
+  //     setError(err.message);
+  //     toast.error(`生成失败: ${err.message}`);
+  //   } finally {
+  //     setIsGenerating(false);
+  //   }
+  // };
 
   // 触发图像编辑功能
   const triggerImageEdit = async () => {
-    if (!design || !pendingEditInstruction.trim()) {
-      toast.error("请先输入编辑指令");
+    const fullEditPrompt = editConversation
+      .map(m => `${m.isUser ? 'User' : 'Assistant'}: ${m.text}`)
+      .join('\n');
+
+    if (!design || !fullEditPrompt.trim()) {
+      toast.error("请先输入您的编辑想法");
       return;
     }
+
     setIsGenerating(true);
     try {
-      // 使用 editImage 函数编辑图片
-      const editedDesign = await editImage(design.url, pendingEditInstruction, currentSessionId);
-      setDesign({
-        ...editedDesign,
-        isEditing: true
-      });
-      // console.log("editImage:",editedDesign)
+      const editedDesign = await editImage(design.url, fullEditPrompt, currentSessionId);
+
+      setDesign({ ...editedDesign, isEditing: true });
       setCurrentImageUrl(editedDesign.url);
       toast.success(`设计已更新！`);
-      const responseMessage = "我已根据您的指令编辑了设计。";
+
+      setEditConversation([]);
+
+      const responseMessage = "我已根据您的指令更新了设计。";
       let messageId: string | undefined;
 
-      // 记录助手回复到数据库并获取消息ID
       if (currentSessionId) {
         const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
         messageId = addedMessage.id;
 
-        // Update the latest image with the message_id
         try {
           const sessionHistory = await sessionService.getSessionHistory(currentSessionId);
           const latestImage = sessionHistory.images.filter(img => img.generation_status === 'success').sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
@@ -356,14 +502,67 @@ const DesignStudio = () => {
       };
       setMessages(prev => [...prev, messageWithThumbnail]);
 
-      // 清空待处理的编辑指令
-      setPendingEditInstruction('');
     } catch (err: any) {
       toast.error(`编辑失败: ${err.message}`);
     } finally {
       setIsGenerating(false);
     }
   };
+  // const triggerImageEdit = async () => {
+  //   if (!design || !pendingEditInstruction.trim()) {
+  //     toast.error("请先输入编辑指令");
+  //     return;
+  //   }
+  //   setIsGenerating(true);
+  //   try {
+  //     // 使用 editImage 函数编辑图片
+  //     const editedDesign = await editImage(design.url, pendingEditInstruction, currentSessionId);
+  //     setDesign({
+  //       ...editedDesign,
+  //       isEditing: true
+  //     });
+  //     // console.log("editImage:",editedDesign)
+  //     setCurrentImageUrl(editedDesign.url);
+  //     toast.success(`设计已更新！`);
+  //     const responseMessage = "我已根据您的指令编辑了设计。";
+  //     let messageId: string | undefined;
+
+  //     // 记录助手回复到数据库并获取消息ID
+  //     if (currentSessionId) {
+  //       const addedMessage = await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
+  //       messageId = addedMessage.id;
+
+  //       // Update the latest image with the message_id
+  //       try {
+  //         const sessionHistory = await sessionService.getSessionHistory(currentSessionId);
+  //         const latestImage = sessionHistory.images.filter(img => img.generation_status === 'success').sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+  //         if (latestImage) {
+  //           await supabase.from('generated_images').update({
+  //             message_id: messageId
+  //           }).eq('id', latestImage.id);
+  //         }
+  //       } catch (error) {
+  //         console.error('关联编辑图片和消息失败:', error);
+  //       }
+  //     }
+  //     const messageWithThumbnail: Message = {
+  //       id: Date.now(),
+  //       text: responseMessage,
+  //       isUser: false,
+  //       detail_image_url: editedDesign.url,
+  //       brief_image_url: editedDesign.brief_image_url,
+  //       designName: editedDesign.design_name
+  //     };
+  //     setMessages(prev => [...prev, messageWithThumbnail]);
+
+  //     // 清空待处理的编辑指令
+  //     setPendingEditInstruction('');
+  //   } catch (err: any) {
+  //     toast.error(`编辑失败: ${err.message}`);
+  //   } finally {
+  //     setIsGenerating(false);
+  //   }
+  // };
 
   // 编辑 mask
   function replacePixels(base64Str, conditionFn, replaceColor): Promise<string>{
@@ -460,84 +659,126 @@ const DesignStudio = () => {
   // 修改后的消息处理函数 - 防止重复保存
   const handleSendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isGenerating || isChatLoading) return;
-    const userMsg: Message = {
-      id: Date.now(),
-      text: userMessage,
-      isUser: true
-    };
-    setMessages(prev => [...prev, userMsg]);
 
-    // Save user message to database once
-    let userMessageId: string | undefined;
+    const userMsg: Message = { id: Date.now(), text: userMessage, isUser: true };
+
+    setMessages(prev => [...prev, userMsg]);
+    if (isEditingMode) {
+      setEditConversation(prev => [...prev, userMsg]);
+    }
+
     if (currentSessionId) {
       try {
-        const addedMessage = await sessionService.addMessage(currentSessionId, 'user', userMessage);
-        userMessageId = addedMessage.id;
-      } catch (error) {
-        console.error('记录用户消息失败:', error);
-      }
+        await sessionService.addMessage(currentSessionId, 'user', userMessage);
+      } catch (error) { console.error('记录用户消息失败:', error); }
     }
-    if (isEditingMode && design) {
-      setPendingEditInstruction(userMessage);
-      const responseMessage = "我已收到您的编辑指令。请点击编辑图片按钮来应用修改。";
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        text: responseMessage,
-        isUser: false
-      }]);
 
-      // Save assistant response to database once
+    setIsChatLoading(true);
+    try {
+      conversationManager.addToHistory('user', userMessage);
+      const gptResponse = await conversationManager.generateResponse(userMessage, isEditingMode); // <-- 把 isEditingMode 传进去
+
+      const assistantMsg: Message = { id: Date.now() + 1, text: gptResponse, isUser: false };
+
+      setMessages(prev => [...prev, assistantMsg]);
+      if (isEditingMode) {
+        setEditConversation(prev => [...prev, assistantMsg]);
+      }
+
       if (currentSessionId) {
         try {
-          await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
-        } catch (error) {
-          console.error('记录助手消息失败:', error);
-        }
+          await sessionService.addMessage(currentSessionId, 'assistant', gptResponse);
+        } catch (error) { console.error('记录助手消息失败:', error); }
       }
-    } else {
-      setIsChatLoading(true);
-      try {
-        console.log('发送消息到 ConversationManager:', userMessage);
-        conversationManager.addToHistory('user', userMessage);
-        const gptResponse = await conversationManager.generateResponse(userMessage);
-        console.log('收到 GPT 回复:', gptResponse);
-        setMessages(prev => [...prev, {
-          id: Date.now() + 1,
-          text: gptResponse,
-          isUser: false
-        }]);
-
-        // Save assistant response to database once
-        if (currentSessionId) {
-          try {
-            await sessionService.addMessage(currentSessionId, 'assistant', gptResponse);
-          } catch (error) {
-            console.error('记录助手消息失败:', error);
-          }
-        }
-      } catch (error) {
-        console.error('GPT 聊天失败:', error);
-        const fallbackResponse = "抱歉，AI 服务暂时不可用。请继续描述您的设计想法，稍后我会为您生成设计。";
-        setMessages(prev => [...prev, {
-          id: Date.now() + 1,
-          text: fallbackResponse,
-          isUser: false
-        }]);
-
-        // Save fallback response to database once
-        if (currentSessionId) {
-          try {
-            await sessionService.addMessage(currentSessionId, 'assistant', fallbackResponse);
-          } catch (error) {
-            console.error('记录助手消息失败:', error);
-          }
-        }
-        toast.error("AI 聊天服务暂时不可用");
-      } finally {
-        setIsChatLoading(false);
-      }
+    } catch (error) {
+      console.error('GPT 聊天失败:', error);
+      const fallbackResponse = "抱歉，AI 服务暂时不可用。";
+      setMessages(prev => [...prev, { id: Date.now() + 1, text: fallbackResponse, isUser: false }]);
+      toast.error("AI 聊天服务暂时不可用");
+    } finally {
+      setIsChatLoading(false);
     }
   };
+  // const handleSendMessage = async (userMessage: string) => {
+  //   if (!userMessage.trim() || isGenerating || isChatLoading) return;
+  //   const userMsg: Message = {
+  //     id: Date.now(),
+  //     text: userMessage,
+  //     isUser: true
+  //   };
+  //   setMessages(prev => [...prev, userMsg]);
+
+  //   // Save user message to database once
+  //   let userMessageId: string | undefined;
+  //   if (currentSessionId) {
+  //     try {
+  //       const addedMessage = await sessionService.addMessage(currentSessionId, 'user', userMessage);
+  //       userMessageId = addedMessage.id;
+  //     } catch (error) {
+  //       console.error('记录用户消息失败:', error);
+  //     }
+  //   }
+  //   if (isEditingMode && design) {
+  //     setPendingEditInstruction(userMessage);
+  //     const responseMessage = "我已收到您的编辑指令。请点击编辑图片按钮来应用修改。";
+  //     setMessages(prev => [...prev, {
+  //       id: Date.now(),
+  //       text: responseMessage,
+  //       isUser: false
+  //     }]);
+
+  //     // Save assistant response to database once
+  //     if (currentSessionId) {
+  //       try {
+  //         await sessionService.addMessage(currentSessionId, 'assistant', responseMessage);
+  //       } catch (error) {
+  //         console.error('记录助手消息失败:', error);
+  //       }
+  //     }
+  //   } else {
+  //     setIsChatLoading(true);
+  //     try {
+  //       console.log('发送消息到 ConversationManager:', userMessage);
+  //       conversationManager.addToHistory('user', userMessage);
+  //       const gptResponse = await conversationManager.generateResponse(userMessage);
+  //       console.log('收到 GPT 回复:', gptResponse);
+  //       setMessages(prev => [...prev, {
+  //         id: Date.now() + 1,
+  //         text: gptResponse,
+  //         isUser: false
+  //       }]);
+
+  //       // Save assistant response to database once
+  //       if (currentSessionId) {
+  //         try {
+  //           await sessionService.addMessage(currentSessionId, 'assistant', gptResponse);
+  //         } catch (error) {
+  //           console.error('记录助手消息失败:', error);
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error('GPT 聊天失败:', error);
+  //       const fallbackResponse = "抱歉，AI 服务暂时不可用。请继续描述您的设计想法，稍后我会为您生成设计。";
+  //       setMessages(prev => [...prev, {
+  //         id: Date.now() + 1,
+  //         text: fallbackResponse,
+  //         isUser: false
+  //       }]);
+
+  //       // Save fallback response to database once
+  //       if (currentSessionId) {
+  //         try {
+  //           await sessionService.addMessage(currentSessionId, 'assistant', fallbackResponse);
+  //         } catch (error) {
+  //           console.error('记录助手消息失败:', error);
+  //         }
+  //       }
+  //       toast.error("AI 聊天服务暂时不可用");
+  //     } finally {
+  //       setIsChatLoading(false);
+  //     }
+  //   }
+  // };
 
   const handleEdit = async () => {
     if (!design || design.design_name === "生成失败") {
@@ -553,7 +794,8 @@ const DesignStudio = () => {
       }
     }
     setIsEditingMode(true);
-    setPendingEditInstruction('');
+    setEditConversation([]); // <-- 新增：清空编辑对话历史
+    // setPendingEditInstruction('');
     setDesign(prev => prev ? {
       ...prev,
       isEditing: true
@@ -568,7 +810,8 @@ const DesignStudio = () => {
 
   const handleExitEdit = () => {
     setIsEditingMode(false);
-    setPendingEditInstruction('');
+    setEditConversation([]);
+    // setPendingEditInstruction('');
     setDesign(prev => prev ? {
       ...prev,
       isEditing: false
@@ -674,7 +917,8 @@ const DesignStudio = () => {
               selectedDesignId={design ? 0 : null} 
               isGenerating={isGenerating || isChatLoading} 
               hasDesign={!!design} 
-              hasPendingEditInstruction={!!pendingEditInstruction.trim()} 
+              hasPendingEditInstruction={editConversation.some(m => m.isUser)}
+              // hasPendingEditInstruction={!!pendingEditInstruction.trim()} 
               currentImageUrl={currentImageUrl} 
             />
           </div>
